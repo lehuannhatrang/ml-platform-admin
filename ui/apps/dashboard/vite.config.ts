@@ -14,13 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { defineConfig, loadEnv, Plugin } from 'vite';
+import { Plugin, defineConfig, loadEnv } from 'vite';
+
+import banner from 'vite-plugin-banner';
+import { dynamicBase } from 'vite-plugin-dynamic-base';
+import { getLicense } from '@karmada/utils';
+import path from 'path';
 import react from '@vitejs/plugin-react';
 import svgr from 'vite-plugin-svgr';
-import path from 'path';
-import { dynamicBase } from 'vite-plugin-dynamic-base';
-import banner from 'vite-plugin-banner';
-import { getLicense } from '@karmada/utils';
 
 const replacePathPrefixPlugin = (): Plugin => {
   return {
@@ -65,6 +66,9 @@ export default defineConfig(({ mode }) => {
           },
         },
       },
+      watch: {
+        usePolling: process.env.NODE_ENV === 'development',
+      }  
     },
   };
 });

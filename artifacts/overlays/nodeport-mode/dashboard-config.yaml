@@ -35,6 +35,9 @@ menu_configs:
   - path: /cluster-manage
     enable: true
     sidebar_key: CLUSTER-MANAGE
+  - path: /node-manage
+    enable: true
+    sidebar_key: NODE-MANAGE
   - path: /basic-config
     enable: true
     sidebar_key: BASIC-CONFIG

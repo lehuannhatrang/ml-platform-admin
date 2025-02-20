@@ -42,6 +42,7 @@ import {
 import { Failover, Permission, Reschedule } from '@/pages/advanced-config';
 import { BuildInAddon, ThridPartyAddon } from '@/pages/addon';
 import ClusterManage from '@/pages/cluster-manage';
+import NodeManage from '@/pages/node-manage';
 import Login from '@/pages/login';
 import { Icons } from '@/components/icons';
 
@@ -90,6 +91,36 @@ export function getRoutes() {
           },
         },
         {
+          path: '/cluster-manage',
+          element: <ClusterManage />,
+          handle: {
+            sidebarKey: 'CLUSTER-MANAGE',
+            sidebarName: i18nInstance.t('74ea72bbd64d8251bbc2642cc38e7bb1'),
+            icon: <Icons.clusters {...IconStyles} />,
+          },
+        },
+        {
+          path: '/node-manage',
+          element: <NodeManage />,
+          handle: {
+            sidebarKey: 'NODE-MANAGE',
+            sidebarName: 'Nodes',
+            icon: <Icons.node {...IconStyles} />,
+          },
+        },
+        {
+          path: 'namespace',
+          element: <MultiCloudNamespace />,
+          handle: {
+            sidebarKey: 'NAMESPACE',
+            sidebarName: i18nInstance.t(
+              'a4b28a416f0b6f3c215c51e79e517298',
+              '命名空间',
+            ),
+            icon: <Icons.namespace {...IconStyles} />,
+          },
+        },
+        {
           path: '/multicloud-resource-manage',
           handle: {
             sidebarKey: 'MULTICLOUD-RESOURCE-MANAGE',
@@ -98,17 +129,6 @@ export function getRoutes() {
             icon: <Icons.resource {...IconStyles} />,
           },
           children: [
-            {
-              path: 'namespace',
-              element: <MultiCloudNamespace />,
-              handle: {
-                sidebarKey: 'NAMESPACE',
-                sidebarName: i18nInstance.t(
-                  'a4b28a416f0b6f3c215c51e79e517298',
-                  '命名空间',
-                ),
-              },
-            },
             {
               path: 'workload',
               element: <MultiCloudworkload />,
@@ -161,16 +181,6 @@ export function getRoutes() {
               },
             },
           ],
-        },
-        {
-          path: '/cluster-manage',
-          element: <ClusterManage />,
-          handle: {
-            sidebarKey: 'CLUSTER-MANAGE',
-            sidebarName: i18nInstance.t('74ea72bbd64d8251bbc2642cc38e7bb1'),
-            icon: <Icons.clusters {...IconStyles} />,
-            isPage: false,
-          },
         },
         {
           path: '/basic-config',

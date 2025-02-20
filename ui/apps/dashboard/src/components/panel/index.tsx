@@ -14,11 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { FC, ReactNode, useMemo } from 'react';
-import { useMatches } from 'react-router-dom';
-import { Breadcrumb } from 'antd';
-import { getRoutes, IRouteObjectHandle } from '@/routes/route.tsx';
 import * as React from 'react';
+
+import { FC, ReactNode, useMemo } from 'react';
+import { IRouteObjectHandle, getRoutes } from '@/routes/route.tsx';
+
+import { Breadcrumb } from 'antd';
+import { useMatches } from 'react-router-dom';
 
 interface IPanelProps {
   children: ReactNode;
@@ -63,8 +65,8 @@ const Panel: FC<IPanelProps> = (props) => {
   }, [matches]);
   return (
     <div className="w-full h-full px-[30px] py-[20px] box-border bg-[#FAFBFC]">
-      <div className="w-full h-full bg-white box-border p-[12px] overflow-y-scroll">
-        <Breadcrumb className="mb-4" items={breadcrumbs} />
+      <Breadcrumb className="mb-4" items={breadcrumbs} />
+      <div className="w-full h-full bg-white box-border p-[12px] overflow-x-hidden overflow-y-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
         {children}
       </div>
     </div>

@@ -16,3 +16,4 @@ limitations under the License.
 
 export { GetClusters } from './cluster.ts';
 export { karmadaClient } from './base.ts';
+export { GetNodes } from './node.ts';

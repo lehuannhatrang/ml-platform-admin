@@ -43,7 +43,7 @@ const Navigation: FC<INavigationProps> = (props) => {
   const {
     headerStyle = {},
     usePlaceholder = true,
-    brandText = 'Karmada Dashboard',
+    brandText = 'DCN Dashboard',
     userInfo,
   } = props;
   return (

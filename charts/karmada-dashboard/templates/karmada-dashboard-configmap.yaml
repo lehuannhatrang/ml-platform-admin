@@ -40,6 +40,9 @@ data:
       - path: /cluster-manage
         enable: true
         sidebar_key: CLUSTER-MANAGE
+      - path: /node-manage
+        enable: true
+        sidebar_key: NODE-MANAGE
       - path: /basic-config
         enable: true
         sidebar_key: BASIC-CONFIG
@@ -118,6 +121,9 @@ data:
       - path: /cluster-manage
         enable: true
         sidebar_key: CLUSTER-MANAGE
+      - path: /node-manage
+        enable: true
+        sidebar_key: NODE-MANAGE
       - path: /basic-config
         enable: false
         sidebar_key: BASIC-CONFIG

@@ -16,3 +16,4 @@ limitations under the License.
 
 export { default as useNamespace } from './use-namespace';
 export { default as useTagNum } from './use-tag-num';
+export { default as useCluster } from './use-cluster';

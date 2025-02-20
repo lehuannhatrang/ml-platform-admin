@@ -15,13 +15,14 @@ limitations under the License.
 */
 
 import {
-  convertDataSelectQuery,
   DataSelectQuery,
   IResponse,
-  karmadaClient,
   ObjectMeta,
   TypeMeta,
+  convertDataSelectQuery,
+  karmadaClient,
 } from './base';
+import { ClusterOption } from '@/hooks/use-cluster';
 
 export interface Namespace {
   objectMeta: ObjectMeta;
@@ -30,7 +31,8 @@ export interface Namespace {
   skipAutoPropagation: boolean;
 }
 
-export async function GetNamespaces(query: DataSelectQuery) {
+export async function GetNamespaces(query: DataSelectQuery, cluster?: ClusterOption) {
+  const apiPath = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/namespace` : '/namespace'; 
   const resp = await karmadaClient.get<
     IResponse<{
       errors: string[];
@@ -39,7 +41,7 @@ export async function GetNamespaces(query: DataSelectQuery) {
       };
       namespaces: Namespace[];
     }>
-  >('/namespace', {
+  >(apiPath, {
     params: convertDataSelectQuery(query),
   });
   return resp.data;

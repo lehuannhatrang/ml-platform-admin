@@ -41,7 +41,7 @@ function App() {
           <AuthProvider>
             <HelmetProvider>
               <Helmet>
-                <title>Karmada Dashboard</title>
+                <title>DCN Dashboard</title>
                 <link
                   rel="apple-touch-icon"
                   sizes="180x180"

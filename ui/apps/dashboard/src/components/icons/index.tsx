@@ -53,6 +53,8 @@ import {
   Trash2,
   ChevronUp,
   ChevronDown,
+  Cpu,
+  Server,
 } from 'lucide-react';
 
 export type Icon = LucideIcon;
@@ -67,8 +69,10 @@ export const Icons = {
   close: X,
   ellipsis: MoreVertical,
   clusters: Boxes,
+  node: Server,
   overview: Target,
-  resource: FileText,
+  namespace: FileText,
+  resource: Cpu,
   policy: FolderKanban,
   basicConfig: Settings2,
   advancedConfig: SlidersHorizontal,

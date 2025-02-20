@@ -75,6 +75,55 @@ export interface TypeMeta {
   scalable: boolean;
   restartable: boolean;
 }
+
+export type Status = {
+  capacity: {
+    cpu: string;
+    'ephemeral-storage': string;
+    'hugepages-1Gi': string;
+    'hugepages-2Mi': string;
+    memory: string;
+    pods: string;
+  };
+  allocatable: {
+    cpu: string;
+    'ephemeral-storage': string;
+    'hugepages-1Gi': string;
+    'hugepages-2Mi': string;
+    memory: string;
+    pods: string;
+  };
+  conditions: {
+    type: string;
+    status: string;
+    lastHeartbeatTime: string;
+    lastTransitionTime: string;
+    reason: string;
+    message: string
+  }[];
+  addresses: {
+    type: string;
+    address: string
+  }[];
+  daemonEndpoints: {
+    kubeletEndpoint: {
+      port: number;
+    }
+  };
+  nodeInfo: {
+    machineID: string;
+    systemUUID: string;
+    bootID: string;
+    kernelVersion: string;
+    osImage: string;
+    containerRuntimeVersion: string;
+    kubeletVersion: string;
+    kubeProxyVersion: string;
+    operatingSystem: string;
+    architecture: string
+  }
+}
+
 export type Selector = Record<string, string>;
 
 export interface RollingUpdateStrategy {

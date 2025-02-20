@@ -14,9 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import i18nInstance from '@/utils/i18n';
-import Panel from '@/components/panel';
-import { useQuery } from '@tanstack/react-query';
 import {
   App,
   Button,
@@ -26,31 +23,48 @@ import {
   Table,
   TableColumnProps,
   Tag,
+  Select,
+  Flex
 } from 'antd';
-import { GetNamespaces } from '@/services/namespace.ts';
-import type { Namespace } from '@/services/namespace.ts';
-import { Icons } from '@/components/icons';
-import dayjs from 'dayjs';
-import { useToggle, useWindowSize } from '@uidotdev/usehooks';
-import NewNamespaceModal from './new-namespace-modal.tsx';
-import { DeleteResource } from '@/services/unstructured';
-import { useState } from 'react';
-import { DataSelectQuery } from '@/services/base.ts';
 import TagList, { convertLabelToTags } from '@/components/tag-list';
+import { useToggle, useWindowSize } from '@uidotdev/usehooks';
+
+import { DataSelectQuery } from '@/services/base.ts';
+import { DeleteResource } from '@/services/unstructured';
+import { GetNamespaces } from '@/services/namespace.ts';
+import { Icons } from '@/components/icons';
+import type { Namespace } from '@/services/namespace.ts';
+import NewNamespaceModal from './new-namespace-modal.tsx';
+import Panel from '@/components/panel';
+import dayjs from 'dayjs';
+import i18nInstance from '@/utils/i18n';
+import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useCluster } from '@/hooks';
+import { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster.ts';
 
 const NamespacePage = () => {
-  const [searchFilter, setSearchFilter] = useState('');
+  const [filter, setFilter] = useState<{
+    selectedCluster: ClusterOption;
+    searchText: string;
+  }>({
+    selectedCluster: DEFAULT_CLUSTER_OPTION,
+    searchText: '',
+  });
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['GetNamespaces', searchFilter],
+    queryKey: ['GetNamespaces', filter.searchText, filter.selectedCluster],
     queryFn: async () => {
       const query: DataSelectQuery = {};
-      if (searchFilter) {
-        query.filterBy = ['name', searchFilter];
+      if (filter.searchText) {
+        query.filterBy = ['name', filter.searchText];
       }
-      const clusters = await GetNamespaces(query);
+      const clusters = await GetNamespaces(query, filter.selectedCluster);
       return clusters.data || {};
     },
   });
+
+  const { clusterOptions, isClusterDataLoading } = useCluster({});
+
   const size = useWindowSize();
   const columns: TableColumnProps<Namespace>[] = [
     {
@@ -164,17 +178,40 @@ const NamespacePage = () => {
   return (
     <Panel>
       <div className={'flex flex-row justify-between mb-4'}>
-        <Input.Search
-          placeholder={i18nInstance.t(
-            'cfaff3e369b9bd51504feb59bf0972a0',
-            '按命名空间搜索',
-          )}
-          className={'w-[400px]'}
-          onPressEnter={(e) => {
-            const input = e.currentTarget.value;
-            setSearchFilter(input);
-          }}
-        />
+        <Flex>
+          <Flex className='mr-4'>
+            <h3 className={'leading-[32px]'}>
+              {i18nInstance.t('85fe5099f6807dada65d274810933389')}：
+            </h3>
+            <Select
+              options={clusterOptions}
+              className={'min-w-[200px]'}
+              value={filter.selectedCluster?.value}
+              loading={isClusterDataLoading}
+              showSearch
+              onChange={(_v: string, option: ClusterOption| ClusterOption[]) => {
+                setFilter({
+                  ...filter,
+                  selectedCluster: option as ClusterOption,
+                });
+              }}
+            />
+          </Flex>
+          <Input.Search
+            placeholder={i18nInstance.t(
+              'cfaff3e369b9bd51504feb59bf0972a0',
+              '按命名空间搜索',
+            )}
+            className={'w-[400px]'}
+            onPressEnter={(e) => {
+              const input = e.currentTarget.value;
+              setFilter({
+                ...filter,
+                searchText: input,
+              });
+            }}
+          />
+        </Flex>
         <Button
           type={'primary'}
           icon={<Icons.add width={16} height={16} />}
