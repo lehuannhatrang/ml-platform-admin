@@ -117,7 +117,7 @@ const Overview = () => {
                     )}
                   </b>
                 </Row>
-                <Row height={300}>
+                <Row>
                   {totalCPU && allocatedCPU && (
                     <GaugeChart
                       data={{
@@ -135,7 +135,7 @@ const Overview = () => {
                         height: 300,
                         style: {
                           textContent: (target: number, total: number) =>
-                            total ? `${(target / total)?.toFixed(4) * 100}%` : '-',
+                            total ? `${(Number((target / total).toFixed(4)) * 100).toFixed(2)}%` : '-'
                         },
                       }}
                     />
@@ -168,8 +168,8 @@ const Overview = () => {
                       config={{
                         height: 300,
                         style: {
-                          textContent: (target, total) =>
-                            `${(target / total).toFixed(4) * 100}%`,
+                          textContent: (target: number, total: number) =>
+                            total ? `${(Number((target / total).toFixed(4)) * 100).toFixed(2)}%` : '-'
                         },
                       }}
                     />
@@ -182,10 +182,8 @@ const Overview = () => {
         </Row>
 
         <SectionCard label="Cluster metrics">
-        <iframe src="http://localhost:18080/grafana/public-dashboards/03ac7f4ef57c4c8289757183d7b16542" width="800" height="600" frameborder="0"></iframe>
-
+          <iframe src="http://localhost:18080/grafana/public-dashboards/03ac7f4ef57c4c8289757183d7b16542" width="800" height="600"></iframe>
         </SectionCard>
-        
       </Panel>
     </Spin>
   );

@@ -1,8 +1,8 @@
-import { Gauge, GaugeProps } from '@ant-design/charts';
+import { Gauge, GaugeConfig } from '@ant-design/charts';
 
 type GaugeChartProps = {
-  data: any[];
-  config: GaugeProps;
+  data: GaugeConfig['data'];
+  config: GaugeConfig;
 };
 
 const GaugeChart = ({ data, config }: GaugeChartProps) => {

@@ -4,7 +4,7 @@ import { CardProps } from 'antd/lib/card';
 
 type InfoCardProps = {
   label: string;
-  value: string | number;
+  value?: string | number;
 } & CardProps;
 
 function InfoCard({ label, value, ...props }: InfoCardProps) {
@@ -28,7 +28,7 @@ function InfoCard({ label, value, ...props }: InfoCardProps) {
             fontWeight: 'bold',
           }}
         >
-          {value}
+          {value || '-'}
         </p>
       </Flex>
     </Card>
