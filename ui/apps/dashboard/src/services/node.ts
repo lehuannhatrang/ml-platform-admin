@@ -32,7 +32,7 @@ import {
   }
   
   export async function GetNodes(query: DataSelectQuery, cluster?: ClusterOption) {
-    const apiPath = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/node` : '/member/primary/node'; 
+    const apiPath = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/node` : '/aggregated/node'; 
     const resp = await karmadaClient.get<
       IResponse<{
         errors: string[];

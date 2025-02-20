@@ -16,6 +16,7 @@ limitations under the License.
 
 import i18nInstance from '@/utils/i18n';
 import Panel from '@/components/panel';
+
 import {
   App,
   Button,
@@ -26,10 +27,10 @@ import {
   Space,
   Table,
   TableColumnProps,
-  Tag,
+  Flex
 } from 'antd';
 import { Icons } from '@/components/icons';
-import type { DeploymentWorkload } from '@/services/workload';
+import type { DeploymentWorkload, Workload } from '@/services/workload';
 import { GetWorkloads } from '@/services/workload';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
@@ -38,25 +39,29 @@ import NewWorkloadEditorModal from './new-workload-editor-modal.tsx';
 import WorkloadDetailDrawer, {
   WorkloadDetailDrawerProps,
 } from './workload-detail-drawer.tsx';
-import { useToggle, useWindowSize } from '@uidotdev/usehooks';
+import { useToggle } from '@uidotdev/usehooks';
 import { stringify } from 'yaml';
-import TagList, { convertLabelToTags } from '@/components/tag-list';
+import TagList from '@/components/tag-list';
 import { WorkloadKind } from '@/services/base.ts';
 import useNamespace from '@/hooks/use-namespace.ts';
+import useCluster, { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
 
-const propagationpolicyKey = 'propagationpolicy.karmada.io/name';
 const WorkloadPage = () => {
   const [filter, setFilter] = useState<{
     kind: WorkloadKind;
+    selectedCluster: ClusterOption;
     selectedWorkSpace: string;
     searchText: string;
   }>({
     kind: WorkloadKind.Deployment,
+    selectedCluster: DEFAULT_CLUSTER_OPTION,
     selectedWorkSpace: '',
     searchText: '',
   });
+  const { clusterOptions, isClusterDataLoading } = useCluster({});
 
-  const { nsOptions, isNsDataLoading } = useNamespace({});
+  const { nsOptions, isNsDataLoading } = useNamespace({clusterFilter: filter.selectedCluster});
+
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['GetWorkloads', JSON.stringify(filter)],
     queryFn: async () => {
@@ -64,6 +69,7 @@ const WorkloadPage = () => {
         kind: filter.kind,
         namespace: filter.selectedWorkSpace,
         keyword: filter.searchText,
+        cluster: filter.selectedCluster,
       });
       return clusters.data || {};
     },
@@ -90,8 +96,24 @@ const WorkloadPage = () => {
       content: '',
     });
   }, []);
-  const size = useWindowSize();
+
   const columns: TableColumnProps<DeploymentWorkload>[] = [
+    {
+      title: i18nInstance.t('89d19c60880d35c2bd88af0d9cc0497b', '负载名称'),
+      key: 'workloadName',
+      width: 200,
+      render: (_, r) => {
+        return r.objectMeta.name;
+      },
+    },
+    ...(filter.selectedCluster.value === 'ALL' ? [{
+      title: 'Cluster',
+      key: 'cluster',
+      width: 200,
+      render: (_: any, r: Workload) => {
+        return r.objectMeta.labels?.cluster || '-';
+      },
+    }] : []),
     {
       title: i18nInstance.t('a4b28a416f0b6f3c215c51e79e517298', '命名空间'),
       key: 'namespaceName',
@@ -101,41 +123,25 @@ const WorkloadPage = () => {
       },
     },
     {
-      title: i18nInstance.t('89d19c60880d35c2bd88af0d9cc0497b', '负载名称'),
-      key: 'workloadName',
+      title: 'Images',
+      key: 'images',
       width: 200,
       render: (_, r) => {
-        return r.objectMeta.name;
+        return <TagList tags={r.containerImages.map((i) => ({ key: i, value: i }))} />
       },
     },
     {
-      title: i18nInstance.t('1f7be0a924280cd098db93c9d81ecccd', '标签信息'),
-      key: 'labelName',
-      align: 'left',
-      width: '30%',
-      render: (_, r) => (
-        <TagList
-          tags={convertLabelToTags(r?.objectMeta?.name, r?.objectMeta?.labels)}
-          maxLen={size && size.width! > 1800 ? undefined : 1}
-        />
-      ),
-    },
-    {
-      title: i18nInstance.t('8a99082b2c32c843d2241e0ba60a3619', '分发策略'),
-      key: 'propagationPolicies',
+      title: 'Ready',
+      key: 'ready',
       render: (_, r) => {
-        if (!r?.objectMeta?.annotations?.[propagationpolicyKey]) {
-          return '-';
-        }
-        return <Tag>{r?.objectMeta?.annotations?.[propagationpolicyKey]}</Tag>;
+        return `${r.pods.running || 0}/${r.pods.desired || 0}`
       },
     },
     {
-      title: i18nInstance.t('eaf8a02d1b16fcf94302927094af921f', '覆盖策略'),
-      key: 'overridePolicies',
-      width: 150,
-      render: () => {
-        return '-';
+      title: 'Created At',
+      key: 'createdat',
+      render: (_, r) => {
+        return new Date(r.objectMeta.creationTimestamp).toLocaleString()
       },
     },
     {
@@ -275,6 +281,24 @@ const WorkloadPage = () => {
         </Button>
       </div>
       <div className={'flex flex-row space-x-4 mb-4'}>
+        <Flex className='mr-4'>
+          <h3 className={'leading-[32px]'}>
+            {i18nInstance.t('85fe5099f6807dada65d274810933389')}：
+          </h3>
+          <Select
+            options={clusterOptions}
+            className={'min-w-[200px]'}
+            value={filter.selectedCluster?.value}
+            loading={isClusterDataLoading}
+            showSearch
+            onChange={(_v: string, option: ClusterOption | ClusterOption[]) => {
+              setFilter({
+                ...filter,
+                selectedCluster: option as ClusterOption,
+              });
+            }}
+          />
+        </Flex>
         <h3 className={'leading-[32px]'}>
           {i18nInstance.t('280c56077360c204e536eb770495bc5f', '命名空间')}：
         </h3>
@@ -316,10 +340,10 @@ const WorkloadPage = () => {
         dataSource={
           data
             ? data.deployments ||
-              data.statefulSets ||
-              data.daemonSets ||
-              data.jobs ||
-              data.items
+            data.statefulSets ||
+            data.daemonSets ||
+            data.jobs ||
+            data.items
             : []
         }
       />

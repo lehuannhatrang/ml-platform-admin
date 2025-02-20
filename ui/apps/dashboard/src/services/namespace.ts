@@ -32,7 +32,7 @@ export interface Namespace {
 }
 
 export async function GetNamespaces(query: DataSelectQuery, cluster?: ClusterOption) {
-  const apiPath = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/namespace` : '/namespace'; 
+  const apiPath = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/namespace` : '/aggregated/namespace'; 
   const resp = await karmadaClient.get<
     IResponse<{
       errors: string[];

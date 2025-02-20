@@ -18,17 +18,18 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { GetNamespaces } from '@/services/namespace.ts';
 import { DataSelectQuery } from '@/services/base.ts';
+import { ClusterOption } from '@/hooks/use-cluster.ts';
 
-const useNamespace = (props: { nsFilter?: DataSelectQuery }) => {
-  const { nsFilter = {} } = props;
+const useNamespace = (props: { nsFilter?: DataSelectQuery; clusterFilter?: ClusterOption }) => {
+  const { nsFilter = {}, clusterFilter } = props;
   const {
     data: nsData,
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ['GetNamespaces', nsFilter],
+    queryKey: ['GetNamespaces', nsFilter, clusterFilter?.value],
     queryFn: async () => {
-      const response = await GetNamespaces(nsFilter);
+      const response = await GetNamespaces(nsFilter, clusterFilter);
       return response.data || {};
     },
   });

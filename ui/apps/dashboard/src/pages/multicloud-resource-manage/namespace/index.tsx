@@ -75,6 +75,14 @@ const NamespacePage = () => {
         return r.objectMeta.name;
       },
     },
+    ...(filter.selectedCluster.value === 'ALL' ? [{
+      title: 'Cluster',
+      key: 'cluster',
+      width: 200,
+      render: (_: any, r: Namespace) => {
+        return r.objectMeta.labels?.cluster;
+      },
+    },] : []),
     {
       title: i18nInstance.t('14d342362f66aa86e2aa1c1e11aa1204', '标签'),
       key: 'label',

@@ -72,10 +72,18 @@ const NodeManagePage = () => {
       },
     }] : []),
     {
+      title: 'Role',
+      key: 'role',
+      render: (_: any, r: Node) => {
+        const role = Object.keys(r.objectMeta.labels).find(key => key === 'node-role.kubernetes.io/control-plane') ? 'Master' : 'Worker'
+        return <Tag color={role === 'Master' ? 'orange' : 'blue'}>{role}</Tag>
+      },
+    },
+    {
       title: 'OS',
       key: 'os',
       render: (_: any, r: Node) => {
-        return <Tag color="blue">{`${r.objectMeta.labels['kubernetes.io/os'] || '-'}/${r.objectMeta.labels['kubernetes.io/arch'] || '-'}`}</Tag>
+        return <Tag color="green">{`${r.objectMeta.labels['kubernetes.io/os'] || '-'}/${r.objectMeta.labels['kubernetes.io/arch'] || '-'}`}</Tag>
       },
     },
     {

@@ -24,6 +24,7 @@ import {
   WorkloadKind,
 } from '@/services/base.ts';
 import { ObjectMeta, TypeMeta } from '@/services/base';
+import { ClusterOption } from '@/hooks/use-cluster';
 
 export interface DeploymentWorkload {
   objectMeta: ObjectMeta;
@@ -62,15 +63,17 @@ export interface WorkloadStatus {
 
 export async function GetWorkloads(params: {
   namespace?: string;
+  cluster?: ClusterOption;
   kind: WorkloadKind;
   keyword?: string;
 }) {
-  const { kind, namespace } = params;
+  const { kind, namespace, cluster } = params;
   const requestData = {} as DataSelectQuery;
   if (params.keyword) {
     requestData.filterBy = ['name', params.keyword];
   }
-  const url = namespace ? `/${kind}/${namespace}` : `/${kind}`;
+  const base_url = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/${kind}` : `/aggregated/${kind}`;
+  const url = namespace ? `${base_url}/${namespace}` : base_url;
   const resp = await karmadaClient.get<
     IResponse<{
       errors: string[];
