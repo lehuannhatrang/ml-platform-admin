@@ -17,13 +17,7 @@ limitations under the License.
 import i18nInstance from '@/utils/i18n';
 import Panel from '@/components/panel';
 import { useQuery } from '@tanstack/react-query';
-import { GetClusters, GetNodes } from '@/services';
-import {
-  Cluster,
-  ClusterDetail,
-  DeleteCluster,
-  GetClusterDetail,
-} from '@/services/cluster';
+import { GetNodes } from '@/services';
 import {
   Badge,
   Tag,
@@ -37,23 +31,11 @@ import {
   Flex,
   Select,
 } from 'antd';
-import { Icons } from '@/components/icons';
 import { useState } from 'react';
 import { useCluster } from '@/hooks';
 import { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
 import { Node } from '@/services/node';
-function getPercentColor(v: number): string {
-  // 0~60 #52C41A
-  // 60~80 #FAAD14
-  // > 80 #F5222D
-  if (v <= 60) {
-    return '#52C41A';
-  } else if (v <= 80) {
-    return '#FAAD14';
-  } else {
-    return '#F5222D';
-  }
-}
+
 const NodeManagePage = () => {
   const [filter, setFilter] = useState<{
     selectedCluster: ClusterOption;
@@ -78,21 +60,21 @@ const NodeManagePage = () => {
       title: i18nInstance.t('c3f28b34bbdec501802fa403584267e6', '集群名称'),
       key: 'nodeName',
       width: 250,
-      render: (_, r) => {
+      render: (_: any, r: Node) => {
         return r.objectMeta.name;
       },
     },
     ...(filter.selectedCluster.value === 'ALL' ? [{
       title: 'Cluster',
       key: 'cluster',
-      render: (_, r) => {
+      render: (_: any, r: Node) => {
         return r.objectMeta.annotations['cluster.x-k8s.io/cluster-name']
       },
     }] : []),
     {
       title: 'OS',
       key: 'os',
-      render: (_, r) => {
+      render: (_: any, r: Node) => {
         return <Tag color="blue">{`${r.objectMeta.labels['kubernetes.io/os'] || '-'}/${r.objectMeta.labels['kubernetes.io/arch'] || '-'}`}</Tag>
       },
     },
@@ -117,7 +99,7 @@ const NodeManagePage = () => {
       key: 'ready',
       align: 'center',
       width: 150,
-      render: (r) => {
+      render: (r: Node) => {
         const v = r.status.conditions.find((c) => c.type === 'Ready');
         if (v) {
           return (
