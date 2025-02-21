@@ -22,9 +22,9 @@ import _ from 'lodash';
 import { MainLayout } from '@/layout';
 import ErrorBoundary from '@/components/error';
 import Overview from '@/pages/overview';
+import MultiCloudNamespace from '@/pages/namespace';
 import {
   MultiCloudConfig,
-  MultiCloudNamespace,
   MultiCloudService,
   MultiCloudworkload,
 } from '@/pages/multicloud-resource-manage';
@@ -45,6 +45,7 @@ import ClusterManage from '@/pages/cluster-manage';
 import NodeManage from '@/pages/node-manage';
 import Login from '@/pages/login';
 import { Icons } from '@/components/icons';
+import { WorkloadKind } from '@/services/base';
 
 export interface IRouteObjectHandle {
   icon?: ReactNode;
@@ -124,19 +125,70 @@ export function getRoutes() {
           path: '/multicloud-resource-manage',
           handle: {
             sidebarKey: 'MULTICLOUD-RESOURCE-MANAGE',
-            sidebarName: i18nInstance.t('21a4e07b08a4efbbfe2b9d88c208836a'),
+            sidebarName: i18nInstance.t('c3bc562e9ffcae6029db730fe218515c'),
             isPage: false,
             icon: <Icons.resource {...IconStyles} />,
           },
           children: [
             {
-              path: 'workload',
-              element: <MultiCloudworkload />,
+              path: 'pod',
+              element: <MultiCloudworkload kind={WorkloadKind.Pod}/>,
               handle: {
-                sidebarKey: 'WORKLOAD',
-                sidebarName: i18nInstance.t('c3bc562e9ffcae6029db730fe218515c'),
+                sidebarKey: 'POD',
+                sidebarName: 'Pod',
               },
             },
+            {
+              path: 'deployment',
+              element: <MultiCloudworkload kind={WorkloadKind.Deployment}/>,
+              handle: {
+                sidebarKey: 'DEPLOYMENT',
+                sidebarName: 'Deployment',
+              },
+            },
+            {
+              path: 'statefulset',
+              element: <MultiCloudworkload kind={WorkloadKind.Statefulset}/>,
+              handle: {
+                sidebarKey: 'STATEFULSET',
+                sidebarName: 'StatefulSet',
+              },
+            },
+            {
+              path: 'daemonset',
+              element: <MultiCloudworkload kind={WorkloadKind.Daemonset}/>,
+              handle: {
+                sidebarKey: 'DAEMONSET',
+                sidebarName: 'DaemonSet',
+              },
+            },
+            {
+              path: 'cronjob',
+              element: <MultiCloudworkload kind={WorkloadKind.Cronjob}/>,
+              handle: {
+                sidebarKey: 'CRONJOB',
+                sidebarName: 'CronJob',
+              },
+            },
+            {
+              path: 'job',
+              element: <MultiCloudworkload kind={WorkloadKind.Job}/>,
+              handle: {
+                sidebarKey: 'JOB',
+                sidebarName: 'Job',
+              },
+            },
+          ],
+        },
+        {
+          path: '/multicloud-service-manage',
+          handle: {
+            sidebarKey: 'MULTICLOUD-SERVICE-MANAGE',
+            sidebarName: 'Service Discovery',
+            icon: <Icons.serviceDiscovery {...IconStyles} />,
+            isPage: false,
+          },
+          children: [
             {
               path: 'service',
               element: <MultiCloudService />,
@@ -145,15 +197,35 @@ export function getRoutes() {
                 sidebarName: i18nInstance.t('4653569c7943335f62caa11e38d48aa0'),
               },
             },
+
+          ]
+        },
+        {
+          path: '/multicloud-storage-manage',
+          handle: {
+            sidebarKey: 'MULTICLOUD-STORAGE-MANAGE',
+            sidebarName: 'Storage',
+            icon: <Icons.storage {...IconStyles} />,
+            isPage: false,
+          },
+          children: [
             {
-              path: 'config',
+              path: 'configmap',
               element: <MultiCloudConfig />,
               handle: {
-                sidebarKey: 'CONFIG',
-                sidebarName: i18nInstance.t('837d8a6473195b8b5e85d58a72cb9c7e'),
+                sidebarKey: 'CONFIGMAP',
+                sidebarName: 'ConfigMap',
               },
             },
-          ],
+            {
+              path: 'secret',
+              element: <MultiCloudConfig />,
+              handle: {
+                sidebarKey: 'SECRET',
+                sidebarName: 'Secret',
+              },
+            },
+          ]
         },
         {
           path: '/multicloud-policy-manage',

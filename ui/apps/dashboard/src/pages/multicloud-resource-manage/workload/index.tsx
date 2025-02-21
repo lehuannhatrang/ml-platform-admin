@@ -22,7 +22,6 @@ import {
   Button,
   Input,
   Popconfirm,
-  Segmented,
   Select,
   Space,
   Table,
@@ -46,27 +45,29 @@ import { WorkloadKind } from '@/services/base.ts';
 import useNamespace from '@/hooks/use-namespace.ts';
 import useCluster, { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
 
-const WorkloadPage = () => {
+type WorkloadPageProps = {
+  kind: WorkloadKind;
+}
+
+const WorkloadPage = ({ kind }: WorkloadPageProps) => {
   const [filter, setFilter] = useState<{
-    kind: WorkloadKind;
     selectedCluster: ClusterOption;
     selectedWorkSpace: string;
     searchText: string;
   }>({
-    kind: WorkloadKind.Deployment,
     selectedCluster: DEFAULT_CLUSTER_OPTION,
     selectedWorkSpace: '',
     searchText: '',
   });
   const { clusterOptions, isClusterDataLoading } = useCluster({});
 
-  const { nsOptions, isNsDataLoading } = useNamespace({clusterFilter: filter.selectedCluster});
+  const { nsOptions, isNsDataLoading } = useNamespace({ clusterFilter: filter.selectedCluster });
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['GetWorkloads', JSON.stringify(filter)],
+    queryKey: ['GetWorkloads', kind, JSON.stringify(filter)],
     queryFn: async () => {
       const clusters = await GetWorkloads({
-        kind: filter.kind,
+        kind,
         namespace: filter.selectedWorkSpace,
         keyword: filter.searchText,
         cluster: filter.selectedCluster,
@@ -109,6 +110,8 @@ const WorkloadPage = () => {
     ...(filter.selectedCluster.value === 'ALL' ? [{
       title: 'Cluster',
       key: 'cluster',
+      filters: clusterOptions.filter(option => option.value !== 'ALL').map((i) => ({ text: i.label, value: i.label })),
+      onFilter: (value: React.Key | boolean, record: Workload) => record.objectMeta.labels?.cluster === value,
       width: 200,
       render: (_: any, r: Workload) => {
         return r.objectMeta.labels?.cluster || '-';
@@ -127,21 +130,21 @@ const WorkloadPage = () => {
       key: 'images',
       width: 200,
       render: (_, r) => {
-        return <TagList tags={r.containerImages.map((i) => ({ key: i, value: i }))} />
+        return <TagList tags={r.containerImages?.map((i) => ({ key: i, value: i }))} />
       },
     },
     {
       title: 'Ready',
       key: 'ready',
       render: (_, r) => {
-        return `${r.pods.running || 0}/${r.pods.desired || 0}`
+        return `${r?.pods?.running || 0}/${r?.pods?.desired || 0}`
       },
     },
     {
       title: 'Created At',
       key: 'createdat',
       render: (_, r) => {
-        return new Date(r.objectMeta.creationTimestamp).toLocaleString()
+        return new Date(r?.objectMeta?.creationTimestamp).toLocaleString()
       },
     },
     {
@@ -221,115 +224,72 @@ const WorkloadPage = () => {
   const { message: messageApi } = App.useApp();
   return (
     <Panel>
-      <div className={'flex flex-row justify-between mb-4'}>
-        <div>
-          <Segmented
-            value={filter.kind}
-            style={{
-              marginBottom: 8,
-            }}
-            onChange={(value) => {
-              // reset filter when switch workload kind
-              const k = value as WorkloadKind;
-              if (k !== filter.kind) {
+      <div className={'flex flex-row justify-between space-x-4 mb-4'}>
+        <Flex>
+          <Flex className='mr-4'>
+            <h3 className={'leading-[32px]'}>
+              {i18nInstance.t('85fe5099f6807dada65d274810933389')}：
+            </h3>
+            <Select
+              options={clusterOptions}
+              className={'min-w-[200px]'}
+              value={filter.selectedCluster?.value}
+              loading={isClusterDataLoading}
+              showSearch
+              onChange={(_v: string, option: ClusterOption | ClusterOption[]) => {
                 setFilter({
                   ...filter,
-                  kind: value as WorkloadKind,
-                  selectedWorkSpace: '',
-                  searchText: '',
+                  selectedCluster: option as ClusterOption,
                 });
-              } else {
+              }}
+            />
+          </Flex>
+          <Flex className='mr-4'>
+            <h3 className={'leading-[32px]'}>
+              {i18nInstance.t('280c56077360c204e536eb770495bc5f', '命名空间')}：
+            </h3>
+            <Select
+              options={nsOptions}
+              className={'min-w-[200px]'}
+              value={filter.selectedWorkSpace}
+              loading={isNsDataLoading}
+              showSearch
+              allowClear
+              onChange={(v) => {
                 setFilter({
                   ...filter,
-                  kind: value as WorkloadKind,
+                  selectedWorkSpace: v,
                 });
-              }
-            }}
-            options={[
-              {
-                label: 'Deployment',
-                value: WorkloadKind.Deployment,
-              },
-              {
-                label: 'Statefulset',
-                value: WorkloadKind.Statefulset,
-              },
-              {
-                label: 'Daemonset',
-                value: WorkloadKind.Daemonset,
-              },
-              {
-                label: 'Cronjob',
-                value: WorkloadKind.Cronjob,
-              },
-              {
-                label: 'Job',
-                value: WorkloadKind.Job,
-              },
-            ]}
-          />
-        </div>
-        <Button
-          type={'primary'}
-          icon={<Icons.add width={16} height={16} />}
-          className="flex flex-row items-center"
-          onClick={() => {
-            toggleShowModal(true);
-          }}
-        >
-          {i18nInstance.t('96d6b0fcc58b6f65dc4c00c6138d2ac0', '新增工作负载')}
-        </Button>
-      </div>
-      <div className={'flex flex-row space-x-4 mb-4'}>
-        <Flex className='mr-4'>
-          <h3 className={'leading-[32px]'}>
-            {i18nInstance.t('85fe5099f6807dada65d274810933389')}：
-          </h3>
-          <Select
-            options={clusterOptions}
-            className={'min-w-[200px]'}
-            value={filter.selectedCluster?.value}
-            loading={isClusterDataLoading}
-            showSearch
-            onChange={(_v: string, option: ClusterOption | ClusterOption[]) => {
+              }}
+            />
+          </Flex>
+          <Input.Search
+            placeholder={i18nInstance.t(
+              'cfaff3e369b9bd51504feb59bf0972a0',
+              '按命名空间搜索',
+            )}
+            className={'w-[300px]'}
+            onPressEnter={(e) => {
+              const input = e.currentTarget.value;
               setFilter({
                 ...filter,
-                selectedCluster: option as ClusterOption,
+                searchText: input,
               });
             }}
           />
         </Flex>
-        <h3 className={'leading-[32px]'}>
-          {i18nInstance.t('280c56077360c204e536eb770495bc5f', '命名空间')}：
-        </h3>
-        <Select
-          options={nsOptions}
-          className={'min-w-[200px]'}
-          value={filter.selectedWorkSpace}
-          loading={isNsDataLoading}
-          showSearch
-          allowClear
-          onChange={(v) => {
-            setFilter({
-              ...filter,
-              selectedWorkSpace: v,
-            });
-          }}
-        />
-        <Input.Search
-          placeholder={i18nInstance.t(
-            'cfaff3e369b9bd51504feb59bf0972a0',
-            '按命名空间搜索',
-          )}
-          className={'w-[300px]'}
-          onPressEnter={(e) => {
-            const input = e.currentTarget.value;
-            setFilter({
-              ...filter,
-              searchText: input,
-            });
-          }}
-        />
+        <div className={'flex flex-row justify-between mb-4'}>
+          <Button
+            type={'primary'}
+            icon={<Icons.add width={16} height={16} />}
+            className="flex flex-row items-center"
+            onClick={() => {
+              toggleShowModal(true);
+            }}
+          >
+            {i18nInstance.t('96d6b0fcc58b6f65dc4c00c6138d2ac0', '新增工作负载')}
+          </Button>
+        </div>
       </div>
       <Table
         rowKey={(r: DeploymentWorkload) =>
@@ -352,7 +312,7 @@ const WorkloadPage = () => {
         mode={editorState.mode}
         workloadContent={editorState.content}
         open={showModal}
-        kind={filter.kind}
+        kind={kind}
         onOk={async (ret) => {
           const msg =
             editorState.mode === 'edit'

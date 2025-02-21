@@ -138,6 +138,7 @@ export enum WorkloadKind {
   Daemonset = 'daemonset',
   Cronjob = 'cronjob',
   Job = 'job',
+  Pod = 'pod',
 }
 
 export enum ServiceKind {

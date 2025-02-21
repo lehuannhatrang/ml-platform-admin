@@ -21,4 +21,5 @@ import (
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/member/namespace"  // Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/member/node"       // Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/member/pod"        // Importing member route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/member/statefulset" // Importing member route packages forces route registration
 )

@@ -31,6 +31,8 @@ import (
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/deployment"       // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/namespace"        // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/node"             // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/pod"              // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/statefulset"      // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/auth"                        // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/cluster"                     // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/clusteroverridepolicy"       // Importing route packages forces route registration

@@ -55,6 +55,7 @@ import {
   ChevronDown,
   Cpu,
   Server,
+  ArrowUpDown
 } from 'lucide-react';
 
 export type Icon = LucideIcon;
@@ -80,6 +81,8 @@ export const Icons = {
   delete: Trash2,
   up: ChevronUp,
   down: ChevronDown,
+  serviceDiscovery: ArrowUpDown,
+  storage: Database,
   gitHub: ({ ...props }: LucideProps) => (
     <svg
       aria-hidden="true"

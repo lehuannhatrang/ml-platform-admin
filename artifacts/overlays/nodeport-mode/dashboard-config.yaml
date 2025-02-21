@@ -6,22 +6,51 @@ menu_configs:
   - path: /overview
     enable: true
     sidebar_key: OVERVIEW
+  - path: namespace
+    enable: true
+    sidebar_key: NAMESPACE
   - path: /multicloud-resource-manage
     enable: true
     sidebar_key: MULTICLOUD-RESOURCE-MANAGE
     children:
-      - path: namespace
+      - path: pod
         enable: true
-        sidebar_key: NAMESPACE
-      - path: workload
+        sidebar_key: POD
+      - path: deployment
         enable: true
-        sidebar_key: WORKLOAD
-      - path: service
+        sidebar_key: DEPLOYMENT
+      - path: statefulset
         enable: true
-        sidebar_key: SERVICE
+        sidebar_key: STATEFULSET
+      - path: daemonset
+        enable: true
+        sidebar_key: DAEMONSET
+      - path: job
+        enable: true
+        sidebar_key: JOB
+      - path: cronjob
+        enable: true
+        sidebar_key: CRONJOB
       - path: config
         enable: true
         sidebar_key: CONFIG
+  - path: /multicloud-service-manage
+    enable: true
+    sidebar_key: MULTICLOUD-SERVICE-MANAGE
+    children:
+      - path: service
+        enable: true
+        sidebar_key: SERVICE
+  - path: /multicloud-storage-manage
+    enable: true
+    sidebar_key: MULTICLOUD-STORAGE-MANAGE
+    children:
+      - path: configmap
+        enable: true
+        sidebar_key: CONFIGMAP
+      - path: secret
+        enable: true
+        sidebar_key: SECRET
   - path: /multicloud-policy-manage
     enable: true
     sidebar_key: MULTICLOUD-POLICY-MANAGE
