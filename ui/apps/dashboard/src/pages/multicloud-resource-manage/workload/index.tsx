@@ -44,6 +44,7 @@ import TagList from '@/components/tag-list';
 import { WorkloadKind } from '@/services/base.ts';
 import useNamespace from '@/hooks/use-namespace.ts';
 import useCluster, { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
+import { calculateDuration } from '@/utils/time.ts';
 
 type WorkloadPageProps = {
   kind: WorkloadKind;
@@ -82,6 +83,7 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
     kind: WorkloadKind.Unknown,
     namespace: '',
     name: '',
+    cluster: '',
   });
   const [showModal, toggleShowModal] = useToggle(false);
   const [editorState, setEditorState] = useState<{
@@ -102,7 +104,7 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
     {
       title: i18nInstance.t('89d19c60880d35c2bd88af0d9cc0497b', '负载名称'),
       key: 'workloadName',
-      width: 200,
+      width: 300,
       render: (_, r) => {
         return r.objectMeta.name;
       },
@@ -141,11 +143,14 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
       },
     },
     {
-      title: 'Created At',
-      key: 'createdat',
+      title: 'Age',
+      key: 'age',
       render: (_, r) => {
-        return new Date(r?.objectMeta?.creationTimestamp).toLocaleString()
+        return calculateDuration(r.objectMeta.creationTimestamp);
       },
+      width: 120,
+      defaultSortOrder: 'descend',
+      sorter: (a, b) => new Date(a.objectMeta.creationTimestamp).getTime() - new Date(b.objectMeta.creationTimestamp).getTime(),
     },
     {
       title: i18nInstance.t('2b6bc0f293f5ca01b006206c2535ccbc', '操作'),
@@ -163,6 +168,7 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
                   kind: r.typeMeta.kind as WorkloadKind,
                   name: r.objectMeta.name,
                   namespace: r.objectMeta.namespace,
+                  cluster: r.objectMeta.labels?.cluster || filter.selectedCluster.label,
                 });
               }}
             >
@@ -342,12 +348,14 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
         kind={drawerData.kind}
         name={drawerData.name}
         namespace={drawerData.namespace}
+        cluster={drawerData.cluster}
         onClose={() => {
           setDrawerData({
             open: false,
             kind: WorkloadKind.Unknown,
             namespace: '',
             name: '',
+            cluster: '',
           });
         }}
       />

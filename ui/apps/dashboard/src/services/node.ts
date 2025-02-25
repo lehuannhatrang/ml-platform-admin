@@ -15,36 +15,102 @@ limitations under the License.
 */
 
 import {
-    DataSelectQuery,
-    IResponse,
-    ObjectMeta,
-    Status,
-    TypeMeta,
-    convertDataSelectQuery,
-    karmadaClient,
-  } from './base';
-  import { ClusterOption } from '@/hooks/use-cluster';
-  
-  export interface Node {
-    objectMeta: ObjectMeta;
-    typeMeta: TypeMeta;
-    status: Status;
-  }
-  
-  export async function GetNodes(query: DataSelectQuery, cluster?: ClusterOption) {
-    const apiPath = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/node` : '/aggregated/node'; 
-    const resp = await karmadaClient.get<
-      IResponse<{
+  DataSelectQuery,
+  IResponse,
+  ObjectMeta,
+  Status,
+  TypeMeta,
+  convertDataSelectQuery,
+  karmadaClient,
+} from './base';
+import { ClusterOption } from '@/hooks/use-cluster';
+import { PodDetail } from './workload';
+
+export interface Node {
+  objectMeta: ObjectMeta;
+  typeMeta: TypeMeta;
+  status: Status;
+}
+
+export interface NodeEvent {
+  objectMeta: ObjectMeta;
+  typeMeta: TypeMeta;
+  message: string;
+  sourceComponent: string;
+  sourceHost: string;
+  object: string;
+  objectKind: string;
+  objectName: string;
+  objectNamespace: string;
+  count: number;
+  firstSeen: string;
+  lastSeen: string;
+  reason: string;
+  type: string;
+}
+
+
+export async function GetNodes(query: DataSelectQuery, cluster?: ClusterOption) {
+  const apiPath = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/node` : '/aggregated/node';
+  const resp = await karmadaClient.get<
+    IResponse<{
+      errors: string[];
+      listMeta: {
+        totalItems: number;
+      };
+      items: Node[];
+    }>
+  >(apiPath, {
+    params: convertDataSelectQuery(query),
+  });
+  return resp.data;
+}
+
+
+export async function GetNodeDetail(params: {
+  name: string;
+  clusterName: string;
+}) {
+  const { name, clusterName } = params;
+  const url = `/member/${clusterName}/node/${name}`;
+  const resp = await karmadaClient.get<
+    IResponse<
+      {
         errors: string[];
-        listMeta: {
-          totalItems: number;
-        };
-        items: Node[];
-      }>
-    >(apiPath, {
-      params: convertDataSelectQuery(query),
-    });
-    return resp.data;
-  }
-  
-  
+      } & Node
+    >
+  >(url);
+  return resp.data;
+}
+
+export async function GetNodeEvents(params: {
+  name: string;
+  clusterName: string;
+}) {
+  const { name, clusterName } = params;
+  const url = `/member/${clusterName}/node/${name}/event`;
+  const resp = await karmadaClient.get<
+    IResponse<{
+      errors: string[];
+      listMeta: {
+        totalItems: number;
+      };
+      events: NodeEvent[];
+    }>
+  >(url);
+  return resp.data;
+}
+
+export async function GetNodePods(params: {
+  name: string;
+  clusterName: string;
+}) {
+  const { name, clusterName } = params;
+  const url = `/member/${clusterName}/node/${name}/pod`;
+  const resp = await karmadaClient.get<
+    IResponse<{
+      items: PodDetail[];
+    }>
+  >(url);
+  return resp.data;
+}

@@ -29,7 +29,7 @@ import { ClusterOption } from '@/hooks/use-cluster';
 export interface DeploymentWorkload {
   objectMeta: ObjectMeta;
   typeMeta: TypeMeta;
-  pods: Pods;
+  pods: PodStatus;
   containerImages: string[];
   initContainerImages: any;
 }
@@ -37,13 +37,13 @@ export interface DeploymentWorkload {
 export interface StatefulsetWorkload {
   objectMeta: ObjectMeta;
   typeMeta: TypeMeta;
-  pods: Pods;
+  pods: PodStatus;
   containerImages: string[];
   initContainerImages: any;
 }
 export type Workload = DeploymentWorkload | StatefulsetWorkload;
 
-export interface Pods {
+export interface PodStatus {
   current: number;
   desired: number;
   running: number;
@@ -51,6 +51,18 @@ export interface Pods {
   failed: number;
   succeeded: number;
   warnings: any[];
+}
+
+export type PodDetail = {
+  metadata: ObjectMeta;
+  spec: any;
+  status: any;
+  hostIP: string;
+  podIP?: string;
+  podIPs?: any[];
+  startTime?: string;
+  containerStatuses?: any[];
+  qosClass?: string;
 }
 
 export interface WorkloadStatus {
@@ -93,19 +105,46 @@ export async function GetWorkloads(params: {
   return resp.data;
 }
 
-export interface WorkloadDetail {
-  objectMeta: ObjectMeta;
-  typeMeta: TypeMeta;
-  pods: Pods;
-  containerImages: string[];
-  initContainerImages: any;
-  selector: Selector;
-  statusInfo: WorkloadStatusInfo;
-  conditions: any[];
-  strategy: string;
-  minReadySeconds: number;
-  rollingUpdateStrategy: RollingUpdateStrategy;
-  revisionHistoryLimit: number;
+export type ContainerStatuses = {
+  name: string;
+  state: {
+    running: {
+      startedAt: string
+    }
+  };
+  lastState: any;
+  ready: boolean;
+  restartCount: number;
+  image: string;
+  imageID: string;
+  containerID: string;
+  started: boolean
+}
+
+export type WorkloadDetail = {
+  objectMeta?: ObjectMeta;
+  typeMeta?: TypeMeta;
+  pods?: PodStatus;
+  containerImages?: string[];
+  initContainerImages?: any;
+  selector?: Selector;
+  statusInfo?: WorkloadStatusInfo;
+  conditions?: any[];
+  strategy?: string;
+  minReadySeconds?: number;
+  rollingUpdateStrategy?: RollingUpdateStrategy;
+  revisionHistoryLimit?: number;
+  metadata?: ObjectMeta;
+  spec?: any;
+  status?: {
+    phase: string;
+    conditions: any[];
+    hostIP: string;
+    podIP: string;
+    podIPs: any[];
+    startTime: string;
+    containerStatuses?: ContainerStatuses[];
+  }
 }
 
 export interface WorkloadStatusInfo {
@@ -116,13 +155,14 @@ export interface WorkloadStatusInfo {
 }
 
 export async function GetWorkloadDetail(params: {
-  namespace?: string;
+  namespace: string;
   name: string;
   kind: WorkloadKind;
+  cluster: string;
 }) {
   // /deployment/:namespace/:deployment
-  const { kind, name, namespace } = params;
-  const url = `/${kind}/${namespace}/${name}`;
+  const { kind, name, namespace, cluster } = params;
+  const url = `/member/${cluster}/${kind}/${namespace}/${name}`;
   const resp = await karmadaClient.get<
     IResponse<
       {
@@ -130,7 +170,14 @@ export async function GetWorkloadDetail(params: {
       } & WorkloadDetail
     >
   >(url);
-  return resp.data;
+
+  const data = resp.data;
+
+  if (!data.data?.objectMeta && data.data?.metadata) {
+    data.data.objectMeta = data.data.metadata;
+  }
+
+  return data;
 }
 
 export interface WorkloadEvent {
@@ -154,9 +201,10 @@ export async function GetWorkloadEvents(params: {
   namespace: string;
   name: string;
   kind: WorkloadKind;
+  cluster: string;
 }) {
-  const { kind, name, namespace } = params;
-  const url = `/${kind}/${namespace}/${name}/event`;
+  const { kind, name, namespace, cluster } = params;
+  const url = `/member/${cluster}/${kind}/${namespace}/${name}/event`;
   const resp = await karmadaClient.get<
     IResponse<{
       errors: string[];

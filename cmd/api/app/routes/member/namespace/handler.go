@@ -24,6 +24,8 @@ import (
 	"github.com/karmada-io/dashboard/pkg/client"
 	"github.com/karmada-io/dashboard/pkg/resource/event"
 	ns "github.com/karmada-io/dashboard/pkg/resource/namespace"
+	v1 "github.com/karmada-io/dashboard/cmd/api/app/types/api/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func handleGetMemberNamespace(c *gin.Context) {
@@ -63,9 +65,45 @@ func handleGetMemberNamespaceEvents(c *gin.Context) {
 	common.Success(c, result)
 }
 
+func handleCreateNamespace(c *gin.Context) {
+	memberClient := client.InClusterClientForMemberCluster(c.Param("clustername"))
+
+	createNamespaceRequest := new(v1.CreateNamesapceRequest)
+
+	if err := c.ShouldBind(&createNamespaceRequest); err != nil {
+		common.Fail(c, err)
+		return
+	}
+	spec := &ns.NamespaceSpec{
+		Name: createNamespaceRequest.Name,
+	}
+
+	if err := ns.CreateNamespace(spec, memberClient); err != nil {
+		common.Fail(c, err)
+		return
+	}
+	common.Success(c, "ok")
+}
+
+func handleDeleteNamespace(c *gin.Context) {
+	memberClient := client.InClusterClientForMemberCluster(c.Param("clustername"))
+	namespaceName := c.Param("name")
+
+	// Delete the namespace
+	err := memberClient.CoreV1().Namespaces().Delete(c, namespaceName, metav1.DeleteOptions{})
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
+
+	common.Success(c, "ok")
+}
+
 func init() {
 	r := router.MemberV1()
 	r.GET("/namespace", handleGetMemberNamespace)
 	r.GET("/namespace/:name", handleGetMemberNamespaceDetail)
 	r.GET("/namespace/:name/event", handleGetMemberNamespaceEvents)
+	r.POST("/namespace", handleCreateNamespace)
+	r.DELETE("/namespace/:name", handleDeleteNamespace)
 }

@@ -30,18 +30,17 @@ import TagList, { convertLabelToTags } from '@/components/tag-list';
 import { useToggle, useWindowSize } from '@uidotdev/usehooks';
 
 import { DataSelectQuery } from '@/services/base.ts';
-import { DeleteResource } from '@/services/unstructured';
-import { GetNamespaces } from '@/services/namespace.ts';
+import { DeleteNamespace, GetNamespaces } from '@/services/namespace.ts';
 import { Icons } from '@/components/icons';
 import type { Namespace } from '@/services/namespace.ts';
 import NewNamespaceModal from './new-namespace-modal.tsx';
 import Panel from '@/components/panel';
-import dayjs from 'dayjs';
 import i18nInstance from '@/utils/i18n';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useCluster } from '@/hooks';
 import { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster.ts';
+import { calculateDuration } from '@/utils/time.ts';
 
 const NamespacePage = () => {
   const [filter, setFilter] = useState<{
@@ -95,32 +94,21 @@ const NamespacePage = () => {
       ),
     },
     {
-      title: i18nInstance.t(
-        '1d5fc011c19d35d08186afc4bad14be9',
-        '是否跳过自动调度',
-      ),
-      key: 'skipAutoPropagation',
-      render: (_, r) => {
-        return r.skipAutoPropagation ? (
-          <Tag color="blue">yes</Tag>
-        ) : (
-          <Tag color="purple">no</Tag>
-        );
-      },
-    },
-    {
       title: i18nInstance.t('e4b51d5cd0e4f199e41c25be1c7591d3', '运行状态'),
       key: 'phase',
-      dataIndex: 'phase',
+      render: (_, r) => {
+        return <Tag color={r.phase === 'Active' ? 'blue' : 'orange'}>{r.phase}</Tag>
+      },
     },
     {
-      title: i18nInstance.t('eca37cb0726c51702f70c486c1c38cf3', '创建时间'),
+      title: 'Age',
       key: 'creationTimestamp',
       render: (_, r) => {
-        return dayjs(r.objectMeta.creationTimestamp).format(
-          'YYYY/MM/DD HH:mm:ss',
-        );
+        return calculateDuration(r.objectMeta.creationTimestamp);
       },
+      width: 120,
+      defaultSortOrder: 'descend',
+      sorter: (a, b) => new Date(a.objectMeta.creationTimestamp).getTime() - new Date(b.objectMeta.creationTimestamp).getTime(),
     },
     {
       title: i18nInstance.t('2b6bc0f293f5ca01b006206c2535ccbc', '操作'),
@@ -129,21 +117,15 @@ const NamespacePage = () => {
       render: (_, r) => {
         return (
           <Space.Compact>
-            <Button size={'small'} type="link" disabled={true}>
-              {i18nInstance.t('607e7a4f377fa66b0b28ce318aab841f', '查看')}
-            </Button>
-            <Button size={'small'} type="link" disabled={true}>
-              {i18nInstance.t('95b351c86267f3aedf89520959bce689', '编辑')}
-            </Button>
             <Popconfirm
               placement="topRight"
               title={i18nInstance.t('b410105ce63c464d55d0b139912476e1', {
                 name: r.objectMeta.name,
               })}
               onConfirm={async () => {
-                const ret = await DeleteResource({
-                  kind: 'namespace',
+                const ret = await DeleteNamespace({
                   name: r.objectMeta.name,
+                  cluster: r.objectMeta.labels?.cluster || filter.selectedCluster.value,
                 });
                 if (ret.code === 200) {
                   await messageApi.success(

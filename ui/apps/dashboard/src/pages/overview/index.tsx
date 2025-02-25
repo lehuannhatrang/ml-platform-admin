@@ -18,6 +18,7 @@ import {
   Col,
   Row,
   Spin,
+  Flex
 } from 'antd';
 
 import { GaugeChart } from '@/components/chart';
@@ -27,6 +28,7 @@ import Panel from '@/components/panel';
 import i18nInstance from '@/utils/i18n';
 import { useQuery } from '@tanstack/react-query';
 import { GetClusters } from '@/services';
+import { Icons } from '@/components/icons';
 
 const Overview = () => {
   const { data, isLoading } = useQuery({
@@ -45,8 +47,10 @@ const Overview = () => {
     },
   });
 
+  const grafanaUrl = 'http://192.168.28.135:31000/grafana/d/W2gX2zHVk/demo-dashboard?orgId=1&from=2025-02-21T09:22:42.348Z&to=2025-02-21T10:22:42.348Z&var-service=frontend&theme=light';
+
   const { allocatedCPU, totalCPU } = data?.memberClusterStatus.cpuSummary || {};
-  const {allocatedMemory, totalMemory} = data?.memberClusterStatus.memorySummary || {};
+  const { allocatedMemory, totalMemory } = data?.memberClusterStatus.memorySummary || {};
   const allocatedMemoryGiB = allocatedMemory && allocatedMemory / 8 / 1024 / 1024;
   const totalMemoryGiB = totalMemory && totalMemory / 8 / 1024 / 1024;
 
@@ -62,17 +66,15 @@ const Overview = () => {
               <Col span={8}>
                 <InfoCard
                   label={'Node'}
-                  value={`${
-                    data?.memberClusterStatus.nodeSummary.readyNum || '-'
-                  }/${data?.memberClusterStatus.nodeSummary.totalNum || '-'}`}
+                  value={`${data?.memberClusterStatus.nodeSummary.readyNum || '-'
+                    }/${data?.memberClusterStatus.nodeSummary.totalNum || '-'}`}
                 />
               </Col>
               <Col span={8}>
                 <InfoCard
                   label={'Pod'}
-                  value={`${
-                    data?.memberClusterStatus.podSummary.allocatedPod || '-'
-                  }/${data?.memberClusterStatus.podSummary.totalPod || '-'}`}
+                  value={`${data?.memberClusterStatus.podSummary.allocatedPod || '-'
+                    }/${data?.memberClusterStatus.podSummary.totalPod || '-'}`}
                 />
               </Col>
             </Row>
@@ -181,8 +183,18 @@ const Overview = () => {
           </Col>
         </Row>
 
-        <SectionCard label="Cluster metrics">
-          <iframe src="http://localhost:18080/grafana/public-dashboards/03ac7f4ef57c4c8289757183d7b16542" width="800" height="600"></iframe>
+        <SectionCard label={(
+          <Flex align='center'>
+            <p style={{
+              fontSize: '24px'
+            }} className='mr-4' >Cluster metrics</p>
+            <a href={grafanaUrl} target='_blank' rel="noreferrer" style={{color: '#1890ff', display: 'flex', fontSize: 16}}>
+              Grafana
+              <Icons.newTab style={{height: 20}} />
+            </a>
+          </Flex>
+        )}>
+          <iframe src={`${grafanaUrl}&kiosk`} width="100%" height="auto" style={{ minHeight: 1800, fontSize: '16px' }}></iframe>
         </SectionCard>
       </Panel>
     </Spin>

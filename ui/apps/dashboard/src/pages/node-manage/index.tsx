@@ -27,7 +27,6 @@ import {
   Button,
   Input,
   message,
-  Popconfirm,
   Flex,
   Select,
 } from 'antd';
@@ -35,6 +34,7 @@ import { useState } from 'react';
 import { useCluster } from '@/hooks';
 import { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
 import { Node } from '@/services/node';
+import NodeDetailDrawer, { NodeDetailDrawerProps } from './node-detail-drawer';
 
 const NodeManagePage = () => {
   const [filter, setFilter] = useState<{
@@ -51,6 +51,13 @@ const NodeManagePage = () => {
       const ret = await GetNodes({}, filter.selectedCluster);
       return ret.data;
     },
+  });
+  const [nodeDetailData, setNodeDetailData] = useState<
+    Omit<NodeDetailDrawerProps, 'onClose'>
+  >({
+    open: false,
+    name: '',
+    clusterName: '',
   });
 
   const { clusterOptions, isClusterDataLoading } = useCluster({});
@@ -149,28 +156,15 @@ const NodeManagePage = () => {
       render: (_, r) => {
         return (
           <Space.Compact>
-            <Button size={'small'} type="link">
+            <Button size={'small'} type="link" onClick={() => {
+              setNodeDetailData({
+                open: true,
+                name: r.objectMeta.name,
+                clusterName: r.objectMeta.annotations?.['cluster.x-k8s.io/cluster-name'] || filter.selectedCluster.label,
+              })
+            }}>
               {i18nInstance.t('607e7a4f377fa66b0b28ce318aab841f', '查看')}
             </Button>
-            <Popconfirm
-              placement="topRight"
-              title={`Do you want to delete ${r.objectMeta.name} node?`}
-              onConfirm={async () => {
-                //
-              }}
-              okText={i18nInstance.t(
-                'e83a256e4f5bb4ff8b3d804b5473217a',
-                '确认',
-              )}
-              cancelText={i18nInstance.t(
-                '625fb26b4b3340f7872b411f401e754c',
-                '取消',
-              )}
-            >
-              <Button size={'small'} type="link" danger>
-                {i18nInstance.t('2f4aaddde33c9b93c36fd2503f3d122b', '删除')}
-              </Button>
-            </Popconfirm>
           </Space.Compact>
         );
       },
@@ -210,6 +204,19 @@ const NodeManagePage = () => {
       />
 
       {messageContextHolder}
+      
+      <NodeDetailDrawer
+        open={nodeDetailData.open}
+        name={nodeDetailData.name}
+        clusterName={nodeDetailData.clusterName}
+        onClose={() => {
+          setNodeDetailData({
+            open: false,
+            name: '',
+            clusterName: '',
+          });
+        }}
+      />
     </Panel>
   );
 };

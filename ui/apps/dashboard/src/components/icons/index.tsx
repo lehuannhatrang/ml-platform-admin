@@ -55,7 +55,8 @@ import {
   ChevronDown,
   Cpu,
   Server,
-  ArrowUpDown
+  ArrowUpDown,
+  SquareArrowOutUpRight
 } from 'lucide-react';
 
 export type Icon = LucideIcon;
@@ -83,6 +84,7 @@ export const Icons = {
   down: ChevronDown,
   serviceDiscovery: ArrowUpDown,
   storage: Database,
+  newTab: SquareArrowOutUpRight,
   gitHub: ({ ...props }: LucideProps) => (
     <svg
       aria-hidden="true"

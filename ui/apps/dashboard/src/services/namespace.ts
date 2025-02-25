@@ -58,4 +58,23 @@ export async function CreateNamespace(params: {
   return resp.data;
 }
 
-export async function DeleteNamespace() {}
+export async function CreateClusterNamespace(params: {
+  name: string;
+  cluster: string;
+}) {
+  const resp = await karmadaClient.post<IResponse<string>>(
+    `/member/${params.cluster}/namespace`,
+    params,
+  );
+  return resp.data;
+}
+
+export async function DeleteNamespace(params: {
+  name: string;
+  cluster: string;
+}) {
+  const resp = await karmadaClient.delete<IResponse<string>>(
+    `/member/${params.cluster}/namespace/${params.name}`
+  );
+  return resp.data;
+}

@@ -29,8 +29,8 @@ export const DEFAULT_CLUSTER_OPTION: ClusterOption = {
     value: 'ALL',
 };
 
-const useCluster = (props: { clusterFilter?: DataSelectQuery }) => {
-    const { clusterFilter = {} } = props;
+const useCluster = (props: { clusterFilter?: DataSelectQuery, allowSelectAll?: boolean }) => {
+    const { clusterFilter = {}, allowSelectAll= true } = props;
     const {
         data: clusterData,
         isLoading,
@@ -45,7 +45,7 @@ const useCluster = (props: { clusterFilter?: DataSelectQuery }) => {
     const clusterOptions: ClusterOption[] = useMemo(() => {
         if (!clusterData?.clusters) return [];
         return [
-            DEFAULT_CLUSTER_OPTION, 
+            ...(allowSelectAll ? [DEFAULT_CLUSTER_OPTION] : []),
             ...clusterData.clusters.map((item) => {
             return {
                 label: item.objectMeta.name,

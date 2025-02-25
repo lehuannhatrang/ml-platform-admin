@@ -16,12 +16,13 @@ limitations under the License.
 
 import i18nInstance from '@/utils/i18n';
 import { FC, useEffect, useState } from 'react';
-import { Form, Modal, Select } from 'antd';
+import { Form, Modal, Select, Flex } from 'antd';
 import Editor from '@monaco-editor/react';
 import { parse } from 'yaml';
 import _ from 'lodash';
 import { CreateResource, PutResource } from '@/services/unstructured';
 import { IResponse, WorkloadKind } from '@/services/base.ts';
+import { useCluster } from '@/hooks';
 export interface NewWorkloadEditorModalProps {
   mode: 'create' | 'edit';
   open: boolean;
@@ -41,6 +42,9 @@ const NewWorkloadEditorModal: FC<NewWorkloadEditorModalProps> = (props) => {
   function handleEditorChange(value: string | undefined) {
     setContent(value || '');
   }
+
+  const { clusterOptions, isClusterDataLoading } = useCluster({ allowSelectAll: false });
+
   return (
     <Modal
       title={
@@ -89,42 +93,61 @@ const NewWorkloadEditorModal: FC<NewWorkloadEditorModalProps> = (props) => {
         setContent('');
       }}
     >
-      <Form.Item
-        label={i18nInstance.t(
-          '0a3e7cdadc44fb133265152268761abc',
-          '工作负载类型',
-        )}
-      >
-        <Select
-          value={kind}
-          disabled
-          options={[
-            {
-              label: 'Deployment',
-              value: WorkloadKind.Deployment,
-            },
-            {
-              label: 'Statefulset',
-              value: WorkloadKind.Statefulset,
-            },
-            {
-              label: 'Daemonset',
-              value: WorkloadKind.Daemonset,
-            },
-            {
-              label: 'Cronjob',
-              value: WorkloadKind.Cronjob,
-            },
-            {
-              label: 'Job',
-              value: WorkloadKind.Job,
-            },
-          ]}
-          style={{
-            width: 200,
-          }}
-        />
-      </Form.Item>
+      <Flex>
+
+        <Form.Item
+          label={i18nInstance.t(
+            '0a3e7cdadc44fb133265152268761abc',
+            '工作负载类型',
+          )}
+        >
+          <Select
+            value={kind}
+            disabled
+            options={[
+              {
+                label: 'Deployment',
+                value: WorkloadKind.Deployment,
+              },
+              {
+                label: 'Statefulset',
+                value: WorkloadKind.Statefulset,
+              },
+              {
+                label: 'Daemonset',
+                value: WorkloadKind.Daemonset,
+              },
+              {
+                label: 'Cronjob',
+                value: WorkloadKind.Cronjob,
+              },
+              {
+                label: 'Job',
+                value: WorkloadKind.Job,
+              },
+            ]}
+            style={{
+              width: 200,
+            }}
+          />
+        </Form.Item>
+        <Form.Item
+          label='Cluster'
+          name="cluster"
+          required
+          rules={[{ required: true }]}
+          className='ml-8'
+        >
+          <Select
+            options={clusterOptions.map(item => ({ label: item.label, value: item.label }))}
+            loading={isClusterDataLoading}
+            showSearch
+            style={{
+              width: 200,
+            }}
+          />
+        </Form.Item>
+      </Flex>
       <Editor
         height="600px"
         defaultLanguage="yaml"

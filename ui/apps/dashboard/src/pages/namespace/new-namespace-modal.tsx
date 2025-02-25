@@ -16,9 +16,10 @@ limitations under the License.
 
 import i18nInstance from '@/utils/i18n';
 import { FC } from 'react';
-import { Modal, Form, Radio, Input } from 'antd';
-import { CreateNamespace } from '@/services/namespace.ts';
+import { Modal, Form, Select, Input } from 'antd';
+import { CreateClusterNamespace } from '@/services/namespace.ts';
 import { IResponse } from '@/services/base.ts';
+import { useCluster } from '@/hooks';
 interface NewNamespaceModalProps {
   open?: boolean;
   onOk?: (ret: IResponse<string>) => Promise<void>;
@@ -29,8 +30,10 @@ const NewNamespaceModal: FC<NewNamespaceModalProps> = (props) => {
   const { open, onOk, onCancel } = props;
   const [form] = Form.useForm<{
     name: string;
-    skipAutoPropagation: boolean;
+    cluster: string;
   }>();
+  
+  const { clusterOptions, isClusterDataLoading } = useCluster({allowSelectAll: false});
 
   return (
     <Modal
@@ -42,7 +45,8 @@ const NewNamespaceModal: FC<NewNamespaceModalProps> = (props) => {
       onOk={async () => {
         try {
           const submitData = await form.validateFields();
-          const ret = await CreateNamespace(submitData);
+          console.log({submitData})
+          const ret = await CreateClusterNamespace(submitData);
           if (ret.code === 200) {
             form.resetFields();
           }
@@ -84,22 +88,16 @@ const NewNamespaceModal: FC<NewNamespaceModalProps> = (props) => {
           />
         </Form.Item>
         <Form.Item
-          label={i18nInstance.t(
-            'd41f6609ddbfa15fb95074a463f3b71a',
-            '是否跳过自动分发',
-          )}
-          name="skipAutoPropagation"
+          label='Cluster'
+          name="cluster"
           required
           rules={[{ required: true }]}
         >
-          <Radio.Group>
-            <Radio value={true}>
-              {i18nInstance.t('0a60ac8f02ccd2cf723f927284877851', '是')}
-            </Radio>
-            <Radio value={false}>
-              {i18nInstance.t('c9744f45e76d885ae1c74d4f4a934b2e', '否')}
-            </Radio>
-          </Radio.Group>
+          <Select
+            options={clusterOptions.map(item => ({label: item.label, value: item.label}))}
+            loading={isClusterDataLoading}
+            showSearch
+          />
         </Form.Item>
       </Form>
     </Modal>
