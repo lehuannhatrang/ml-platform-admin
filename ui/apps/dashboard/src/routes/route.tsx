@@ -45,7 +45,7 @@ import ClusterManage from '@/pages/cluster-manage';
 import NodeManage from '@/pages/node-manage';
 import Login from '@/pages/login';
 import { Icons } from '@/components/icons';
-import { WorkloadKind } from '@/services/base';
+import { ServiceKind, WorkloadKind } from '@/services/base';
 
 export interface IRouteObjectHandle {
   icon?: ReactNode;
@@ -191,13 +191,20 @@ export function getRoutes() {
           children: [
             {
               path: 'service',
-              element: <MultiCloudService />,
+              element: <MultiCloudService kind={ServiceKind.Service} />,
               handle: {
                 sidebarKey: 'SERVICE',
                 sidebarName: i18nInstance.t('4653569c7943335f62caa11e38d48aa0'),
               },
             },
-
+            {
+              path: 'ingress',
+              element: <MultiCloudService kind={ServiceKind.Ingress} />,
+              handle: {
+                sidebarKey: 'INGRESS',
+                sidebarName: 'Ingress',
+              },
+            },
           ]
         },
         {

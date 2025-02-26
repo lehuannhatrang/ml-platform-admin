@@ -16,7 +16,7 @@ limitations under the License.
 
 import i18nInstance from '@/utils/i18n';
 import Panel from '@/components/panel';
-import { App, Button, Input, Segmented, Select } from 'antd';
+import { App, Button, Input, Select, Flex } from 'antd';
 import { ServiceKind } from '@/services/base';
 import { Icons } from '@/components/icons';
 import { useCallback, useState } from 'react';
@@ -27,16 +27,23 @@ import { stringify } from 'yaml';
 import IngressTable from '@/pages/multicloud-resource-manage/service/components/ingress-table';
 import useNamespace from '@/hooks/use-namespace.ts';
 import { useQueryClient } from '@tanstack/react-query';
-import { DeleteResource } from '@/services/unstructured.ts';
-const ServicePage = () => {
+import { DeleteMemberResource, DeleteResource } from '@/services/unstructured.ts';
+import { useCluster } from '@/hooks';
+import { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
+
+export type ServicePageProps = {
+  kind: ServiceKind;
+}
+
+const ServicePage = ({ kind }: ServicePageProps) => {
   const [filter, setFilter] = useState<{
     selectedWorkSpace: string;
     searchText: string;
-    kind: ServiceKind;
+    selectedCluster: ClusterOption;
   }>({
+    selectedCluster: DEFAULT_CLUSTER_OPTION,
     selectedWorkSpace: '',
     searchText: '',
-    kind: ServiceKind.Service,
   });
   const { nsOptions, isNsDataLoading } = useNamespace({});
   const size = useWindowSize();
@@ -44,56 +51,81 @@ const ServicePage = () => {
   const [editorState, setEditorState] = useState<{
     mode: 'create' | 'edit' | 'detail';
     content: string;
+    cluster: string;
   }>({
     mode: 'create',
     content: '',
+    cluster: '',
   });
   const [showModal, toggleShowModal] = useToggle(false);
   const resetEditorState = useCallback(() => {
     setEditorState({
       mode: 'create',
       content: '',
+      cluster: '',
     });
   }, []);
   const { message: messageApi } = App.useApp();
   const queryClient = useQueryClient();
+
+  const { clusterOptions, isClusterDataLoading } = useCluster({});
+
   return (
     <Panel>
       <div className={'flex flex-row justify-between mb-4'}>
-        <div>
-          <Segmented
-            style={{
-              marginBottom: 8,
-            }}
-            options={[
-              {
-                label: 'Service',
-                value: ServiceKind.Service,
-              },
-              {
-                label: 'Ingress',
-                value: ServiceKind.Ingress,
-              },
-            ]}
-            value={filter.kind}
-            onChange={(value) => {
-              // reset filter when switch workload kind
-              if (value !== filter.kind) {
+        <Flex>
+          <Flex className='mr-4'>
+            <h3 className={'leading-[32px]'}>
+              {i18nInstance.t('85fe5099f6807dada65d274810933389')}：
+            </h3>
+            <Select
+              options={clusterOptions}
+              className={'min-w-[200px]'}
+              value={filter.selectedCluster?.value}
+              loading={isClusterDataLoading}
+              showSearch
+              onChange={(_v: string, option: ClusterOption | ClusterOption[]) => {
                 setFilter({
                   ...filter,
-                  kind: value,
-                  selectedWorkSpace: '',
-                  searchText: '',
+                  selectedCluster: option as ClusterOption,
                 });
-              } else {
+              }}
+            />
+          </Flex>
+          <Flex className='mr-4'>
+            <h3 className={'leading-[32px] mr-2'}>
+              {i18nInstance.t('280c56077360c204e536eb770495bc5f', '命名空间')}:
+            </h3>
+            <Select
+              options={nsOptions}
+              className={'min-w-[200px]'}
+              value={filter.selectedWorkSpace}
+              loading={isNsDataLoading}
+              showSearch
+              allowClear
+              onChange={(v) => {
                 setFilter({
                   ...filter,
-                  kind: value,
+                  selectedWorkSpace: v,
                 });
-              }
+              }}
+            />
+          </Flex>
+          <Input.Search
+            placeholder={i18nInstance.t(
+              'cfaff3e369b9bd51504feb59bf0972a0',
+              '按命名空间搜索',
+            )}
+            className={'w-[300px]'}
+            onPressEnter={(e) => {
+              const input = e.currentTarget.value;
+              setFilter({
+                ...filter,
+                searchText: input,
+              });
             }}
           />
-        </div>
+        </Flex>
         <Button
           type={'primary'}
           icon={<Icons.add width={16} height={16} />}
@@ -105,64 +137,27 @@ const ServicePage = () => {
           {i18nInstance.t('c7961c290ec86485d8692f3c09b4075b', '新增服务')}
         </Button>
       </div>
-      <div className={'flex flex-row space-x-4 mb-4'}>
-        <h3 className={'leading-[32px]'}>
-          {i18nInstance.t('280c56077360c204e536eb770495bc5f', '命名空间')}
-        </h3>
-        <Select
-          options={nsOptions}
-          className={'min-w-[200px]'}
-          value={filter.selectedWorkSpace}
-          loading={isNsDataLoading}
-          showSearch
-          allowClear
-          onChange={(v) => {
-            setFilter({
-              ...filter,
-              selectedWorkSpace: v,
-            });
-          }}
-        />
-        <Input.Search
-          placeholder={i18nInstance.t(
-            'cfaff3e369b9bd51504feb59bf0972a0',
-            '按命名空间搜索',
-          )}
-          className={'w-[300px]'}
-          onPressEnter={(e) => {
-            const input = e.currentTarget.value;
-            setFilter({
-              ...filter,
-              searchText: input,
-            });
-          }}
-        />
-      </div>
-      {filter.kind === ServiceKind.Service && (
+      {kind === ServiceKind.Service && (
         <ServiceTable
+          clusterOption={filter.selectedCluster}
           labelTagNum={labelTagNum}
           searchText={filter.searchText}
           selectedWorkSpace={filter.selectedWorkSpace}
-          onViewServiceContent={(r) => {
+          onEditServiceContent={(r, clusterName) => {
             setEditorState({
-              mode: 'detail',
+              mode: 'edit', 
               content: stringify(r),
+              cluster: clusterName,
             });
             toggleShowModal(true);
           }}
-          onEditServiceContent={(r) => {
-            setEditorState({
-              mode: 'edit',
-              content: stringify(r),
-            });
-            toggleShowModal(true);
-          }}
-          onDeleteServiceContent={async (r) => {
+          onDeleteServiceContent={async (r, clusterName) => {
             try {
-              const ret = await DeleteResource({
+              const ret = await DeleteMemberResource({
                 kind: r.typeMeta.kind,
                 name: r.objectMeta.name,
                 namespace: r.objectMeta.namespace,
+                cluster: clusterName,
               });
               if (ret.code !== 200) {
                 await messageApi.error(
@@ -182,15 +177,16 @@ const ServicePage = () => {
           }}
         />
       )}
-      {filter.kind === ServiceKind.Ingress && (
+      {kind === ServiceKind.Ingress && (
         <IngressTable
-          labelTagNum={labelTagNum}
+          clusterOption={filter.selectedCluster}
           searchText={filter.searchText}
           selectedWorkSpace={filter.selectedWorkSpace}
-          onViewIngressContent={(r) => {
+          onEditIngressContent={(r, clusterName) => {
             setEditorState({
               mode: 'edit',
               content: stringify(r),
+              cluster: clusterName,
             });
             toggleShowModal(true);
           }}
@@ -221,6 +217,7 @@ const ServicePage = () => {
       )}
 
       <ServiceEditorModal
+        cluster={editorState.cluster}
         mode={editorState.mode}
         open={showModal}
         serviceContent={editorState.content}
@@ -230,16 +227,16 @@ const ServicePage = () => {
               editorState.mode === 'edit'
                 ? i18nInstance.t('55aa6366c0d09a392d8acf54c4c4b837', '更新成功')
                 : i18nInstance.t(
-                    '04a691b377c91da599d5b4b62b0cb114',
-                    '创建成功',
-                  ),
+                  '04a691b377c91da599d5b4b62b0cb114',
+                  '创建成功',
+                ),
             );
             toggleShowModal(false);
             resetEditorState();
             // invalidate react query
             await queryClient.invalidateQueries({
               queryKey: [
-                filter.kind === ServiceKind.Service
+                kind === ServiceKind.Service
                   ? 'GetServices'
                   : 'GetIngress',
                 filter.selectedWorkSpace,
@@ -251,9 +248,9 @@ const ServicePage = () => {
               editorState.mode === 'edit'
                 ? i18nInstance.t('930442e2f423436f9db3d8e91f648e93', '更新失败')
                 : i18nInstance.t(
-                    'a889286a51f3adab3cfb6913f2b0ac2e',
-                    '创建失败',
-                  ),
+                  'a889286a51f3adab3cfb6913f2b0ac2e',
+                  '创建失败',
+                ),
             );
           }
         }}
@@ -261,7 +258,7 @@ const ServicePage = () => {
           resetEditorState();
           toggleShowModal(false);
         }}
-        kind={filter.kind}
+        kind={kind}
       />
     </Panel>
   );

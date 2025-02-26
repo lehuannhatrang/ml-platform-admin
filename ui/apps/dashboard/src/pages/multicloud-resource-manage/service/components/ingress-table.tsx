@@ -15,32 +15,64 @@ limitations under the License.
 */
 
 import i18nInstance from '@/utils/i18n';
-import { Button, Popconfirm, Space, Table, TableColumnProps, Tag } from 'antd';
+import { Button, Popconfirm, Space, Table, TableColumnProps } from 'antd';
 import {
-  extractPropagationPolicy,
   GetIngress,
   Ingress,
 } from '@/services/service.ts';
-import TagList from '@/components/tag-list';
 import { FC } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { GetResource } from '@/services/unstructured.ts';
+import { ClusterOption } from '@/hooks/use-cluster';
+import { calculateDuration } from '@/utils/time';
+import { GetMemberResource } from '@/services/unstructured';
+
 interface ServiceTableProps {
-  labelTagNum?: number;
   selectedWorkSpace: string;
   searchText: string;
-  onViewIngressContent: (r: any) => void;
-  onDeleteIngressContent: (r: Ingress) => void;
+  onEditIngressContent: (r: Ingress, clusterName: string) => void;
+  onDeleteIngressContent: (r: Ingress, clusterName: string) => void;
+  clusterOption: ClusterOption;
 }
 const IngressTable: FC<ServiceTableProps> = (props) => {
   const {
-    labelTagNum,
     selectedWorkSpace,
     searchText,
-    onViewIngressContent,
+    onEditIngressContent,
     onDeleteIngressContent,
+    clusterOption,
   } = props;
+  
+  const { data, isLoading } = useQuery({
+    queryKey: ['GetIngress',  clusterOption.value, selectedWorkSpace, searchText],
+    queryFn: async () => {
+      const services = await GetIngress({
+        namespace: selectedWorkSpace,
+        keyword: searchText,
+        cluster: clusterOption,
+      });
+      return services.data || {};
+    },
+    refetchInterval: 5000,
+  });
+
   const columns: TableColumnProps<Ingress>[] = [
+    {
+      title: i18nInstance.t('d7ec2d3fea4756bc1642e0f10c180cf5', '名称'),
+      key: 'ingressName',
+      width: 300,
+      render: (_, r) => {
+        return r.objectMeta.name;
+      },
+    },
+    ...(clusterOption.value === 'ALL' ? [{
+      title: 'Cluster',
+      key: 'cluster',
+      onFilter: (value: React.Key | boolean, record: Ingress) => record.objectMeta.labels?.cluster === value,
+      width: 100,
+      render: (_: any, r: Ingress) => {
+        return r.objectMeta.labels?.cluster || '-';
+      },
+    }] : []),
     {
       title: i18nInstance.t('a4b28a416f0b6f3c215c51e79e517298', '命名空间'),
       key: 'namespaceName',
@@ -50,46 +82,22 @@ const IngressTable: FC<ServiceTableProps> = (props) => {
       },
     },
     {
-      title: i18nInstance.t('d7ec2d3fea4756bc1642e0f10c180cf5', '名称'),
-      key: 'ingressName',
-      width: 300,
+      title: 'LoadBalancer',
+      key: 'loadBalancer',
+      width: 200,
       render: (_, r) => {
-        return r.objectMeta.name;
+        return r.endpoints.map(e => e.host).join(', ')
       },
     },
     {
-      title: i18nInstance.t('1f7be0a924280cd098db93c9d81ecccd', '标签信息'),
-      key: 'labelName',
-      align: 'left',
-      width: '30%',
+      title: 'Age',
+      key: 'age',
       render: (_, r) => {
-        if (!r?.objectMeta?.labels) {
-          return '-';
-        }
-        const params = Object.keys(r.objectMeta.labels).map((key) => {
-          return {
-            key: `${r.objectMeta.name}-${key}`,
-            value: `${key}:${r.objectMeta.labels[key]}`,
-          };
-        });
-        return <TagList tags={params} maxLen={labelTagNum} />;
+        return calculateDuration(r.objectMeta.creationTimestamp);
       },
-    },
-    {
-      title: i18nInstance.t('8a99082b2c32c843d2241e0ba60a3619', '分发策略'),
-      key: 'propagationPolicies',
-      render: (_, r) => {
-        const pp = extractPropagationPolicy(r);
-        return pp ? <Tag>{pp}</Tag> : '-';
-      },
-    },
-    {
-      title: i18nInstance.t('eaf8a02d1b16fcf94302927094af921f', '覆盖策略'),
-      key: 'overridePolicies',
-      width: 150,
-      render: () => {
-        return '-';
-      },
+      width: 120,
+      defaultSortOrder: 'descend',
+      sorter: (a, b) => new Date(a.objectMeta.creationTimestamp).getTime() - new Date(b.objectMeta.creationTimestamp).getTime(),
     },
     {
       title: i18nInstance.t('2b6bc0f293f5ca01b006206c2535ccbc', '操作'),
@@ -102,21 +110,13 @@ const IngressTable: FC<ServiceTableProps> = (props) => {
               size={'small'}
               type="link"
               onClick={async () => {
-                const ret = await GetResource({
+                const ret = await GetMemberResource({
                   kind: r.typeMeta.kind,
                   name: r.objectMeta.name,
                   namespace: r.objectMeta.namespace,
+                  cluster: r.objectMeta.labels?.cluster || clusterOption.label
                 });
-                onViewIngressContent(ret?.data);
-              }}
-            >
-              {i18nInstance.t('607e7a4f377fa66b0b28ce318aab841f', '查看')}
-            </Button>
-            <Button
-              size={'small'}
-              type="link"
-              onClick={() => {
-                onDeleteIngressContent(r);
+                onEditIngressContent(ret?.data, r.objectMeta.labels?.cluster || clusterOption.label);
               }}
             >
               {i18nInstance.t('95b351c86267f3aedf89520959bce689', '编辑')}
@@ -128,7 +128,7 @@ const IngressTable: FC<ServiceTableProps> = (props) => {
                 name: r.objectMeta.name,
               })}
               onConfirm={() => {
-                onDeleteIngressContent(r);
+                onDeleteIngressContent(r, r.objectMeta.labels?.cluster || clusterOption.label);
               }}
               okText={i18nInstance.t(
                 'e83a256e4f5bb4ff8b3d804b5473217a',
@@ -148,20 +148,10 @@ const IngressTable: FC<ServiceTableProps> = (props) => {
       },
     },
   ];
-  const { data, isLoading } = useQuery({
-    queryKey: ['GetIngress', selectedWorkSpace, searchText],
-    queryFn: async () => {
-      const services = await GetIngress({
-        namespace: selectedWorkSpace,
-        keyword: searchText,
-      });
-      return services.data || {};
-    },
-  });
   return (
     <Table
       rowKey={(r: Ingress) =>
-        `${r.objectMeta.namespace}-${r.objectMeta.name}` || ''
+        `${r.objectMeta.labels?.cluster || clusterOption.label}-ingress-${r.objectMeta.namespace}-${r.objectMeta.name}` || ''
       }
       columns={columns}
       loading={isLoading}

@@ -91,10 +91,30 @@ func getGroupVersionResource(kind string) schema.GroupVersionResource {
 			Version:  "v1",
 			Resource: "statefulsets",
 		},
+		"daemonset": {
+			Group:    "apps",
+			Version:  "v1",
+			Resource: "daemonsets",
+		},
+		"job": {
+			Group:    "batch",
+			Version:  "v1",
+			Resource: "jobs",
+		},
+		"cronjob": {
+			Group:    "batch",
+			Version:  "v1",
+			Resource: "cronjobs",
+		},
 		"service": {
 			Group:    "",
 			Version:  "v1",
 			Resource: "services",
+		},
+		"ingress": {
+			Group:    "networking.k8s.io",
+			Version:  "v1",
+			Resource: "ingresses",
 		},
 		"pod": {
 			Group:    "",

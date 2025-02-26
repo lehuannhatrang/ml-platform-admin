@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+import { ClusterOption } from '@/hooks/use-cluster';
 import {
   convertDataSelectQuery,
   DataSelectQuery,
@@ -60,10 +61,13 @@ export interface Service {
 
 export async function GetServices(params: {
   namespace?: string;
+  cluster?: ClusterOption;
   keyword?: string;
 }) {
-  const { namespace, keyword } = params;
-  const url = namespace ? `/service/${namespace}` : `/service`;
+  const { namespace, keyword, cluster } = params;
+  const base_url = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/service` : `/aggregated/service`;
+  const url = namespace ? `${base_url}/${namespace}` : base_url;
+
   const requestData = {} as DataSelectQuery;
   if (keyword) {
     requestData.filterBy = ['name', keyword];
@@ -86,13 +90,20 @@ export interface Ingress {
   objectMeta: ObjectMeta;
   typeMeta: TypeMeta;
   selector: Selector;
+  endpoints: {
+    host: string | null;
+    ports: string | null;
+  }[];
 }
 export async function GetIngress(params: {
   namespace?: string;
+  cluster?: ClusterOption;
   keyword?: string;
 }) {
-  const { namespace, keyword } = params;
-  const url = namespace ? `/ingress/${namespace}` : `/ingress`;
+  const { namespace, keyword, cluster } = params;
+  const base_url = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/ingress` : `/aggregated/ingress`;
+  const url = namespace ? `${base_url}/${namespace}` : base_url;
+
   const requestData = {} as DataSelectQuery;
   if (keyword) {
     requestData.filterBy = ['name', keyword];

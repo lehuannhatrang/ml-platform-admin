@@ -27,7 +27,8 @@ import {
   Table,
   TableColumnProps,
   Flex,
-  Tag
+  Tag,
+  Tooltip
 } from 'antd';
 import { Icons } from '@/components/icons';
 import type { Workload } from '@/services/workload';
@@ -47,6 +48,7 @@ import useNamespace from '@/hooks/use-namespace.ts';
 import useCluster, { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
 import { calculateDuration } from '@/utils/time.ts';
 import { getStatusFromCondition } from '@/utils/resource.ts';
+import dayjs from 'dayjs';
 
 type WorkloadPageProps = {
   kind: WorkloadKind;
@@ -109,8 +111,8 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
   const columns: TableColumnProps<Workload>[] = [
     {
       title: i18nInstance.t('89d19c60880d35c2bd88af0d9cc0497b', '负载名称'),
-      key: 'workloadName',
-      width: 200,
+      key: `${kind}-name`,
+      width: 250,
       render: (_, r) => {
         return r.objectMeta.name;
       },
@@ -138,7 +140,9 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
       key: 'images',
       width: 200,
       render: (_: any, r: any) => {
-        const images = r.containerImages?.map((i: any) => ({ key: i, value: i })) || r.spec?.containers?.map((i: any) => ({ key: i.image, value: i.image }))
+        const images = kind === WorkloadKind.Pod ? 
+          r.spec?.containers?.map((i: any) => ({ key: i.image, value: i.image })) 
+        : [...new Set(r.containerImages)].map((i: any) => ({ key: i, value: i }))
         return <TagList tagStyle={{
           maxWidth: 200,
           overflow: 'hidden',
@@ -164,15 +168,61 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
             return <Tag color={status === 'Ready' ? 'blue' : 'orange'}>{status}</Tag>
           },
         }]
-      : [
-        {
-          title: 'Ready',
-          key: 'ready',
-          render: (_: any, r: any) => {
-            const podsStatus = r?.pods || r?.podInfo
-            return `${podsStatus?.running || 0}/${podsStatus?.desired || 0}`
-          },
-        },]),
+      : []
+    ),
+    ...([WorkloadKind.Deployment, WorkloadKind.Statefulset, WorkloadKind.Daemonset].includes(kind) ? [
+      {
+        title: 'Ready',
+        key: 'ready',
+        render: (_: any, r: any) => {
+          const podsStatus = r?.pods || r?.podInfo
+          return `${podsStatus?.running || 0}/${podsStatus?.desired || 0}`
+        },
+      }
+    ]
+    : []),
+    ...([WorkloadKind.Cronjob].includes(kind) ? [
+      {
+        title: 'Schedule',
+        key: 'schedule',
+        render: (_: any, r: any) => {
+          return <b>{r.schedule}</b>
+        },
+      },
+      {
+        title: 'Status',
+        key: 'Status',
+        render: (_: any, r: any) => {
+          return <Tag color={r.suspend ? 'red' : 'green'}>{r.suspend ? 'Suspend' : 'Running'}</Tag>
+        },
+      },
+      {
+        title: 'Last run',
+        key: 'lastSchedule',
+        render: (_: any, r: any) => {
+          return <Tooltip title={dayjs.utc(r.lastSchedule).local().format('YYYY-MM-DD HH:mm:ss')}>
+            {`${calculateDuration(r.lastSchedule)} ago`}
+          </Tooltip> 
+        },
+      },
+    ]
+    : []),
+    ...([WorkloadKind.Job].includes(kind) ? [
+      {
+        title: 'Status',
+        key: 'Status',
+        render: (_: any, r: any) => {
+          return <Tag color={r.jobStatus?.status === 'Complete' ? 'green' : 'orange'}>{r.jobStatus?.status}</Tag>
+        },
+      },
+      {
+        title: 'Message',
+        key: 'message',
+        render: (_: any, r: any) => {
+          return <div>{r.jobStatus?.message || '-'}</div>
+        },
+      }
+    ] : []),
     {
       title: 'Age',
       key: 'age',
@@ -262,6 +312,7 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
     },
   ];
   const { message: messageApi } = App.useApp();
+
   return (
     <Panel>
       <div className={'flex flex-row justify-between space-x-4 mb-4'}>
@@ -333,7 +384,7 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
       </div>
       <Table
         rowKey={(r: Workload) =>
-          `${filter.selectedCluster.label}-${kind}-${r.objectMeta.namespace}-${r.objectMeta.name}` || ''
+          `${r.objectMeta.labels?.cluster || filter.selectedCluster.label}-${kind}-${r.objectMeta.namespace}-${r.objectMeta.name}` || ''
         }
         columns={columns}
         loading={isLoading}

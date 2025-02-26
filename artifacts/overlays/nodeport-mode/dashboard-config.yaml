@@ -41,6 +41,9 @@ menu_configs:
       - path: service
         enable: true
         sidebar_key: SERVICE
+      - path: ingress
+        enable: true
+        sidebar_key: INGRESS
   - path: /multicloud-storage-manage
     enable: true
     sidebar_key: MULTICLOUD-STORAGE-MANAGE
