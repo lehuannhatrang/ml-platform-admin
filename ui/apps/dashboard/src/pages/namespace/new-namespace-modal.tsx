@@ -45,7 +45,6 @@ const NewNamespaceModal: FC<NewNamespaceModalProps> = (props) => {
       onOk={async () => {
         try {
           const submitData = await form.validateFields();
-          console.log({submitData})
           const ret = await CreateClusterNamespace(submitData);
           if (ret.code === 200) {
             form.resetFields();

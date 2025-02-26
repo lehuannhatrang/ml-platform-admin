@@ -24,10 +24,11 @@ export interface ITagListProps {
     value: string;
   }[];
   maxLen?: number;
+  tagStyle?: React.CSSProperties;
 }
 
 const TagList: FC<ITagListProps> = (props) => {
-  const { tags = [], maxLen = Infinity } = props;
+  const { tags = [], maxLen = Infinity, tagStyle } = props;
   return (
     <>
       {tags.length === 0 ? (
@@ -35,7 +36,7 @@ const TagList: FC<ITagListProps> = (props) => {
       ) : tags.length <= maxLen ? (
         <div className="flex flex-row flex-wrap gap-y-[4px]">
           {tags.map((t) => (
-            <Tag key={t.key}>{t.value}</Tag>
+            <Tag key={t.key} style={tagStyle}>{t.value}</Tag>
           ))}
         </div>
       ) : (
@@ -55,7 +56,7 @@ const TagList: FC<ITagListProps> = (props) => {
               })),
             }}
           >
-            <Tag>+1</Tag>
+            <Tag style={tagStyle}>+1</Tag>
           </Dropdown>
         </div>
       )}

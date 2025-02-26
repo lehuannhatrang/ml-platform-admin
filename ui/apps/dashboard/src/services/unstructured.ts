@@ -16,14 +16,40 @@ limitations under the License.
 
 import { IResponse, karmadaClient } from './base';
 
+function generateUrlForUnstructuredParams(params: UnstructuredParams) {
+  const { kind, name, namespace } = params;
+  if (namespace) {
+    return `/_raw/${kind}/namespace/${namespace}/name/${name}`;
+  } else {
+    return `/_raw/${kind}/name/${name}`;
+  }
+}
+
+function generateUrlForMemberUnstructuredParams(params: MemberUnstructuredParams) {
+  const { kind, name, namespace, cluster } = params;
+  return !!name ? `/member/${cluster}/_raw/${kind}/${namespace}/${name}` : `/member/${cluster}/_raw/${kind}/${namespace}`;
+}
+
 export async function DeleteResource(params: UnstructuredParams) {
   const url = generateUrlForUnstructuredParams(params);
   const resp = await karmadaClient.delete<IResponse<any>>(url);
   return resp.data;
 }
 
+export async function DeleteMemberResource(params: MemberUnstructuredParams) {
+  const url = generateUrlForMemberUnstructuredParams(params);
+  const resp = await karmadaClient.delete<IResponse<any>>(url);
+  return resp.data;
+}
+
 export async function GetResource(params: UnstructuredParams) {
   const url = generateUrlForUnstructuredParams(params);
+  const resp = await karmadaClient.get<IResponse<any>>(url);
+  return resp.data;
+}
+
+export async function GetMemberResource(params: MemberUnstructuredParams) {
+  const url = generateUrlForMemberUnstructuredParams(params);
   const resp = await karmadaClient.get<IResponse<any>>(url);
   return resp.data;
 }
@@ -38,20 +64,29 @@ export async function PutResource(
   return resp.data;
 }
 
+export async function PutMemberResource(
+  params: MemberUnstructuredParams & {
+    content: Record<string, any>;
+  },
+) {
+  const url = generateUrlForMemberUnstructuredParams(params);
+  const resp = await karmadaClient.put<IResponse<any>>(url, params.content);
+  return resp.data;
+}
+
 interface UnstructuredParams {
   kind: string;
   name: string;
   namespace?: string;
 }
 
-function generateUrlForUnstructuredParams(params: UnstructuredParams) {
-  const { kind, name, namespace } = params;
-  if (namespace) {
-    return `/_raw/${kind}/namespace/${namespace}/name/${name}`;
-  } else {
-    return `/_raw/${kind}/name/${name}`;
-  }
+interface MemberUnstructuredParams {
+  kind: string;
+  cluster: string;
+  name?: string;
+  namespace: string;
 }
+
 
 export async function CreateResource(
   params: UnstructuredParams & {
@@ -59,6 +94,16 @@ export async function CreateResource(
   },
 ) {
   const url = generateUrlForUnstructuredParams(params);
+  const resp = await karmadaClient.post<IResponse<any>>(url, params.content);
+  return resp.data;
+}
+
+export async function CreateMemberResource(
+  params: MemberUnstructuredParams & {
+    content: Record<string, any>;
+  },
+) {
+  const url = generateUrlForMemberUnstructuredParams(params);
   const resp = await karmadaClient.post<IResponse<any>>(url, params.content);
   return resp.data;
 }

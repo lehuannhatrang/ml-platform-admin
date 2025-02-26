@@ -26,6 +26,27 @@ import {
 import { ObjectMeta, TypeMeta } from '@/services/base';
 import { ClusterOption } from '@/hooks/use-cluster';
 
+export enum ResourceConditionType {
+  Initialized = 'Initialized',
+  PodScheduled = 'PodScheduled',
+  ContainersReady = 'ContainersReady',
+  Ready = 'Ready',
+}
+
+export interface ResourceCondition {
+  type: ResourceConditionType
+  status: string
+  lastProbeTime: string
+  lastTransitionTime: string
+}
+
+export interface PodWorkload {
+  objectMeta: ObjectMeta;
+  typeMeta: TypeMeta;
+  spec: any;
+  status:  { conditions: ResourceCondition[] }
+}
+
 export interface DeploymentWorkload {
   objectMeta: ObjectMeta;
   typeMeta: TypeMeta;
@@ -37,11 +58,11 @@ export interface DeploymentWorkload {
 export interface StatefulsetWorkload {
   objectMeta: ObjectMeta;
   typeMeta: TypeMeta;
-  pods: PodStatus;
+  podInfo: PodStatus;
   containerImages: string[];
   initContainerImages: any;
 }
-export type Workload = DeploymentWorkload | StatefulsetWorkload;
+export type Workload = PodWorkload |DeploymentWorkload | StatefulsetWorkload;
 
 export interface PodStatus {
   current: number;

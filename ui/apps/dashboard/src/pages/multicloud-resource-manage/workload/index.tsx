@@ -26,14 +26,15 @@ import {
   Space,
   Table,
   TableColumnProps,
-  Flex
+  Flex,
+  Tag
 } from 'antd';
 import { Icons } from '@/components/icons';
-import type { DeploymentWorkload, Workload } from '@/services/workload';
+import type { Workload } from '@/services/workload';
 import { GetWorkloads } from '@/services/workload';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
-import { DeleteResource, GetResource } from '@/services/unstructured.ts';
+import { DeleteMemberResource, GetMemberResource } from '@/services/unstructured.ts';
 import NewWorkloadEditorModal from './new-workload-editor-modal.tsx';
 import WorkloadDetailDrawer, {
   WorkloadDetailDrawerProps,
@@ -45,6 +46,7 @@ import { WorkloadKind } from '@/services/base.ts';
 import useNamespace from '@/hooks/use-namespace.ts';
 import useCluster, { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
 import { calculateDuration } from '@/utils/time.ts';
+import { getStatusFromCondition } from '@/utils/resource.ts';
 
 type WorkloadPageProps = {
   kind: WorkloadKind;
@@ -75,6 +77,7 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
       });
       return clusters.data || {};
     },
+    refetchInterval: 5000,
   });
   const [drawerData, setDrawerData] = useState<
     Omit<WorkloadDetailDrawerProps, 'onClose'>
@@ -89,22 +92,25 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
   const [editorState, setEditorState] = useState<{
     mode: 'create' | 'edit';
     content: string;
+    cluster: string
   }>({
     mode: 'create',
     content: '',
+    cluster: ''
   });
   const resetEditorState = useCallback(() => {
     setEditorState({
       mode: 'create',
       content: '',
+      cluster: ''
     });
   }, []);
 
-  const columns: TableColumnProps<DeploymentWorkload>[] = [
+  const columns: TableColumnProps<Workload>[] = [
     {
       title: i18nInstance.t('89d19c60880d35c2bd88af0d9cc0497b', '负载名称'),
       key: 'workloadName',
-      width: 300,
+      width: 200,
       render: (_, r) => {
         return r.objectMeta.name;
       },
@@ -114,7 +120,7 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
       key: 'cluster',
       filters: clusterOptions.filter(option => option.value !== 'ALL').map((i) => ({ text: i.label, value: i.label })),
       onFilter: (value: React.Key | boolean, record: Workload) => record.objectMeta.labels?.cluster === value,
-      width: 200,
+      width: 100,
       render: (_: any, r: Workload) => {
         return r.objectMeta.labels?.cluster || '-';
       },
@@ -131,17 +137,42 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
       title: 'Images',
       key: 'images',
       width: 200,
-      render: (_, r) => {
-        return <TagList tags={r.containerImages?.map((i) => ({ key: i, value: i }))} />
+      render: (_: any, r: any) => {
+        const images = r.containerImages?.map((i: any) => ({ key: i, value: i })) || r.spec?.containers?.map((i: any) => ({ key: i.image, value: i.image }))
+        return <TagList tagStyle={{
+          maxWidth: 200,
+          overflow: 'hidden',
+          whiteSpace: 'nowrap',
+          textOverflow: 'ellipsis'
+        }} tags={images} />
       },
     },
-    {
-      title: 'Ready',
-      key: 'ready',
-      render: (_, r) => {
-        return `${r?.pods?.running || 0}/${r?.pods?.desired || 0}`
-      },
-    },
+    ...(kind === WorkloadKind.Pod ?
+      [
+        {
+          title: 'Node',
+          key: 'node',
+          render: (_: any, r: any) => {
+            return r.spec?.nodeName || '-';
+          },
+        },
+        {
+          title: 'Status',
+          key: 'status',
+          render: (_: any, r: any) => {
+            const status = getStatusFromCondition(r.status?.conditions)
+            return <Tag color={status === 'Ready' ? 'blue' : 'orange'}>{status}</Tag>
+          },
+        }]
+      : [
+        {
+          title: 'Ready',
+          key: 'ready',
+          render: (_: any, r: any) => {
+            const podsStatus = r?.pods || r?.podInfo
+            return `${podsStatus?.running || 0}/${podsStatus?.desired || 0}`
+          },
+        },]),
     {
       title: 'Age',
       key: 'age',
@@ -178,14 +209,16 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
               size={'small'}
               type="link"
               onClick={async () => {
-                const ret = await GetResource({
-                  kind: r.typeMeta.kind,
+                const ret = await GetMemberResource({
+                  kind: r.typeMeta.kind as WorkloadKind,
                   name: r.objectMeta.name,
                   namespace: r.objectMeta.namespace,
+                  cluster: r.objectMeta.labels?.cluster || filter.selectedCluster.label,
                 });
                 setEditorState({
                   mode: 'edit',
                   content: stringify(ret.data),
+                  cluster: r.objectMeta.labels?.cluster || filter.selectedCluster.label,
                 });
                 toggleShowModal(true);
               }}
@@ -200,10 +233,11 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
               })}
               onConfirm={async () => {
                 // todo after delete, need to wait until resource deleted
-                const ret = await DeleteResource({
+                const ret = await DeleteMemberResource({
                   kind: r.typeMeta.kind,
                   name: r.objectMeta.name,
                   namespace: r.objectMeta.namespace,
+                  cluster: r.objectMeta.labels?.cluster || filter.selectedCluster.label,
                 });
                 if (ret.code === 200) {
                   await refetch();
@@ -298,8 +332,8 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
         </div>
       </div>
       <Table
-        rowKey={(r: DeploymentWorkload) =>
-          `${r.objectMeta.namespace}-${r.objectMeta.name}` || ''
+        rowKey={(r: Workload) =>
+          `${filter.selectedCluster.label}-${kind}-${r.objectMeta.namespace}-${r.objectMeta.name}` || ''
         }
         columns={columns}
         loading={isLoading}
@@ -319,6 +353,7 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
         workloadContent={editorState.content}
         open={showModal}
         kind={kind}
+        cluster={editorState.cluster}
         onOk={async (ret) => {
           const msg =
             editorState.mode === 'edit'

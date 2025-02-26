@@ -173,7 +173,7 @@ const WorkloadDetailDrawer: FC<WorkloadDetailDrawerProps> = (props) => {
               value={cluster || '-'}
             />
           </Col>
-          <Col span={16}>
+          <Col span={8}>
             <Statistic
               className={styles['no-value']}
               title={i18nInstance.t(
@@ -216,6 +216,12 @@ const WorkloadDetailDrawer: FC<WorkloadDetailDrawerProps> = (props) => {
               }
             />
           </Col>
+          {detailData?.spec && <Col span={8}>
+            <Statistic
+              title='Node'
+              value={detailData?.spec?.nodeName}
+            />
+          </Col>}
           <Col span={8}>
             <Statistic
               title={i18nInstance.t(

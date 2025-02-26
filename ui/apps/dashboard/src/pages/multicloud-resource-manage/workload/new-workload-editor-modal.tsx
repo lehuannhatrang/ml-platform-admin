@@ -15,12 +15,12 @@ limitations under the License.
 */
 
 import i18nInstance from '@/utils/i18n';
-import { FC, useEffect, useState } from 'react';
+import { FC, useEffect, useState, useMemo } from 'react';
 import { Form, Modal, Select, Flex } from 'antd';
 import Editor from '@monaco-editor/react';
 import { parse } from 'yaml';
 import _ from 'lodash';
-import { CreateResource, PutResource } from '@/services/unstructured';
+import { CreateMemberResource, PutMemberResource } from '@/services/unstructured';
 import { IResponse, WorkloadKind } from '@/services/base.ts';
 import { useCluster } from '@/hooks';
 export interface NewWorkloadEditorModalProps {
@@ -30,10 +30,11 @@ export interface NewWorkloadEditorModalProps {
   workloadContent?: string;
   onOk: (ret: IResponse<any>) => Promise<void>;
   onCancel: () => Promise<void> | void;
+  cluster: string;
 }
 
 const NewWorkloadEditorModal: FC<NewWorkloadEditorModalProps> = (props) => {
-  const { mode, open, workloadContent = '', onOk, onCancel, kind } = props;
+  const { mode, open, workloadContent = '', onOk, onCancel, kind, cluster: clusterName } = props;
   const [content, setContent] = useState<string>(workloadContent);
   useEffect(() => {
     setContent(workloadContent);
@@ -43,7 +44,27 @@ const NewWorkloadEditorModal: FC<NewWorkloadEditorModalProps> = (props) => {
     setContent(value || '');
   }
 
+  const [form] = Form.useForm<{
+    kind: WorkloadKind;
+    cluster: string;
+  }>();
+
+  useEffect(() => {
+    form.setFieldsValue({
+      kind,
+      cluster: clusterName,
+    });
+  }, [kind, clusterName]);
+
   const { clusterOptions, isClusterDataLoading } = useCluster({ allowSelectAll: false });
+  const clusterOptionsFormated = useMemo(() => {
+    return clusterOptions.map((item) => {
+      return {
+        label: item.label,
+        value: item.label,
+      };
+    });
+  }, [clusterOptions]);
 
   return (
     <Modal
@@ -58,28 +79,28 @@ const NewWorkloadEditorModal: FC<NewWorkloadEditorModalProps> = (props) => {
       cancelText={i18nInstance.t('625fb26b4b3340f7872b411f401e754c', '取消')}
       destroyOnClose={true}
       onOk={async () => {
-        // await onOk()
         try {
           const yamlObject = parse(content) as Record<string, string>;
           const kind = _.get(yamlObject, 'kind');
           const namespace = _.get(yamlObject, 'metadata.namespace');
           const name = _.get(yamlObject, 'metadata.name');
+          const submitData = await form.validateFields();
           if (mode === 'create') {
-            const ret = await CreateResource({
+            const ret = await CreateMemberResource({
               kind,
-              name,
               namespace,
+              cluster: submitData.cluster,
               content: yamlObject,
             });
-            console.log('ret', ret);
             await onOk(ret);
             setContent('');
           } else {
-            const ret = await PutResource({
+            const ret = await PutMemberResource({
               kind,
               name,
               namespace,
               content: yamlObject,
+              cluster: submitData.cluster,
             });
             await onOk(ret);
             setContent('');
@@ -93,63 +114,76 @@ const NewWorkloadEditorModal: FC<NewWorkloadEditorModalProps> = (props) => {
         setContent('');
       }}
     >
-      <Flex>
 
-        <Form.Item
-          label={i18nInstance.t(
-            '0a3e7cdadc44fb133265152268761abc',
-            '工作负载类型',
-          )}
-        >
-          <Select
-            value={kind}
-            disabled
-            options={[
-              {
-                label: 'Deployment',
-                value: WorkloadKind.Deployment,
-              },
-              {
-                label: 'Statefulset',
-                value: WorkloadKind.Statefulset,
-              },
-              {
-                label: 'Daemonset',
-                value: WorkloadKind.Daemonset,
-              },
-              {
-                label: 'Cronjob',
-                value: WorkloadKind.Cronjob,
-              },
-              {
-                label: 'Job',
-                value: WorkloadKind.Job,
-              },
-            ]}
-            style={{
-              width: 200,
-            }}
-          />
-        </Form.Item>
-        <Form.Item
-          label='Cluster'
-          name="cluster"
-          required
-          rules={[{ required: true }]}
-          className='ml-8'
-        >
-          <Select
-            options={clusterOptions.map(item => ({ label: item.label, value: item.label }))}
-            loading={isClusterDataLoading}
-            showSearch
-            style={{
-              width: 200,
-            }}
-          />
-        </Form.Item>
-      </Flex>
+      <Form
+        form={form}
+        className={'h-[100px]'}
+        validateMessages={{
+          required: i18nInstance.t(
+            'e0a23c19b8a0044c5defd167b441d643',
+            "'${name}' 是必选字段",
+          ),
+        }}
+      >
+        <Flex>
+
+          <Form.Item
+            name='kind'
+            label={i18nInstance.t(
+              '0a3e7cdadc44fb133265152268761abc',
+              '工作负载类型',
+            )}
+          >
+            <Select
+              disabled
+              options={[
+                {
+                  label: 'Deployment',
+                  value: WorkloadKind.Deployment,
+                },
+                {
+                  label: 'Statefulset',
+                  value: WorkloadKind.Statefulset,
+                },
+                {
+                  label: 'Daemonset',
+                  value: WorkloadKind.Daemonset,
+                },
+                {
+                  label: 'Cronjob',
+                  value: WorkloadKind.Cronjob,
+                },
+                {
+                  label: 'Job',
+                  value: WorkloadKind.Job,
+                },
+              ]}
+              style={{
+                width: 200,
+              }}
+            />
+          </Form.Item>
+          <Form.Item
+            name='cluster'
+            label='Cluster'
+            required
+            rules={[{ required: true }]}
+            className='ml-8'
+          >
+            <Select
+              disabled={!!clusterName}
+              options={clusterOptionsFormated}
+              loading={isClusterDataLoading}
+              showSearch
+              style={{
+                width: 200,
+              }}
+            />
+          </Form.Item>
+        </Flex>
+      </Form>
       <Editor
-        height="600px"
+        height="540px"
         defaultLanguage="yaml"
         value={content}
         theme="vs"

@@ -16,7 +16,7 @@ limitations under the License.
 
 import { FC, CSSProperties } from 'react';
 import styles from './index.module.less';
-import karmadaLogo from '@/assets/karmada-logo.svg';
+import DCNLogo from '@/assets/dcn_logo.png';
 import {
   setLang,
   getLangIcon,
@@ -53,7 +53,7 @@ const Navigation: FC<INavigationProps> = (props) => {
           <div className={styles.left}>
             <div className={styles.brand}>
               <div className={styles.logoWrap}>
-                <img className={styles.logo} src={karmadaLogo} />
+                <img className={styles.logo} src={DCNLogo} />
               </div>
               <div className={styles.text}>{brandText}</div>
             </div>
