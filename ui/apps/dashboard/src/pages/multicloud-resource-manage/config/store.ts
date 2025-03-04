@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 import { create } from 'zustand';
-import { ConfigKind } from '@/services/base.ts';
 import { FilterState, EditorState } from './types.ts';
+import { DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster.ts';
 
 type State = {
   filter: FilterState;
@@ -25,8 +25,8 @@ type State = {
 
 type Actions = {
   setFilter: (k: Partial<FilterState>) => void;
-  viewConfig: (config: string) => void;
-  editConfig: (config: string) => void;
+  viewConfig: (config: string, clusterName: string) => void;
+  editConfig: (config: string, clusterName: string) => void;
   hideEditor: () => void;
   createConfig: () => void;
 };
@@ -35,14 +35,15 @@ export type Store = State & Actions;
 
 export const useStore = create<Store>((set) => ({
   filter: {
-    kind: ConfigKind.ConfigMap,
     selectedWorkspace: '',
     searchText: '',
+    selectedCluster: DEFAULT_CLUSTER_OPTION,
   },
   editor: {
     show: false,
     mode: 'create',
     content: '',
+    cluster: '',
   },
   setFilter: (k: Partial<FilterState>) => {
     set((state) => {
@@ -55,21 +56,23 @@ export const useStore = create<Store>((set) => ({
       };
     });
   },
-  viewConfig: (config: string) => {
+  viewConfig: (config: string, clusterName: string) => {
     set({
       editor: {
         show: true,
         mode: 'read',
         content: config,
+        cluster: clusterName,
       },
     });
   },
-  editConfig: (config: string) => {
+  editConfig: (config: string, clusterName: string) => {
     set({
       editor: {
         show: true,
         mode: 'edit',
         content: config,
+        cluster: clusterName,
       },
     });
   },
@@ -79,6 +82,7 @@ export const useStore = create<Store>((set) => ({
         show: false,
         mode: 'edit',
         content: '',
+        cluster: '',
       },
     });
   },
@@ -88,6 +92,7 @@ export const useStore = create<Store>((set) => ({
         show: true,
         mode: 'create',
         content: '',
+        cluster: '',
       },
     });
   },

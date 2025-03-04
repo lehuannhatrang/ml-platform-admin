@@ -14,16 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { ConfigKind } from '@/services/base.ts';
+import { ClusterOption } from "@/hooks/use-cluster";
 
 export interface FilterState {
-  kind: ConfigKind;
   selectedWorkspace: string;
   searchText: string;
+  selectedCluster: ClusterOption;
 }
 
 export interface EditorState {
   show: boolean;
   mode: 'create' | 'edit' | 'read';
   content: string;
+  cluster: string;
 }

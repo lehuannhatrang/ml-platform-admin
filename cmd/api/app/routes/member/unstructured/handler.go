@@ -121,6 +121,11 @@ func getGroupVersionResource(kind string) schema.GroupVersionResource {
 			Version:  "v1",
 			Resource: "pods",
 		},
+		"replicaset": {
+			Group:    "apps",
+			Version:  "v1",
+			Resource: "replicasets",
+		},
 		"configmap": {
 			Group:    "",
 			Version:  "v1",

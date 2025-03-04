@@ -45,7 +45,7 @@ import ClusterManage from '@/pages/cluster-manage';
 import NodeManage from '@/pages/node-manage';
 import Login from '@/pages/login';
 import { Icons } from '@/components/icons';
-import { ServiceKind, WorkloadKind } from '@/services/base';
+import { ConfigKind, ServiceKind, WorkloadKind } from '@/services/base';
 
 export interface IRouteObjectHandle {
   icon?: ReactNode;
@@ -163,6 +163,14 @@ export function getRoutes() {
               },
             },
             {
+              path: 'replicaset',
+              element: <MultiCloudworkload kind={WorkloadKind.ReplicaSet}/>,
+              handle: {
+                sidebarKey: 'REPLICASET',
+                sidebarName: 'ReplicaSet',
+              },
+            },
+            {
               path: 'cronjob',
               element: <MultiCloudworkload kind={WorkloadKind.Cronjob}/>,
               handle: {
@@ -218,7 +226,7 @@ export function getRoutes() {
           children: [
             {
               path: 'configmap',
-              element: <MultiCloudConfig />,
+              element: <MultiCloudConfig kind={ConfigKind.ConfigMap} />,
               handle: {
                 sidebarKey: 'CONFIGMAP',
                 sidebarName: 'ConfigMap',
@@ -226,7 +234,7 @@ export function getRoutes() {
             },
             {
               path: 'secret',
-              element: <MultiCloudConfig />,
+              element: <MultiCloudConfig kind={ConfigKind.Secret} />,
               handle: {
                 sidebarKey: 'SECRET',
                 sidebarName: 'Secret',

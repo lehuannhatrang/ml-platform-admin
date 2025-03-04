@@ -136,6 +136,7 @@ export enum WorkloadKind {
   Deployment = 'deployment',
   Statefulset = 'statefulset',
   Daemonset = 'daemonset',
+  ReplicaSet = 'replicaset',
   Cronjob = 'cronjob',
   Job = 'job',
   Pod = 'pod',

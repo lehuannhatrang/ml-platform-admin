@@ -24,10 +24,15 @@ import { useTagNum, useNamespace } from '@/hooks/index';
 import ConfigEditorModal from './components/config-editor-modal';
 import { useStore } from './store.ts';
 import { message } from 'antd';
-import { DeleteResource } from '@/services/unstructured.ts';
+import { DeleteMemberResource } from '@/services/unstructured.ts';
 import { useQueryClient } from '@tanstack/react-query';
 import SecretTable from '@/pages/multicloud-resource-manage/config/components/secret-table.tsx';
-const ConfigPage = () => {
+
+export type ConfigPageProps = {
+  kind: ConfigKind;
+}
+
+const ConfigPage = ({ kind }: ConfigPageProps) => {
   const { nsOptions, isNsDataLoading } = useNamespace({});
   const { tagNum } = useTagNum();
   const filter = useStore((state) => state.filter);
@@ -52,6 +57,7 @@ const ConfigPage = () => {
   return (
     <Panel>
       <QueryFilter
+        kind={kind}
         filter={filter}
         setFilter={(v) => {
           setFilter(v);
@@ -60,24 +66,25 @@ const ConfigPage = () => {
         nsOptions={nsOptions}
         isNsDataLoading={isNsDataLoading}
       />
-
-      {filter.kind === ConfigKind.ConfigMap && (
+      {kind === ConfigKind.ConfigMap && (
         <ConfigMapTable
+          clusterOption={filter.selectedCluster}
           labelTagNum={tagNum}
           searchText={filter.searchText}
           selectedWorkSpace={filter.selectedWorkspace}
-          onViewConfigMapContent={(r) => {
-            viewConfig(stringify(r));
+          onViewConfigMapContent={(r, clusterName) => {
+            viewConfig(stringify(r), clusterName);
           }}
-          onEditConfigMapContent={(r) => {
-            editConfig(stringify(r));
+          onEditConfigMapContent={(r, clusterName) => {
+            editConfig(stringify(r), clusterName);
           }}
-          onDeleteConfigMapContent={async (r) => {
+          onDeleteConfigMapContent={async (r, clusterName) => {
             try {
-              const ret = await DeleteResource({
+              const ret = await DeleteMemberResource({
                 kind: r.typeMeta.kind,
                 name: r.objectMeta.name,
                 namespace: r.objectMeta.namespace,
+                cluster: clusterName,
               });
               if (ret.code !== 200) {
                 await messageApi.error(
@@ -97,23 +104,25 @@ const ConfigPage = () => {
           }}
         />
       )}
-      {filter.kind === ConfigKind.Secret && (
+      {kind === ConfigKind.Secret && (
         <SecretTable
+          clusterOption={filter.selectedCluster}
           labelTagNum={tagNum}
           searchText={filter.searchText}
           selectedWorkSpace={filter.selectedWorkspace}
-          onViewSecret={(r) => {
-            viewConfig(stringify(r));
+          onViewSecret={(r, clusterName) => {
+            viewConfig(stringify(r), clusterName);
           }}
-          onEditSecret={(r) => {
-            editConfig(stringify(r));
+          onEditSecret={(r, clusterName) => {
+            editConfig(stringify(r), clusterName);
           }}
-          onDeleteSecretContent={async (r) => {
+          onDeleteSecretContent={async (r, clusterName) => {
             try {
-              const ret = await DeleteResource({
+              const ret = await DeleteMemberResource({
                 kind: r.typeMeta.kind,
                 name: r.objectMeta.name,
                 namespace: r.objectMeta.namespace,
+                cluster: clusterName,
               });
               if (ret.code !== 200) {
                 await messageApi.error(
@@ -135,10 +144,11 @@ const ConfigPage = () => {
       )}
 
       <ConfigEditorModal
+        cluster={editor.cluster}
         mode={editor.mode}
         workloadContent={editor.content}
         open={editor.show}
-        kind={filter.kind}
+        kind={kind}
         onOk={async (ret) => {
           if (editor.mode === 'read') {
             hideEditor();

@@ -17,6 +17,7 @@ limitations under the License.
 package aggregated
 
 import (
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/configmap"    // Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/cronjob"     // Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/daemonset"   // Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/deployment"  // Importing member route packages forces route registration
@@ -25,6 +26,8 @@ import (
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/namespace"   // Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/node"        // Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/pod"         // Importing member route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/replicaset"  // Importing member route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/secret"      // Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/service"     // Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/statefulset" // Importing member route packages forces route registration
 )

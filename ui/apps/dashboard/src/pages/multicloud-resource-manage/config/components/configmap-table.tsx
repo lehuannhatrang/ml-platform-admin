@@ -15,20 +15,23 @@ limitations under the License.
 */
 
 import i18nInstance from '@/utils/i18n';
-import { Button, Popconfirm, Space, Table, TableColumnProps, Tag } from 'antd';
+import { Button, Popconfirm, Space, Table, TableColumnProps } from 'antd';
 import TagList from '@/components/tag-list';
 import { FC } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { GetResource } from '@/services/unstructured.ts';
+import { GetMemberResource } from '@/services/unstructured.ts';
 import { Config, GetConfigMaps } from '@/services/config.ts';
-import { extractPropagationPolicy } from '@/services/base.ts';
+import { calculateDuration } from '@/utils/time';
+import { ClusterOption } from '@/hooks/use-cluster';
+
 interface ConfigMapTableProps {
   labelTagNum?: number;
   selectedWorkSpace: string;
   searchText: string;
-  onViewConfigMapContent: (r: any) => void;
-  onEditConfigMapContent: (r: any) => void;
-  onDeleteConfigMapContent: (r: Config) => void;
+  onViewConfigMapContent: (r: any, clusterName: string) => void;
+  onEditConfigMapContent: (r: any, clusterName: string) => void;
+  onDeleteConfigMapContent: (r: Config, clusterName: string) => void;
+  clusterOption: ClusterOption;
 }
 const ConfigMapTable: FC<ConfigMapTableProps> = (props) => {
   const {
@@ -38,22 +41,46 @@ const ConfigMapTable: FC<ConfigMapTableProps> = (props) => {
     onViewConfigMapContent,
     onEditConfigMapContent,
     onDeleteConfigMapContent,
+    clusterOption
   } = props;
-  const columns: TableColumnProps<Config>[] = [
-    {
-      title: i18nInstance.t('a4b28a416f0b6f3c215c51e79e517298', '命名空间'),
-      key: 'namespaceName',
-      width: 200,
-      render: (_, r) => {
-        return r.objectMeta.namespace;
-      },
+
+  
+  const { data, isLoading } = useQuery({
+    queryKey: ['GetConfigMaps', clusterOption.value, selectedWorkSpace, searchText],
+    queryFn: async () => {
+      const services = await GetConfigMaps({
+        namespace: selectedWorkSpace,
+        keyword: searchText,
+        cluster: clusterOption,
+      });
+      return services.data || {};
     },
+  });
+  
+  const columns: TableColumnProps<Config>[] = [
     {
       title: i18nInstance.t('4fcad1c9ba0732214679e13bd69d998b', '配置名称'),
       key: 'configmapName',
       width: 300,
       render: (_, r) => {
         return r.objectMeta.name;
+      },
+    },
+    ...(clusterOption.value === 'ALL' ? [{
+      title: 'Cluster',
+      key: 'cluster',
+      onFilter: (value: React.Key | boolean, record: Config) => record.objectMeta.labels?.cluster === value,
+      width: 100,
+      render: (_: any, r: Config) => {
+        return r.objectMeta.labels?.cluster || '-';
+      },
+    }] : []),
+    {
+      title: i18nInstance.t('a4b28a416f0b6f3c215c51e79e517298', '命名空间'),
+      key: 'namespaceName',
+      width: 200,
+      render: (_, r) => {
+        return r.objectMeta.namespace;
       },
     },
     {
@@ -75,20 +102,14 @@ const ConfigMapTable: FC<ConfigMapTableProps> = (props) => {
       },
     },
     {
-      title: i18nInstance.t('8a99082b2c32c843d2241e0ba60a3619', '分发策略'),
-      key: 'propagationPolicies',
+      title: 'Age',
+      key: 'age',
       render: (_, r) => {
-        const pp = extractPropagationPolicy(r);
-        return pp ? <Tag>{pp}</Tag> : '-';
+        return calculateDuration(r.objectMeta.creationTimestamp);
       },
-    },
-    {
-      title: i18nInstance.t('eaf8a02d1b16fcf94302927094af921f', '覆盖策略'),
-      key: 'overridePolicies',
-      width: 150,
-      render: () => {
-        return '-';
-      },
+      width: 120,
+      defaultSortOrder: 'descend',
+      sorter: (a, b) => new Date(a.objectMeta.creationTimestamp).getTime() - new Date(b.objectMeta.creationTimestamp).getTime(),
     },
     {
       title: i18nInstance.t('2b6bc0f293f5ca01b006206c2535ccbc', '操作'),
@@ -101,12 +122,13 @@ const ConfigMapTable: FC<ConfigMapTableProps> = (props) => {
               size={'small'}
               type="link"
               onClick={async () => {
-                const ret = await GetResource({
+                const ret = await GetMemberResource({
                   kind: r.typeMeta.kind,
                   name: r.objectMeta.name,
                   namespace: r.objectMeta.namespace,
+                  cluster: r.objectMeta.labels?.cluster || clusterOption.label,
                 });
-                onViewConfigMapContent(ret?.data);
+                onViewConfigMapContent(ret?.data, r.objectMeta.labels?.cluster || clusterOption.label);
               }}
             >
               {i18nInstance.t('607e7a4f377fa66b0b28ce318aab841f', '查看')}
@@ -115,12 +137,13 @@ const ConfigMapTable: FC<ConfigMapTableProps> = (props) => {
               size={'small'}
               type="link"
               onClick={async () => {
-                const ret = await GetResource({
+                const ret = await GetMemberResource({
                   kind: r.typeMeta.kind,
                   name: r.objectMeta.name,
                   namespace: r.objectMeta.namespace,
+                  cluster: r.objectMeta.labels?.cluster || clusterOption.label,
                 });
-                onEditConfigMapContent(ret?.data);
+                onEditConfigMapContent(ret?.data, r.objectMeta.labels?.cluster || clusterOption.label);
               }}
             >
               {i18nInstance.t('95b351c86267f3aedf89520959bce689', '编辑')}
@@ -132,7 +155,7 @@ const ConfigMapTable: FC<ConfigMapTableProps> = (props) => {
                 name: r.objectMeta.name,
               })}
               onConfirm={() => {
-                onDeleteConfigMapContent(r);
+                onDeleteConfigMapContent(r, r.objectMeta.labels?.cluster || clusterOption.label);
               }}
               okText={i18nInstance.t(
                 'e83a256e4f5bb4ff8b3d804b5473217a',
@@ -152,20 +175,10 @@ const ConfigMapTable: FC<ConfigMapTableProps> = (props) => {
       },
     },
   ];
-  const { data, isLoading } = useQuery({
-    queryKey: ['GetConfigMaps', selectedWorkSpace, searchText],
-    queryFn: async () => {
-      const services = await GetConfigMaps({
-        namespace: selectedWorkSpace,
-        keyword: searchText,
-      });
-      return services.data || {};
-    },
-  });
   return (
     <Table
       rowKey={(r: Config) =>
-        `${r.objectMeta.namespace}-${r.objectMeta.name}` || ''
+        `${r.objectMeta.labels?.cluster || clusterOption.label}-configmap-${r.objectMeta.namespace}-${r.objectMeta.name}` || ''
       }
       columns={columns}
       loading={isLoading}

@@ -25,6 +25,9 @@ menu_configs:
       - path: daemonset
         enable: true
         sidebar_key: DAEMONSET
+      - path: replicaset
+        enable: true
+        sidebar_key: REPLICASET
       - path: job
         enable: true
         sidebar_key: JOB

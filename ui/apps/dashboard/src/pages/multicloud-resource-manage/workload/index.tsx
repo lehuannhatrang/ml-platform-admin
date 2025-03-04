@@ -170,7 +170,7 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
         }]
       : []
     ),
-    ...([WorkloadKind.Deployment, WorkloadKind.Statefulset, WorkloadKind.Daemonset].includes(kind) ? [
+    ...([WorkloadKind.Deployment, WorkloadKind.Statefulset, WorkloadKind.Daemonset, WorkloadKind.ReplicaSet].includes(kind) ? [
       {
         title: 'Ready',
         key: 'ready',

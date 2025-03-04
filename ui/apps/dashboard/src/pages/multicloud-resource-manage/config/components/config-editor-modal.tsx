@@ -16,12 +16,13 @@ limitations under the License.
 
 import i18nInstance from '@/utils/i18n';
 import { FC, useEffect, useMemo, useState } from 'react';
-import { Form, Modal, Select } from 'antd';
+import { Form, Modal, Select, Flex } from 'antd';
 import Editor from '@monaco-editor/react';
 import { parse } from 'yaml';
 import _ from 'lodash';
-import { CreateResource, PutResource } from '@/services/unstructured';
+import { CreateMemberResource, PutMemberResource } from '@/services/unstructured';
 import { ConfigKind, IResponse } from '@/services/base.ts';
+import { useCluster } from '@/hooks';
 export interface NewWorkloadEditorModalProps {
   mode: 'create' | 'edit' | 'read';
   open: boolean;
@@ -29,9 +30,10 @@ export interface NewWorkloadEditorModalProps {
   workloadContent?: string;
   onOk: (ret: IResponse<any>) => Promise<void>;
   onCancel: () => Promise<void> | void;
+  cluster: string;
 }
 const NewConfigEditorModal: FC<NewWorkloadEditorModalProps> = (props) => {
-  const { mode, open, workloadContent = '', onOk, onCancel, kind } = props;
+  const { mode, open, workloadContent = '', onOk, onCancel, kind, cluster: clusterName } = props;
   const [content, setContent] = useState<string>(workloadContent);
   useEffect(() => {
     setContent(workloadContent);
@@ -39,6 +41,31 @@ const NewConfigEditorModal: FC<NewWorkloadEditorModalProps> = (props) => {
   function handleEditorChange(value: string | undefined) {
     setContent(value || '');
   }
+
+  const [form] = Form.useForm<{
+    kind: ConfigKind;
+    cluster: string;
+  }>();
+
+  const { clusterOptions, isClusterDataLoading } = useCluster({ allowSelectAll: false });
+
+
+  const clusterOptionsFormated = useMemo(() => {
+    return clusterOptions.map((item) => {
+      return {
+        label: item.label,
+        value: item.label,
+      };
+    });
+  }, [clusterOptions]);
+
+  useEffect(() => {
+    form.setFieldsValue({
+      kind,
+      cluster: clusterName,
+    });
+  }, [kind, clusterName]);
+
   const title = useMemo(() => {
     switch (mode) {
       case 'read':
@@ -63,21 +90,23 @@ const NewConfigEditorModal: FC<NewWorkloadEditorModalProps> = (props) => {
           const kind = _.get(yamlObject, 'kind');
           const namespace = _.get(yamlObject, 'metadata.namespace');
           const name = _.get(yamlObject, 'metadata.name');
+          const submitData = await form.validateFields();
           if (mode === 'create') {
-            const ret = await CreateResource({
+            const ret = await CreateMemberResource({
               kind,
-              name,
               namespace,
               content: yamlObject,
+              cluster: submitData.cluster,
             });
             await onOk(ret);
             setContent('');
           } else if (mode === 'edit') {
-            const ret = await PutResource({
+            const ret = await PutMemberResource({
               kind,
               name,
               namespace,
               content: yamlObject,
+              cluster: submitData.cluster,
             });
             await onOk(ret);
             setContent('');
@@ -91,45 +120,74 @@ const NewConfigEditorModal: FC<NewWorkloadEditorModalProps> = (props) => {
         setContent('');
       }}
     >
-      <Form.Item
-        label={i18nInstance.t('6d95c8c1f41302ab4bc28e08a1226c8c', '配置类型')}
-      >
-        <Select
-          value={kind}
-          disabled
-          options={[
-            {
-              label: 'ConfigMap',
-              value: ConfigKind.ConfigMap,
-            },
-            {
-              label: 'Secret',
-              value: ConfigKind.Secret,
-            },
-          ]}
-          style={{
-            width: 200,
-          }}
-        />
-      </Form.Item>
-
-      <Editor
-        height="600px"
-        defaultLanguage="yaml"
-        value={content}
-        theme="vs"
-        options={{
-          theme: 'vs',
-          lineNumbers: 'on',
-          fontSize: 15,
-          readOnly: mode === 'read',
-          minimap: {
-            enabled: false,
-          },
-          wordWrap: 'on',
+      <Form
+        form={form}
+        className={'h-[100px]'}
+        validateMessages={{
+          required: i18nInstance.t(
+            'e0a23c19b8a0044c5defd167b441d643',
+            "'${name}' 是必选字段",
+          ),
         }}
-        onChange={handleEditorChange}
-      />
+      >
+        <Flex>
+          <Form.Item
+            name='kind'
+            label={i18nInstance.t('6d95c8c1f41302ab4bc28e08a1226c8c', '配置类型')}
+          >
+            <Select
+              disabled
+              options={[
+                {
+                  label: 'ConfigMap',
+                  value: ConfigKind.ConfigMap,
+                },
+                {
+                  label: 'Secret',
+                  value: ConfigKind.Secret,
+                },
+              ]}
+              style={{
+                width: 200,
+              }}
+            />
+          </Form.Item>
+          <Form.Item
+            name='cluster'
+            label='Cluster'
+            required
+            rules={[{ required: true }]}
+            className='ml-8'
+          >
+            <Select
+              disabled={!!clusterName}
+              options={clusterOptionsFormated}
+              loading={isClusterDataLoading}
+              showSearch
+              style={{
+                width: 200,
+              }}
+            />
+          </Form.Item>
+        </Flex>
+      </Form>
+        <Editor
+          height="520px"
+          defaultLanguage="yaml"
+          value={content}
+          theme="vs"
+          options={{
+            theme: 'vs',
+            lineNumbers: 'on',
+            fontSize: 15,
+            readOnly: mode === 'read',
+            minimap: {
+              enabled: false,
+            },
+            wordWrap: 'on',
+          }}
+          onChange={handleEditorChange}
+        />
     </Modal>
   );
 };

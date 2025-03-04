@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+import { ClusterOption } from '@/hooks/use-cluster';
 import {
   convertDataSelectQuery,
   DataSelectQuery,
@@ -31,9 +32,11 @@ export interface Config {
 export async function GetConfigMaps(params: {
   namespace?: string;
   keyword?: string;
+  cluster?: ClusterOption;
 }) {
-  const { namespace, keyword } = params;
-  const url = namespace ? `/configmap/${namespace}` : `/configmap`;
+  const { namespace, keyword, cluster } = params;
+  const base_url = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/configmap` : `/aggregated/configmap`;
+  const url = namespace ? `${base_url}/${namespace}` : base_url;
   const requestData = {} as DataSelectQuery;
   if (keyword) {
     requestData.filterBy = ['name', keyword];
@@ -60,10 +63,14 @@ export interface Secret {
 export async function GetSecrets(params: {
   namespace?: string;
   keyword?: string;
+  cluster?: ClusterOption;
 }) {
-  const { namespace, keyword } = params;
-  const url = namespace ? `/secret/${namespace}` : `/secret`;
+  const { namespace, keyword, cluster } = params;
+  const base_url = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/secret` : `/aggregated/secret`;
+  const url = namespace ? `${base_url}/${namespace}` : base_url;
+  
   const requestData = {} as DataSelectQuery;
+
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }

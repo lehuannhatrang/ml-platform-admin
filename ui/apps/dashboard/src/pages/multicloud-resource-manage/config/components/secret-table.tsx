@@ -15,20 +15,23 @@ limitations under the License.
 */
 
 import i18nInstance from '@/utils/i18n';
-import { Button, Popconfirm, Space, Table, TableColumnProps, Tag } from 'antd';
-import { extractPropagationPolicy } from '@/services/base';
+import { Button, Popconfirm, Space, Table, TableColumnProps } from 'antd';
 import TagList from '@/components/tag-list';
 import { FC } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { GetResource } from '@/services/unstructured.ts';
+import { GetMemberResource } from '@/services/unstructured.ts';
 import { Config, GetSecrets, Secret } from '@/services/config.ts';
+import { calculateDuration } from '@/utils/time';
+import { ClusterOption } from '@/hooks/use-cluster';
+
 interface SecretTableProps {
   labelTagNum?: number;
   selectedWorkSpace: string;
   searchText: string;
-  onViewSecret: (r: any) => void;
-  onEditSecret: (r: Secret) => void;
-  onDeleteSecretContent: (r: Secret) => void;
+  onViewSecret: (r: any, clusterName: string) => void;
+  onEditSecret: (r: Secret, clusterName: string) => void;
+  onDeleteSecretContent: (r: Secret, clusterName: string) => void;
+  clusterOption: ClusterOption;
 }
 const SecretTable: FC<SecretTableProps> = (props) => {
   const {
@@ -38,32 +41,43 @@ const SecretTable: FC<SecretTableProps> = (props) => {
     onViewSecret,
     onEditSecret,
     onDeleteSecretContent,
+    clusterOption,
   } = props;
   const { data, isLoading } = useQuery({
-    queryKey: ['GetSecrets', selectedWorkSpace, searchText],
+    queryKey: ['GetSecrets', clusterOption.label, selectedWorkSpace, searchText],
     queryFn: async () => {
       const services = await GetSecrets({
         namespace: selectedWorkSpace,
         keyword: searchText,
+        cluster: clusterOption,
       });
       return services.data || {};
     },
   });
   const columns: TableColumnProps<Config>[] = [
     {
-      title: i18nInstance.t('a4b28a416f0b6f3c215c51e79e517298', '命名空间'),
-      key: 'namespaceName',
-      width: 200,
-      render: (_, r) => {
-        return r.objectMeta.namespace;
-      },
-    },
-    {
       title: i18nInstance.t('d1d64de5ff73bc8b408035fcdb2cc77c', '秘钥名称'),
       key: 'secretName',
       width: 300,
       render: (_, r) => {
         return r.objectMeta.name;
+      },
+    },
+    ...(clusterOption.value === 'ALL' ? [{
+      title: 'Cluster',
+      key: 'cluster',
+      onFilter: (value: React.Key | boolean, record: Config) => record.objectMeta.labels?.cluster === value,
+      width: 100,
+      render: (_: any, r: Config) => {
+        return r.objectMeta.labels?.cluster || '-';
+      },
+    }] : []),
+    {
+      title: i18nInstance.t('a4b28a416f0b6f3c215c51e79e517298', '命名空间'),
+      key: 'namespaceName',
+      width: 200,
+      render: (_, r) => {
+        return r.objectMeta.namespace;
       },
     },
     {
@@ -85,20 +99,14 @@ const SecretTable: FC<SecretTableProps> = (props) => {
       },
     },
     {
-      title: i18nInstance.t('8a99082b2c32c843d2241e0ba60a3619', '分发策略'),
-      key: 'propagationPolicies',
+      title: 'Age',
+      key: 'age',
       render: (_, r) => {
-        const pp = extractPropagationPolicy(r);
-        return pp ? <Tag>{pp}</Tag> : '-';
+        return calculateDuration(r.objectMeta.creationTimestamp);
       },
-    },
-    {
-      title: i18nInstance.t('eaf8a02d1b16fcf94302927094af921f', '覆盖策略'),
-      key: 'overridePolicies',
-      width: 150,
-      render: () => {
-        return '-';
-      },
+      width: 120,
+      defaultSortOrder: 'descend',
+      sorter: (a, b) => new Date(a.objectMeta.creationTimestamp).getTime() - new Date(b.objectMeta.creationTimestamp).getTime(),
     },
     {
       title: i18nInstance.t('2b6bc0f293f5ca01b006206c2535ccbc', '操作'),
@@ -111,12 +119,13 @@ const SecretTable: FC<SecretTableProps> = (props) => {
               size={'small'}
               type="link"
               onClick={async () => {
-                const ret = await GetResource({
+                const ret = await GetMemberResource({
                   kind: r.typeMeta.kind,
                   name: r.objectMeta.name,
                   namespace: r.objectMeta.namespace,
+                  cluster: r.objectMeta.labels?.cluster || clusterOption.label,
                 });
-                onViewSecret(ret?.data);
+                onViewSecret(ret?.data, r.objectMeta.labels?.cluster || clusterOption.label);
               }}
             >
               {i18nInstance.t('607e7a4f377fa66b0b28ce318aab841f', '查看')}
@@ -124,8 +133,14 @@ const SecretTable: FC<SecretTableProps> = (props) => {
             <Button
               size={'small'}
               type="link"
-              onClick={() => {
-                onEditSecret(r);
+              onClick={async () => {
+                const ret = await GetMemberResource({
+                  kind: r.typeMeta.kind,
+                  name: r.objectMeta.name,
+                  namespace: r.objectMeta.namespace,
+                  cluster: r.objectMeta.labels?.cluster || clusterOption.label,
+                });
+                onEditSecret(ret?.data, r.objectMeta.labels?.cluster || clusterOption.label);
               }}
             >
               {i18nInstance.t('95b351c86267f3aedf89520959bce689', '编辑')}
@@ -137,7 +152,7 @@ const SecretTable: FC<SecretTableProps> = (props) => {
                 name: r.objectMeta.name,
               })}
               onConfirm={() => {
-                onDeleteSecretContent(r);
+                onDeleteSecretContent(r, r.objectMeta.labels?.cluster || clusterOption.label);
               }}
               okText={i18nInstance.t(
                 'e83a256e4f5bb4ff8b3d804b5473217a',
@@ -160,7 +175,7 @@ const SecretTable: FC<SecretTableProps> = (props) => {
   return (
     <Table
       rowKey={(r: Config) =>
-        `${r.objectMeta.namespace}-${r.objectMeta.name}` || ''
+        `${r.objectMeta.labels?.cluster || clusterOption.label}-secret-${r.objectMeta.namespace}-${r.objectMeta.name}` || ''
       }
       columns={columns}
       loading={isLoading}
