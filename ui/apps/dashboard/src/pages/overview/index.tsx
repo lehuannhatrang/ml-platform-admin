@@ -18,17 +18,17 @@ import {
   Col,
   Row,
   Spin,
-  Flex
 } from 'antd';
 
 import { GaugeChart } from '@/components/chart';
-import { GetOverview } from '@/services/overview.ts';
+import { GetOverview, MetricsDashboard } from '@/services/overview.ts';
 import { InfoCard, SectionCard } from '@/components/cards';
 import Panel from '@/components/panel';
 import i18nInstance from '@/utils/i18n';
 import { useQuery } from '@tanstack/react-query';
 import { GetClusters } from '@/services';
 import { Icons } from '@/components/icons';
+import { useState, useEffect } from 'react';
 
 const Overview = () => {
   const { data, isLoading } = useQuery({
@@ -47,7 +47,13 @@ const Overview = () => {
     },
   });
 
-  const grafanaUrl = 'http://192.168.28.135:31000/grafana/d/W2gX2zHVk/demo-dashboard?orgId=1&from=2025-02-21T09:22:42.348Z&to=2025-02-21T10:22:42.348Z&var-service=frontend&theme=light';
+  const [selectedDashboard, setSelectedDashboard] = useState<MetricsDashboard | null>(null);
+
+  useEffect(() => {
+    if ((data?.metricsDashboards?.length || 0) > 0) {
+      setSelectedDashboard(data?.metricsDashboards?.[0] || null);
+    }
+  }, [data]);
 
   const { allocatedCPU, totalCPU } = data?.memberClusterStatus.cpuSummary || {};
   const { allocatedMemory, totalMemory } = data?.memberClusterStatus.memorySummary || {};
@@ -183,19 +189,31 @@ const Overview = () => {
           </Col>
         </Row>
 
-        <SectionCard label={(
-          <Flex align='center'>
-            <p style={{
-              fontSize: '24px'
-            }} className='mr-4' >Cluster metrics</p>
-            <a href={grafanaUrl} target='_blank' rel="noreferrer" style={{color: '#1890ff', display: 'flex', fontSize: 16}}>
+        {(data?.metricsDashboards?.length || 0) > 0 && (
+        <SectionCard 
+          title='Monitoring'
+          extra={selectedDashboard && (
+            <a href={selectedDashboard.url} target='_blank' rel="noreferrer" style={{color: '#1890ff', display: 'flex', fontSize: 16}}>
               Grafana
               <Icons.newTab style={{height: 20}} />
             </a>
-          </Flex>
-        )}>
-          <iframe src={`${grafanaUrl}&kiosk`} width="100%" height="auto" style={{ minHeight: 1800, fontSize: '16px' }}></iframe>
-        </SectionCard>
+          )}
+          tabList={data?.metricsDashboards?.map((dashboard: MetricsDashboard) => ({
+            label: dashboard.name,
+            key: dashboard.name,
+          })) || []}
+          activeTabKey={selectedDashboard?.name}
+          onTabChange={(key: string) => setSelectedDashboard(data?.metricsDashboards?.find((dashboard: MetricsDashboard) => dashboard.name === key) || null)}
+        >
+          {selectedDashboard && (
+            <iframe
+              src={`${selectedDashboard.url}&kiosk`}
+              width="100%"
+              height="auto"
+              style={{ fontSize: '16px', overflow: 'hidden', minHeight: '1800px' }}
+            ></iframe>
+          )}
+        </SectionCard>)}
       </Panel>
     </Spin>
   );

@@ -22,7 +22,22 @@ import (
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
 	v1 "github.com/karmada-io/dashboard/cmd/api/app/types/api/v1"
 	"github.com/karmada-io/dashboard/cmd/api/app/types/common"
+	"github.com/karmada-io/dashboard/pkg/config"
 )
+
+func getMetricsDashboards() []v1.MetricsDashboard {
+	cfg := config.GetDashboardConfig()
+	var dashboards []v1.MetricsDashboard
+	if cfg.MetricsDashboards != nil {
+		for _, d := range cfg.MetricsDashboards {
+			dashboards = append(dashboards, v1.MetricsDashboard{
+				Name: d.Name,
+				URL:  d.URL,
+			})
+		}
+	}
+	return dashboards
+}
 
 func handleGetOverview(c *gin.Context) {
 	dataSelect := common.ParseDataSelectPathParameter(c)
@@ -43,11 +58,13 @@ func handleGetOverview(c *gin.Context) {
 		return
 	}
 
-	//GetControllerManagerInfo(dataSelect)
+	metricsDashboards := getMetricsDashboards()
+
 	common.Success(c, v1.OverviewResponse{
 		KarmadaInfo:           karmadaInfo,
 		MemberClusterStatus:   memberClusterStatus,
 		ClusterResourceStatus: clusterResourceStatus,
+		MetricsDashboards:     metricsDashboards,
 	})
 }
 

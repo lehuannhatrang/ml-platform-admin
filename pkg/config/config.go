@@ -95,7 +95,6 @@ func InitDashboardConfig(k8sClient kubernetes.Interface, stopper <-chan struct{}
 		klog.Errorf("Failed to add handler for resource(%s): %v", configmapGVR.String(), err)
 		return
 	}
-
 	factory.Start(stopper)
 	klog.Infof("ConfigMap informer started, waiting for ConfigMap events...")
 }
@@ -103,10 +102,11 @@ func InitDashboardConfig(k8sClient kubernetes.Interface, stopper <-chan struct{}
 // GetDashboardConfig returns a copy of the current dashboard configuration.
 func GetDashboardConfig() DashboardConfig {
 	return DashboardConfig{
-		DockerRegistries: dashboardConfig.DockerRegistries,
-		ChartRegistries:  dashboardConfig.ChartRegistries,
-		MenuConfigs:      dashboardConfig.MenuConfigs,
-		PathPrefix:       dashboardConfig.PathPrefix,
+		DockerRegistries:  dashboardConfig.DockerRegistries,
+		ChartRegistries:   dashboardConfig.ChartRegistries,
+		MenuConfigs:       dashboardConfig.MenuConfigs,
+		PathPrefix:        dashboardConfig.PathPrefix,
+		MetricsDashboards: dashboardConfig.MetricsDashboards,
 	}
 }
 

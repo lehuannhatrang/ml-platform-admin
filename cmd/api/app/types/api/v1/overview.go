@@ -26,6 +26,7 @@ type OverviewResponse struct {
 	KarmadaInfo           *KarmadaInfo           `json:"karmadaInfo"`
 	MemberClusterStatus   *MemberClusterStatus   `json:"memberClusterStatus"`
 	ClusterResourceStatus *ClusterResourceStatus `json:"clusterResourceStatus"`
+	MetricsDashboards     []MetricsDashboard     `json:"metricsDashboards"`
 }
 
 // KarmadaInfo contains information about the Karmada system.
@@ -75,4 +76,10 @@ type ClusterResourceStatus struct {
 	WorkloadNum          int `json:"workloadNum"`
 	ServiceNum           int `json:"serviceNum"`
 	ConfigNum            int `json:"configNum"`
+}
+
+// MetricsDashboard represents a metrics dashboard configuration
+type MetricsDashboard struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
 }

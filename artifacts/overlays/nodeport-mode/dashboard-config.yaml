@@ -2,6 +2,9 @@ docker_registries: []
 chart_registries: []
 # path_prefix: '/karmada'
 path_prefix: ''
+metrics_dashboards:
+  - name: 'Overview'
+    url: 'http://192.168.28.142:31984/d/efa86fd1d0c121a26444b636a3f509a8/kubernetes-compute-resources-cluster?orgId=1&from=now-1h&to=now&timezone=utc&var-datasource=default&var-cluster=&refresh=10s&shareView=public_dashboard'
 menu_configs:
   - path: /overview
     enable: true

@@ -128,7 +128,6 @@ const ServiceEditorModal: FC<NewWorkloadEditorModalProps> = (props) => {
         }}
       >
         <Flex>
-
           <Form.Item
             label={i18nInstance.t('924f67de61fc9e07fff979306900dc6a', '服务类型')}
           >

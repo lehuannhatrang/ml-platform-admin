@@ -42,10 +42,16 @@ type MenuConfig struct {
 	Children   []MenuConfig `yaml:"children" json:"children,omitempty"`
 }
 
+type MetricsDashboard struct {
+	Name string `yaml:"name" json:"name"`
+	URL  string `yaml:"url" json:"url"`
+}
+
 // DashboardConfig represents the configuration structure for the Karmada dashboard.
 type DashboardConfig struct {
-	DockerRegistries []DockerRegistry `yaml:"docker_registries" json:"docker_registries"`
-	ChartRegistries  []ChartRegistry  `yaml:"chart_registries" json:"chart_registries"`
-	MenuConfigs      []MenuConfig     `yaml:"menu_configs" json:"menu_configs"`
-	PathPrefix       string           `yaml:"path_prefix" json:"path_prefix"`
+	DockerRegistries  []DockerRegistry   `yaml:"docker_registries" json:"docker_registries"`
+	ChartRegistries   []ChartRegistry    `yaml:"chart_registries" json:"chart_registries"`
+	MenuConfigs       []MenuConfig       `yaml:"menu_configs" json:"menu_configs"`
+	PathPrefix        string             `yaml:"path_prefix" json:"path_prefix"`
+	MetricsDashboards []MetricsDashboard `yaml:"metrics_dashboards" json:"metrics_dashboards"`
 }

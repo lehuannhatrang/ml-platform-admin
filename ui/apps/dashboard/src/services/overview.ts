@@ -20,6 +20,7 @@ export interface OverviewInfo {
   karmadaInfo: KarmadaInfo;
   memberClusterStatus: MemberClusterStatus;
   clusterResourceStatus: ClusterResourceStatus;
+  metricsDashboards: MetricsDashboard[] | null;
 }
 
 export interface KarmadaInfo {
@@ -77,4 +78,9 @@ export interface ClusterResourceStatus {
 export async function GetOverview() {
   const resp = await karmadaClient.get<IResponse<OverviewInfo>>('/overview');
   return resp.data;
+}
+
+export interface MetricsDashboard {
+  name: string;
+  url: string;
 }
