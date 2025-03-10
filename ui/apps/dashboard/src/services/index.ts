@@ -18,3 +18,4 @@ export { GetClusters } from './cluster.ts';
 export { karmadaClient } from './base.ts';
 export { GetNodes } from './node.ts';
 export * from './karmada-config.ts';
+export * from './custom-resource.ts';

@@ -30,4 +30,5 @@ import (
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/secret"      // Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/service"     // Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/statefulset" // Importing member route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/customresource" // Importing member route packages forces route registration
 )

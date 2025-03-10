@@ -29,6 +29,7 @@ import { useQuery } from '@tanstack/react-query';
 import { GetClusters } from '@/services';
 import { Icons } from '@/components/icons';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const Overview = () => {
   const { data, isLoading } = useQuery({
@@ -46,6 +47,8 @@ const Overview = () => {
       return ret.data;
     },
   });
+  
+  const navigate = useNavigate();
 
   const [selectedDashboard, setSelectedDashboard] = useState<MetricsDashboard | null>(null);
 
@@ -67,13 +70,20 @@ const Overview = () => {
           <Col span={12}>
             <Row gutter={32} className="mb-8">
               <Col span={8}>
-                <InfoCard label={'Cluster'} value={clusters?.clusters.length || '-'} />
+                <InfoCard
+                  label={'Cluster'}
+                  value={clusters?.clusters.length || '-'}
+                  hoverable={true}
+                  onClick={() => navigate('/cluster-manage')}
+                />
               </Col>
               <Col span={8}>
                 <InfoCard
                   label={'Node'}
                   value={`${data?.memberClusterStatus.nodeSummary.readyNum || '-'
                     }/${data?.memberClusterStatus.nodeSummary.totalNum || '-'}`}
+                  hoverable={true}
+                  onClick={() => navigate('/node-manage')}
                 />
               </Col>
               <Col span={8}>
@@ -81,6 +91,8 @@ const Overview = () => {
                   label={'Pod'}
                   value={`${data?.memberClusterStatus.podSummary.allocatedPod || '-'
                     }/${data?.memberClusterStatus.podSummary.totalPod || '-'}`}
+                  hoverable={true}
+                  onClick={() => navigate('/multicloud-resource-manage/pod')}
                 />
               </Col>
             </Row>
@@ -92,6 +104,8 @@ const Overview = () => {
                     '调度策略',
                   )}
                   value={data?.clusterResourceStatus.propagationPolicyNum}
+                  hoverable={true}
+                  onClick={() => navigate('/multicloud-policy-manage/propagation-policy')}
                 />
               </Col>
               <Col span={8}>
@@ -101,6 +115,8 @@ const Overview = () => {
                     '差异化策略',
                   )}
                   value={data?.clusterResourceStatus.overridePolicyNum}
+                  hoverable={true}
+                  onClick={() => navigate('/multicloud-policy-manage/override-policy')}
                 />
               </Col>
               <Col span={8}>
@@ -118,7 +134,7 @@ const Overview = () => {
             <Row gutter={32}>
               <Col span={12}>
                 <Row>
-                  <b>
+                  <b style={{ fontSize: 16 }}>
                     {i18nInstance.t(
                       'a1dacced95ddca3603110bdb1ae46af1',
                       'CPU使用情况',
@@ -152,7 +168,7 @@ const Overview = () => {
               </Col>
               <Col span={12}>
                 <Row>
-                  <b>
+                  <b style={{ fontSize: 16 }}>
                     {i18nInstance.t(
                       '5eaa09de6e55b322fcc299f641d73ce7',
                       'Memory使用情况',

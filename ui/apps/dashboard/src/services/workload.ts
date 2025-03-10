@@ -175,6 +175,13 @@ export interface WorkloadStatusInfo {
   unavailable: number;
 }
 
+export type ContainerLogs = {
+  logs: string;
+  page: number;
+  totalPages: number;
+  totalLines: number;
+}
+
 export async function GetWorkloadDetail(params: {
   namespace: string;
   name: string;
@@ -199,6 +206,30 @@ export async function GetWorkloadDetail(params: {
   }
 
   return data;
+}
+
+export async function GetContainerLogs(params: {
+  namespace: string;
+  name: string;
+  container: string;
+  cluster: string;
+  page: number;
+}) {
+  const { namespace, name, container, cluster, page } = params;
+  const url = `/member/${cluster}/pod/${namespace}/${name}/logs`;
+  const resp = await karmadaClient.get<
+    IResponse<
+      {
+        errors: string[];
+      } & ContainerLogs
+    >
+  >(url, {
+    params: {
+      container,
+      page
+    },
+  });
+  return resp.data;
 }
 
 export interface WorkloadEvent {

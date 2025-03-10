@@ -69,11 +69,10 @@ const TextareaWithUpload: FC<TextareaWithUploadProps> = (props) => {
   return (
     <div className="relative">
       <Editor
-        // height="100px"
-        // width="200px"
+        className='shadow-md pt-[8px]'
         defaultLanguage="yaml"
         value={_value}
-        theme={'vs-dark'}
+        theme='vs'
         onChange={(v) => {
           triggerChange(v || '');
         }}
@@ -82,10 +81,11 @@ const TextareaWithUpload: FC<TextareaWithUploadProps> = (props) => {
 
       {!hideUploadButton && (
         <Upload
-          className="absolute top-[8px] right-[6px] z-[100]"
+          className="absolute top-[-32px] right-[6px] z-[100]"
           beforeUpload={async (file) => {
             const d = await readBlob(file);
             const isValid = checkContent(d);
+            console.log({isValid})
             if (isValid) {
               triggerChange(d.data as string);
             }

@@ -56,7 +56,8 @@ import {
   Cpu,
   Server,
   ArrowUpDown,
-  SquareArrowOutUpRight
+  SquareArrowOutUpRight,
+  Puzzle,
 } from 'lucide-react';
 
 export type Icon = LucideIcon;
@@ -79,6 +80,7 @@ export const Icons = {
   basicConfig: Settings2,
   advancedConfig: SlidersHorizontal,
   addon: Blocks,
+  custom: Puzzle,
   delete: Trash2,
   up: ChevronUp,
   down: ChevronDown,

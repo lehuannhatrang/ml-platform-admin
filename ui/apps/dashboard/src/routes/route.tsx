@@ -46,6 +46,8 @@ import NodeManage from '@/pages/node-manage';
 import Login from '@/pages/login';
 import { Icons } from '@/components/icons';
 import { ConfigKind, ServiceKind, WorkloadKind } from '@/services/base';
+import CustomResourcePage from '@/pages/multicloud-custom-resource/custom-resource';
+import CustomResourceDefinitionPage from '@/pages/multicloud-custom-resource/custom-resource-definition';
 
 export interface IRouteObjectHandle {
   icon?: ReactNode;
@@ -265,6 +267,33 @@ export function getRoutes() {
               handle: {
                 sidebarKey: 'OVERRIDE-POLICY',
                 sidebarName: i18nInstance.t('0a7e9443c41575378d2db1e288d3f1cb'),
+              },
+            },
+          ],
+        },
+        {
+          path: '/multicloud-custom-resource',
+          handle: {
+            sidebarKey: 'MULTICLOUD-CUSTOM-RESOURCE',
+            sidebarName: 'Custom Resources',
+            icon: <Icons.custom {...IconStyles} />,
+            isPage: false,
+          },
+          children: [
+            {
+              path: 'custom-resource-definition',
+              element: <CustomResourceDefinitionPage />,
+              handle: {
+                sidebarKey: 'CUSTOM-RESOURCE-DEFINITION',
+                sidebarName: 'Custom Resource Definition',
+              },
+            },
+            {
+              path: 'custom-resource',
+              element: <CustomResourcePage />,
+              handle: {
+                sidebarKey: 'CUSTOM-RESOURCE',
+                sidebarName: 'Custom Resource',
               },
             },
           ],

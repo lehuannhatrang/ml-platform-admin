@@ -31,7 +31,7 @@ import {
   Tooltip
 } from 'antd';
 import { Icons } from '@/components/icons';
-import type { Workload } from '@/services/workload';
+import type { PodWorkload, Workload } from '@/services/workload';
 import { GetWorkloads } from '@/services/workload';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
@@ -49,6 +49,7 @@ import useCluster, { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-c
 import { calculateDuration } from '@/utils/time.ts';
 import { getStatusFromCondition } from '@/utils/resource.ts';
 import dayjs from 'dayjs';
+import LogsDrawer, { LogsDrawerProps } from './logs-drawer.tsx';
 
 type WorkloadPageProps = {
   kind: WorkloadKind;
@@ -89,6 +90,16 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
     namespace: '',
     name: '',
     cluster: '',
+  });
+  const [logsDrawerData, setLogsDrawerData] = useState<
+    Omit<LogsDrawerProps, 'onClose'>
+  >({
+    open: false,
+    kind: WorkloadKind.Pod,
+    namespace: '',
+    name: '',
+    cluster: '',
+    containers: [],
   });
   const [showModal, toggleShowModal] = useToggle(false);
   const [editorState, setEditorState] = useState<{
@@ -255,6 +266,22 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
             >
               {i18nInstance.t('607e7a4f377fa66b0b28ce318aab841f', '查看')}
             </Button>
+            {kind === WorkloadKind.Pod && <Button
+              size={'small'}
+              type="link"
+              onClick={() => {
+                setLogsDrawerData({
+                  open: true,
+                  kind: r.typeMeta.kind as WorkloadKind,
+                  name: r.objectMeta.name,
+                  namespace: r.objectMeta.namespace,
+                  cluster: r.objectMeta.labels?.cluster || filter.selectedCluster.label,
+                  containers: (r as PodWorkload).spec?.containers?.map((i: any) => i.name) || [],
+                });
+              }}
+            >
+              {'Logs'}
+            </Button>}
             <Button
               size={'small'}
               type="link"
@@ -442,6 +469,24 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
             namespace: '',
             name: '',
             cluster: '',
+          });
+        }}
+      />
+      <LogsDrawer
+        open={logsDrawerData.open}
+        kind={logsDrawerData.kind}
+        name={logsDrawerData.name}
+        namespace={logsDrawerData.namespace}
+        cluster={logsDrawerData.cluster}
+        containers={logsDrawerData.containers}
+        onClose={() => {
+          setLogsDrawerData({
+            open: false,
+            kind: WorkloadKind.Pod,
+            namespace: '',
+            name: '',
+            cluster: '',
+            containers: [],
           });
         }}
       />

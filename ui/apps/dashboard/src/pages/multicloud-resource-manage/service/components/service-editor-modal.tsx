@@ -17,12 +17,12 @@ limitations under the License.
 import i18nInstance from '@/utils/i18n';
 import { FC, useEffect, useMemo, useState } from 'react';
 import { Form, Modal, Select, Flex } from 'antd';
-import Editor from '@monaco-editor/react';
 import { parse } from 'yaml';
 import _ from 'lodash';
 import { CreateMemberResource, PutMemberResource } from '@/services/unstructured';
 import { IResponse, ServiceKind } from '@/services/base.ts';
 import { useCluster } from '@/hooks';
+import TextareaWithUpload from '@/components/textarea-with-upload';
 export interface NewWorkloadEditorModalProps {
   mode: 'create' | 'edit' | 'detail';
   open: boolean;
@@ -168,7 +168,7 @@ const ServiceEditorModal: FC<NewWorkloadEditorModalProps> = (props) => {
           </Form.Item>
         </Flex>
       </Form>
-      <Editor
+      <TextareaWithUpload
         height="520px"
         defaultLanguage="yaml"
         value={content}
@@ -184,6 +184,7 @@ const ServiceEditorModal: FC<NewWorkloadEditorModalProps> = (props) => {
           wordWrap: 'on',
         }}
         onChange={handleEditorChange}
+        checkContent={(data) => !data.err}
       />
     </Modal>
   );

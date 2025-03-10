@@ -29,8 +29,6 @@ import {
 } from 'antd';
 import {
   GetWorkloadDetail,
-  GetWorkloadEvents,
-  WorkloadEvent,
   ContainerStatuses,
 } from '@/services/workload.ts';
 import { useQuery } from '@tanstack/react-query';
@@ -70,47 +68,6 @@ const WorkloadDetailDrawer: FC<WorkloadDetailDrawerProps> = (props) => {
     },
     enabled: enableFetch,
   });
-  const { data: eventsData } = useQuery({
-    queryKey: ['GetWorkloadEvents', kind, name, namespace],
-    queryFn: async () => {
-      const workloadEventsRet = await GetWorkloadEvents({
-        namespace,
-        name,
-        kind,
-        cluster,
-      });
-      return workloadEventsRet.data || {};
-    },
-    enabled: enableFetch,
-  });
-
-  const columns: TableColumnProps<WorkloadEvent>[] = [
-    {
-      title: i18nInstance.t('383a6d166f8f60e16e726ccc9c483631', '类别'),
-      key: 'type',
-      dataIndex: 'type',
-    },
-    {
-      title: i18nInstance.t('26ca20b161c33362d88eb0ba0bc90751', '来源'),
-      key: 'sourceComponent',
-      dataIndex: 'sourceComponent',
-    },
-    {
-      title: i18nInstance.t('03663386e7d82f847634a6ee9111a32b', '最后检测时间'),
-      key: 'lastSeen',
-      dataIndex: 'lastSeen',
-    },
-    {
-      title: i18nInstance.t('41dfb0bf6167ca035b93caf3e06d6c95', '原因'),
-      key: 'reason',
-      dataIndex: 'reason',
-    },
-    {
-      title: i18nInstance.t('d8c7e04c8e2be23dd3b81a31db6e04f1', '信息'),
-      key: 'message',
-      dataIndex: 'message',
-    },
-  ];
   
   const containerStatusColumns: TableColumnProps<ContainerStatuses>[] = [
     {
@@ -280,19 +237,6 @@ const WorkloadDetailDrawer: FC<WorkloadDetailDrawerProps> = (props) => {
           />
         </Card>
       )}
-
-      <Card
-        title={i18nInstance.t('be41a5333fef1e665214254aaf11f4fd', '调度信息')}
-        bordered
-        className={cn(styles['schedule-container'], 'mt-[6px]')}
-      >
-        <Table
-          rowKey={(e) => e.objectMeta.uid}
-          columns={columns}
-          pagination={false}
-          dataSource={eventsData?.events || []}
-        />
-      </Card>
     </Drawer>
   );
 };

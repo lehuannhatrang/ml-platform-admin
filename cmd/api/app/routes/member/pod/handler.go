@@ -17,6 +17,8 @@ limitations under the License.
 package pod
 
 import (
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
@@ -51,9 +53,57 @@ func handleGetMemberPodDetail(c *gin.Context) {
 	common.Success(c, result)
 }
 
+// handleGetPodContainerLogs returns logs from a specific container in a pod with paging support
+func handleGetPodContainerLogs(c *gin.Context) {
+	memberClient := client.InClusterClientForMemberCluster(c.Param("clustername"))
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+	container := c.Query("container")
+
+	// Get page parameter, default to 1 if not provided
+	page, err := strconv.ParseInt(c.DefaultQuery("page", "1"), 10, 64)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	// First get total lines by fetching all logs
+	allLogs, err := pod.GetPodLogs(memberClient, namespace, name, pod.LogOptions{
+		Container: container,
+		Previous:  false,
+		TailLines: nil, // nil means all lines
+	})
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
+
+	// Calculate total pages (200 lines per page)
+	totalPages := (allLogs.TotalLines + 199) / 200 // Round up division
+
+	// Now get the requested page
+	tailLines := page * 200
+	logs, err := pod.GetPodLogs(memberClient, namespace, name, pod.LogOptions{
+		Container: container,
+		Previous:  false,
+		TailLines: &tailLines,
+	})
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
+
+	common.Success(c, gin.H{
+		"logs": logs.Logs,
+		"page": page,
+		"totalPages": totalPages,
+		"totalLines": allLogs.TotalLines,
+	})
+}
+
 func init() {
 	r := router.MemberV1()
 	r.GET("/pod", handleGetMemberPod)
 	r.GET("/pod/:namespace", handleGetMemberPod)
 	r.GET("/pod/:namespace/:name", handleGetMemberPodDetail)
+	r.GET("/pod/:namespace/:name/logs", handleGetPodContainerLogs)
 }
