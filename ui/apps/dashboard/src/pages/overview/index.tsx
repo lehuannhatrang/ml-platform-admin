@@ -16,8 +16,12 @@ limitations under the License.
 
 import {
   Col,
+  Empty,
+  Flex,
+  Popconfirm,
   Row,
   Spin,
+  message,
 } from 'antd';
 
 import { GaugeChart } from '@/components/chart';
@@ -30,9 +34,12 @@ import { GetClusters } from '@/services';
 import { Icons } from '@/components/icons';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PlusOutlined, SettingOutlined } from '@ant-design/icons';
+import NewDashboardModal from './new-dashboard-modal';
+import { DeleteMonitoringDashboard } from '@/services/monitoring-config';
 
 const Overview = () => {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['GetOverview'],
     queryFn: async () => {
       const ret = await GetOverview();
@@ -47,10 +54,11 @@ const Overview = () => {
       return ret.data;
     },
   });
-  
+
   const navigate = useNavigate();
 
   const [selectedDashboard, setSelectedDashboard] = useState<MetricsDashboard | null>(null);
+  const [isNewDashboardModalOpen, setIsNewDashboardModalOpen] = useState(false);
 
   useEffect(() => {
     if ((data?.metricsDashboards?.length || 0) > 0) {
@@ -62,6 +70,30 @@ const Overview = () => {
   const { allocatedMemory, totalMemory } = data?.memberClusterStatus.memorySummary || {};
   const allocatedMemoryGiB = allocatedMemory && allocatedMemory / 8 / 1024 / 1024;
   const totalMemoryGiB = totalMemory && totalMemory / 8 / 1024 / 1024;
+
+  const handleDeleteDashboard = async () => {
+    if (!selectedDashboard) return;
+    
+    try {
+      await DeleteMonitoringDashboard({
+        name: selectedDashboard.name,
+        url: selectedDashboard.url,
+      });
+
+      message.success('Dashboard deleted successfully');
+      
+      // Refresh overview data
+      refetch();
+      
+      // Reset selected dashboard if it was deleted
+      if (selectedDashboard) {
+        const newActiveKey = data?.metricsDashboards?.find(d => d.name !== selectedDashboard.name)?.name || 'add-new-dashboard';
+        setSelectedDashboard(data?.metricsDashboards?.find(d => d.name === newActiveKey) || null);
+      }
+    } catch (error: any) {
+      message.error(error?.message || 'Failed to delete dashboard');
+    }
+  };
 
   return (
     <Spin spinning={isLoading}>
@@ -205,32 +237,78 @@ const Overview = () => {
           </Col>
         </Row>
 
-        {(data?.metricsDashboards?.length || 0) > 0 && (
-        <SectionCard 
-          title='Monitoring'
-          extra={selectedDashboard && (
-            <a href={selectedDashboard.url} target='_blank' rel="noreferrer" style={{color: '#1890ff', display: 'flex', fontSize: 16}}>
-              Grafana
-              <Icons.newTab style={{height: 20}} />
-            </a>
-          )}
-          tabList={data?.metricsDashboards?.map((dashboard: MetricsDashboard) => ({
-            label: dashboard.name,
-            key: dashboard.name,
-          })) || []}
-          activeTabKey={selectedDashboard?.name}
-          onTabChange={(key: string) => setSelectedDashboard(data?.metricsDashboards?.find((dashboard: MetricsDashboard) => dashboard.name === key) || null)}
-        >
-          {selectedDashboard && (
-            <iframe
-              src={`${selectedDashboard.url}&kiosk`}
-              width="100%"
-              height="auto"
-              style={{ fontSize: '16px', overflow: 'hidden', minHeight: '1800px' }}
-            ></iframe>
-          )}
-        </SectionCard>)}
+          <SectionCard
+            title='Monitoring'
+            extra={(
+              <a href='/basic-config/monitoring-config' style={{ fontSize: 20, color: '#1890ff' }}>
+                <SettingOutlined />
+              </a>
+            )}
+            tabList={[
+              ...(data?.metricsDashboards?.map((dashboard: MetricsDashboard) => ({
+                label: dashboard.name,
+                key: dashboard.name,
+              })) || []),
+              {
+                label: <Flex>
+                  <PlusOutlined className='mr-2' /> Add Dashboard
+                </Flex>,
+                key: 'add-new-dashboard',
+              }
+            ]}
+            activeTabKey={selectedDashboard?.name || ''}
+            onTabChange={(key: string) => {
+              if (key === 'add-new-dashboard') {
+                setIsNewDashboardModalOpen(true);
+              } else {
+                setSelectedDashboard(data?.metricsDashboards?.find((dashboard: MetricsDashboard) => dashboard.name === key) || null)
+              }
+            }}
+          >
+            {selectedDashboard ? (
+              <>
+                <Flex justify='space-between' className='mb-4'>
+                  <a href={selectedDashboard.url} target='_blank' rel="noreferrer" style={{ color: '#1890ff', display: 'flex', fontSize: 16 }}>
+                    Grafana
+                    <Icons.newTab style={{ height: 20 }} />
+                  </a>
+                  <Popconfirm
+                    className='ml-4'
+                    placement="topRight"
+                    title={`Do you want to remove "${selectedDashboard.name}" dashboard?`}
+                    onConfirm={handleDeleteDashboard}
+                    okText={i18nInstance.t(
+                      'e83a256e4f5bb4ff8b3d804b5473217a',
+                      '确认',
+                    )}
+                    cancelText={i18nInstance.t(
+                      '625fb26b4b3340f7872b411f401e754c',
+                      '取消',
+                    )}
+                  >
+                    <Icons.trash style={{ height: 20, cursor: 'pointer', color: '#F4664A' }} />
+                  </Popconfirm>
+                </Flex>
+                <iframe
+                  src={`${selectedDashboard.url}${selectedDashboard.url.includes('?') ? '&' : '?'}theme=light&kiosk`}
+                  width="100%"
+                  height="auto"
+                  style={{ fontSize: '16px', overflow: 'hidden', minHeight: '1800px' }}
+                ></iframe>
+              </>
+            ): <Empty description="No monitoring dashboard found, please add one."/>}
+          </SectionCard>
       </Panel>
+
+      <NewDashboardModal
+        open={isNewDashboardModalOpen}
+        onCancel={() => setIsNewDashboardModalOpen(false)}
+        onSuccess={() => {
+          setIsNewDashboardModalOpen(false);
+          // Refetch data after adding a new dashboard
+          refetch();
+        }}
+      />
     </Spin>
   );
 };

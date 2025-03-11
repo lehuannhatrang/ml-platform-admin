@@ -48,6 +48,7 @@ import { Icons } from '@/components/icons';
 import { ConfigKind, ServiceKind, WorkloadKind } from '@/services/base';
 import CustomResourcePage from '@/pages/multicloud-custom-resource/custom-resource';
 import CustomResourceDefinitionPage from '@/pages/multicloud-custom-resource/custom-resource-definition';
+import MonitoringConfig from '@/pages/basic-config/monitoring-config';
 
 export interface IRouteObjectHandle {
   icon?: ReactNode;
@@ -321,6 +322,14 @@ export function getRoutes() {
               handle: {
                 sidebarKey: 'UPGRADE',
                 sidebarName: i18nInstance.t('0506797675615f94ddf57bebca9da81f'),
+              },
+            },
+            {
+              path: 'monitoring-config',
+              element: <MonitoringConfig />,
+              handle: {
+                sidebarKey: 'MONITORING-CONFIG',
+                sidebarName: 'Monitoring Config',
               },
             },
             {

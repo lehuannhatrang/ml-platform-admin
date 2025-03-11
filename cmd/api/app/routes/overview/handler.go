@@ -17,11 +17,14 @@ limitations under the License.
 package overview
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
 	v1 "github.com/karmada-io/dashboard/cmd/api/app/types/api/v1"
 	"github.com/karmada-io/dashboard/cmd/api/app/types/common"
+	"github.com/karmada-io/dashboard/pkg/client"
 	"github.com/karmada-io/dashboard/pkg/config"
 )
 
@@ -68,6 +71,90 @@ func handleGetOverview(c *gin.Context) {
 	})
 }
 
+type DashboardConfig struct {
+	Name string `json:"name" binding:"required"`
+	URL  string `json:"url" binding:"required,url"`
+}
+
+func handleSaveDashboard(c *gin.Context) {
+	var dashboardConfig DashboardConfig
+	if err := c.ShouldBindJSON(&dashboardConfig); err != nil {
+		common.Fail(c, fmt.Errorf("invalid request body: %w", err))
+		return
+	}
+
+	// Get kubernetes client
+	kubeClient := client.InClusterClient()
+
+	// Get current dashboard config
+	currentConfig := config.GetDashboardConfig()
+
+	// Check for duplicate name
+	for _, d := range currentConfig.MetricsDashboards {
+		if d.Name == dashboardConfig.Name {
+			common.Fail(c, fmt.Errorf("dashboard with name '%s' already exists", dashboardConfig.Name))
+			return
+		}
+	}
+
+	// Add new dashboard
+	currentConfig.MetricsDashboards = append(currentConfig.MetricsDashboards, config.MetricsDashboard{
+		Name: dashboardConfig.Name,
+		URL:  dashboardConfig.URL,
+	})
+
+	// Update dashboard config
+	if err := config.UpdateDashboardConfig(kubeClient, currentConfig); err != nil {
+		common.Fail(c, fmt.Errorf("failed to update dashboard config: %w", err))
+		return
+	}
+
+	common.Success(c, gin.H{"message": "Dashboard saved successfully"})
+}
+
+func handleDeleteDashboard(c *gin.Context) {
+	name := c.Param("name")
+	url := c.Query("url")
+
+	if name == "" || url == "" {
+		common.Fail(c, fmt.Errorf("name and url parameters are required"))
+		return
+	}
+
+	// Get kubernetes client
+	kubeClient := client.InClusterClient()
+
+	// Get current dashboard config
+	currentConfig := config.GetDashboardConfig()
+
+	// Find and remove the dashboard
+	found := false
+	updatedDashboards := make([]config.MetricsDashboard, 0, len(currentConfig.MetricsDashboards))
+	for _, d := range currentConfig.MetricsDashboards {
+		if d.Name == name && d.URL == url {
+			found = true
+			continue
+		}
+		updatedDashboards = append(updatedDashboards, d)
+	}
+
+	if !found {
+		common.Fail(c, fmt.Errorf("dashboard with name '%s' and url '%s' not found", name, url))
+		return
+	}
+
+	// Update the metrics dashboards
+	currentConfig.MetricsDashboards = updatedDashboards
+
+	// Update dashboard config
+	if err := config.UpdateDashboardConfig(kubeClient, currentConfig); err != nil {
+		common.Fail(c, fmt.Errorf("failed to update dashboard config: %w", err))
+		return
+	}
+
+	common.Success(c, gin.H{"message": "Dashboard deleted successfully"})
+}
+
 func init() {
 	/*
 		创建时间	2024-01-01
@@ -78,4 +165,6 @@ func init() {
 	*/
 	r := router.V1()
 	r.GET("/overview", handleGetOverview)
+	r.POST("/overview/monitoring/dashboard", handleSaveDashboard)
+	r.DELETE("/overview/monitoring/dashboard/:name", handleDeleteDashboard)
 }
