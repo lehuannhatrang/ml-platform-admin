@@ -17,6 +17,7 @@ limitations under the License.
 package aggregated
 
 import (
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/argocd"
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/configmap"    // Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/cronjob"     // Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/daemonset"   // Importing member route packages forces route registration

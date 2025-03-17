@@ -76,6 +76,19 @@ menu_configs:
   - path: /node-manage
     enable: true
     sidebar_key: NODE-MANAGE
+  - path: /continuous-delivery
+    enable: true
+    sidebar_key: CONTINUOUS-DELIVERY
+    children:
+      - path: application
+        enable: true
+        sidebar_key: APPLICATION
+      - path: application-set
+        enable: true
+        sidebar_key: APPLICATION-SET
+      - path: project
+        enable: true
+        sidebar_key: PROJECT
   - path: /basic-config
     enable: true
     sidebar_key: BASIC-CONFIG

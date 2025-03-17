@@ -1,5 +1,5 @@
-import { ClusterOption } from "@/hooks/use-cluster";
-import { IResponse, karmadaClient, ObjectMeta } from "./base";
+import { ClusterOption } from "../hooks/use-cluster";
+import { convertDataSelectQuery, DataSelectQuery, IResponse, karmadaClient, ObjectMeta } from "./base";
 
 export interface ApiVersion {
   group: string;
@@ -50,8 +50,13 @@ export async function GetApiVersions(params: {
 
 export async function GetCustomResourceDefinitions(params: {
   cluster?: ClusterOption;
+  keyword?: string;
 }) {
-    const { cluster } = params;
+    const { cluster, keyword } = params;
+    const requestData = {} as DataSelectQuery;
+    if (keyword) {
+      requestData.filterBy = ['name', keyword];
+    }
     const url = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/customresource/definition` : '/aggregated/customresource/definition';
     const resp = await karmadaClient.get<
       IResponse<{
@@ -61,7 +66,62 @@ export async function GetCustomResourceDefinitions(params: {
         };
         items: CustomResourceDefinition[];
       }>
+    >(url, {
+      params: convertDataSelectQuery(requestData),
+    });
+    return resp.data;
+}
+
+export type CustomResourceDefinitionDetail = {
+  apiVersion: string;
+  kind: string;
+  metadata: ObjectMeta;
+  spec: any;
+  status: {
+    acceptedNames: {
+      kind: string;
+      listKind: string;
+      plural: string;
+      singular: string;
+    };
+    conditions: {
+      type: string;
+      status: string;
+      reason: string;
+      message: string;
+    }[];
+  }
+  storedVersions: string[];
+}
+
+export async function GetCustomResourceDefinitionByName(params: {
+  cluster: string;
+  crdName: string;
+}) {
+    const { cluster, crdName } = params;
+    const url = `/member/${cluster}/customresource/definition/${crdName}`;
+    const resp = await karmadaClient.get<
+      IResponse<{
+        errors: string[];
+        crd: CustomResourceDefinitionDetail;
+      }>
     >(url);
+    return resp.data;
+}
+
+export async function UpdateCustomResourceDefinition(params: {
+  cluster: string;
+  crdName: string;
+  crdData: any;
+}) {
+    const { cluster, crdName, crdData } = params;
+    const url = `/member/${cluster}/customresource/definition/${crdName}`;
+    const resp = await karmadaClient.put<
+      IResponse<{
+        errors: string[];
+        crd: any;
+      }>
+    >(url, crdData);
     return resp.data;
 }
 

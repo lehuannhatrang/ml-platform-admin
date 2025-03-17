@@ -58,6 +58,7 @@ import {
   ArrowUpDown,
   SquareArrowOutUpRight,
   Puzzle,
+  Sailboat
 } from 'lucide-react';
 
 export type Icon = LucideIcon;
@@ -70,6 +71,7 @@ export const Icons = {
   chevronRight: ChevronRight,
   check: Check,
   close: X,
+  continuousDelivery: Sailboat,
   ellipsis: MoreVertical,
   clusters: Boxes,
   node: Server,

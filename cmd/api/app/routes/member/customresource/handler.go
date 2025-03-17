@@ -18,6 +18,7 @@ package customresource
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/gin-gonic/gin"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,146 +29,8 @@ import (
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
 	"github.com/karmada-io/dashboard/cmd/api/app/types/common"
 	"github.com/karmada-io/dashboard/pkg/client"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
-
-func handleGetCustomResourceDefinitions(c *gin.Context) {
-	// Get member cluster config
-	memberConfig, err := client.GetMemberConfig()
-	if err != nil {
-		klog.ErrorS(err, "Failed to get member config")
-		common.Fail(c, fmt.Errorf("failed to get member config: %w", err))
-		return
-	}
-
-	karmadaConfig, _, err := client.GetKarmadaConfig()
-	if err != nil {
-		klog.ErrorS(err, "Failed to get karmada config")
-		common.Fail(c, fmt.Errorf("failed to get karmada config: %w", err))
-		return
-	}
-
-	clusterName := c.Param("clustername")
-
-	// Set up member cluster proxy URL
-	memberConfig.Host = karmadaConfig.Host + fmt.Sprintf("/apis/cluster.karmada.io/v1alpha1/clusters/%s/proxy/", clusterName)
-	klog.V(4).InfoS("Using member config", "host", memberConfig.Host)
-
-	// Create dynamic client
-	dynamicClient, err := dynamic.NewForConfig(memberConfig)
-	if err != nil {
-		klog.ErrorS(err, "Failed to create dynamic client")
-		common.Fail(c, fmt.Errorf("failed to create dynamic client: %w", err))
-		return
-	}
-
-	// Get group name from path parameter
-	groupName := c.Param("groupname")
-
-	// Create GVR for CRDs
-	gvr := schema.GroupVersionResource{
-		Group:    "apiextensions.k8s.io",
-		Version:  "v1",
-		Resource: "customresourcedefinitions",
-	}
-
-	// List all CRDs
-	list, err := dynamicClient.Resource(gvr).List(c, metav1.ListOptions{})
-	if err != nil {
-		klog.ErrorS(err, "Failed to list CRDs", "cluster", clusterName)
-		common.Fail(c, fmt.Errorf("failed to list CRDs: %w", err))
-		return
-	}
-
-	// Filter CRDs by group
-	filteredList := list.DeepCopy()
-	filteredList.Items = nil
-
-	for _, crd := range list.Items {
-		spec, ok := crd.Object["spec"].(map[string]interface{})
-		if !ok {
-			continue
-		}
-		group, ok := spec["group"].(string)
-		if !ok {
-			continue
-		}
-		if group == groupName {
-			filteredList.Items = append(filteredList.Items, crd)
-		}
-	}
-
-	common.Success(c, filteredList)
-}
-
-func handleGetCustomResources(c *gin.Context) {
-	// Get member cluster config
-	memberConfig, err := client.GetMemberConfig()
-	if err != nil {
-		klog.ErrorS(err, "Failed to get member config")
-		common.Fail(c, fmt.Errorf("failed to get member config: %w", err))
-		return
-	}
-
-	karmadaConfig, _, err := client.GetKarmadaConfig()
-	if err != nil {
-		klog.ErrorS(err, "Failed to get karmada config")
-		common.Fail(c, fmt.Errorf("failed to get karmada config: %w", err))
-		return
-	}
-
-	clusterName := c.Param("clustername")
-	if clusterName == "" {
-		common.Fail(c, fmt.Errorf("cluster name is required"))
-		return
-	}
-
-	// Set up member cluster proxy URL with the correct format
-	memberConfig.Host = fmt.Sprintf("%s/apis/cluster.karmada.io/v1alpha1/clusters/%s/proxy", karmadaConfig.Host, clusterName)
-	klog.V(4).InfoS("Using member config", "host", memberConfig.Host)
-
-	// Create dynamic client
-	dynamicClient, err := dynamic.NewForConfig(memberConfig)
-	if err != nil {
-		klog.ErrorS(err, "Failed to create dynamic client")
-		common.Fail(c, fmt.Errorf("failed to create dynamic client: %w", err))
-		return
-	}
-
-	// Get resource definition from path parameter
-	resourceDefinition := c.Param("resourcedefinition")
-	namespaceQuery := common.ParseNamespacePathParameter(c)
-
-	// Parse the resource definition into group, version, and resource
-	gv, err := schema.ParseGroupVersion(resourceDefinition)
-	if err != nil {
-		klog.ErrorS(err, "Failed to parse group version")
-		common.Fail(c, fmt.Errorf("failed to parse group version: %w", err))
-		return
-	}
-
-	gvr := schema.GroupVersionResource{
-		Group:    gv.Group,
-		Version:  gv.Version,
-		Resource: c.Query("resource"), // Get the resource type from query parameter
-	}
-
-	// List custom resources
-	var list interface{}
-	namespace := namespaceQuery.ToRequestParam()
-	if namespace == "" {
-		list, err = dynamicClient.Resource(gvr).List(c, metav1.ListOptions{})
-	} else {
-		list, err = dynamicClient.Resource(gvr).Namespace(namespace).List(c, metav1.ListOptions{})
-	}
-
-	if err != nil {
-		klog.ErrorS(err, "Failed to list custom resources", "cluster", clusterName)
-		common.Fail(c, fmt.Errorf("failed to list custom resources: %w", err))
-		return
-	}
-
-	common.Success(c, list)
-}
 
 // handleListCustomResourcesByGroupAndCRD handles GET requests for custom resources filtered by group and CRD name
 func handleListCustomResourcesByGroupAndCRD(c *gin.Context) {
@@ -258,9 +121,336 @@ func handleListCustomResourcesByGroupAndCRD(c *gin.Context) {
 	})
 }
 
+// handleGetClusterCRDs handles GET requests to list all CustomResourceDefinitions in a specific member cluster
+func handleGetClusterCRDs(c *gin.Context) {
+	// Get cluster name from path parameter
+	clusterName := c.Param("clustername")
+	if clusterName == "" {
+		common.Fail(c, fmt.Errorf("cluster name is required"))
+		return
+	}
+
+	// Check if grouping by group is requested
+	groupBy := c.Query("groupBy")
+
+	// Get member cluster config
+	memberConfig, err := client.GetMemberConfig()
+	if err != nil {
+		klog.ErrorS(err, "Failed to get member config")
+		common.Fail(c, fmt.Errorf("failed to get member config: %w", err))
+		return
+	}
+
+	karmadaConfig, _, err := client.GetKarmadaConfig()
+	if err != nil {
+		klog.ErrorS(err, "Failed to get karmada config")
+		common.Fail(c, fmt.Errorf("failed to get karmada config: %w", err))
+		return
+	}
+
+	// Set up member cluster proxy URL with the correct format
+	memberConfig.Host = fmt.Sprintf("%s/apis/cluster.karmada.io/v1alpha1/clusters/%s/proxy", karmadaConfig.Host, clusterName)
+	klog.V(4).InfoS("Using member config", "host", memberConfig.Host)
+
+	// Create dynamic client
+	dynamicClient, err := dynamic.NewForConfig(memberConfig)
+	if err != nil {
+		klog.ErrorS(err, "Failed to create dynamic client")
+		common.Fail(c, fmt.Errorf("failed to create dynamic client: %w", err))
+		return
+	}
+
+	// Define the GVR for CustomResourceDefinitions
+	crdGVR := schema.GroupVersionResource{
+		Group:    "apiextensions.k8s.io",
+		Version:  "v1",
+		Resource: "customresourcedefinitions",
+	}
+
+	// List all CRDs in the member cluster
+	crdList, err := dynamicClient.Resource(crdGVR).List(c, metav1.ListOptions{})
+	if err != nil {
+		klog.ErrorS(err, "Failed to list CRDs", "cluster", clusterName)
+		common.Fail(c, fmt.Errorf("failed to list CRDs: %w", err))
+		return
+	}
+
+	// Process CRDs 
+	var allCRDs []unstructured.Unstructured
+	groupedCRDs := make(map[string][]unstructured.Unstructured)
+
+	// Add cluster information to each CRD's metadata and extract necessary info from spec
+	for _, crd := range crdList.Items {
+		// Clean up metadata
+		metadata := crd.Object["metadata"].(map[string]interface{})
+		
+		// Initialize labels if not present
+		if metadata["labels"] == nil {
+			metadata["labels"] = make(map[string]interface{})
+		}
+		
+		// Add cluster information
+		metadata["labels"].(map[string]interface{})["cluster"] = clusterName
+
+		// Remove managedFields
+		delete(metadata, "managedFields")
+
+		// Extract necessary fields from spec before cleaning it
+		var group string
+		if spec, ok := crd.Object["spec"].(map[string]interface{}); ok {
+			// Extract and store group
+			group = spec["group"].(string)
+			// Store group in labels for later use
+			metadata["labels"].(map[string]interface{})["group"] = group
+
+			// Create simplified spec with only group and scope
+			simplifiedSpec := map[string]interface{}{
+				"group": group,
+			}
+			// Keep scope if present
+			if scope, ok := spec["scope"].(string); ok {
+				simplifiedSpec["scope"] = scope
+			}
+			// Replace full spec with simplified version
+			crd.Object["spec"] = simplifiedSpec
+		}
+
+		// Extract acceptedNames from status before removing it
+		if status, ok := crd.Object["status"].(map[string]interface{}); ok {
+			if acceptedNames, ok := status["acceptedNames"].(map[string]interface{}); ok {
+				// Store acceptedNames directly in the root object
+				crd.Object["acceptedNames"] = acceptedNames
+			}
+			// Remove entire status field
+			delete(crd.Object, "status")
+		}
+
+		if groupBy == "group" {
+			// Group key is just the group since we're only dealing with a single cluster
+			groupedCRDs[group] = append(groupedCRDs[group], crd)
+		} else {
+			allCRDs = append(allCRDs, crd)
+		}
+	}
+
+	// Prepare response based on grouping
+	if groupBy == "group" {
+		// Sort groups for consistent ordering
+		groups := make([]string, 0, len(groupedCRDs))
+		for group := range groupedCRDs {
+			groups = append(groups, group)
+		}
+		sort.Strings(groups)
+
+		// Create sorted grouped response
+		groupedResponse := make([]gin.H, 0, len(groups))
+		totalItems := 0
+
+		for _, group := range groups {
+			crds := groupedCRDs[group]
+			totalItems += len(crds)
+			groupedResponse = append(groupedResponse, gin.H{
+				"group":   group,
+				"cluster": clusterName,
+				"crds":    crds,
+				"count":   len(crds),
+			})
+		}
+
+		common.Success(c, gin.H{
+			"groups":     groupedResponse,
+			"totalItems": totalItems,
+		})
+	} else {
+		common.Success(c, gin.H{
+			"items":      allCRDs,
+			"totalItems": len(allCRDs),
+		})
+	}
+}
+
+// handleGetCRDByName handles GET requests to get a specific CustomResourceDefinition by name in a member cluster
+func handleGetCRDByName(c *gin.Context) {
+	// Get cluster name and CRD name from path parameters
+	clusterName := c.Param("clustername")
+	if clusterName == "" {
+		common.Fail(c, fmt.Errorf("cluster name is required"))
+		return
+	}
+
+	crdName := c.Param("crdname")
+	if crdName == "" {
+		common.Fail(c, fmt.Errorf("CRD name is required"))
+		return
+	}
+
+	// Get member cluster config
+	memberConfig, err := client.GetMemberConfig()
+	if err != nil {
+		klog.ErrorS(err, "Failed to get member config")
+		common.Fail(c, fmt.Errorf("failed to get member config: %w", err))
+		return
+	}
+
+	karmadaConfig, _, err := client.GetKarmadaConfig()
+	if err != nil {
+		klog.ErrorS(err, "Failed to get karmada config")
+		common.Fail(c, fmt.Errorf("failed to get karmada config: %w", err))
+		return
+	}
+
+	// Set up member cluster proxy URL with the correct format
+	memberConfig.Host = fmt.Sprintf("%s/apis/cluster.karmada.io/v1alpha1/clusters/%s/proxy", karmadaConfig.Host, clusterName)
+	klog.V(4).InfoS("Using member config", "host", memberConfig.Host)
+
+	// Create dynamic client
+	dynamicClient, err := dynamic.NewForConfig(memberConfig)
+	if err != nil {
+		klog.ErrorS(err, "Failed to create dynamic client")
+		common.Fail(c, fmt.Errorf("failed to create dynamic client: %w", err))
+		return
+	}
+
+	// Define the GVR for CustomResourceDefinitions
+	crdGVR := schema.GroupVersionResource{
+		Group:    "apiextensions.k8s.io",
+		Version:  "v1",
+		Resource: "customresourcedefinitions",
+	}
+
+	// Get the specific CRD by name
+	crd, err := dynamicClient.Resource(crdGVR).Get(c, crdName, metav1.GetOptions{})
+	if err != nil {
+		klog.ErrorS(err, "Failed to get CRD", "cluster", clusterName, "crd", crdName)
+		common.Fail(c, fmt.Errorf("failed to get CRD %s: %w", crdName, err))
+		return
+	}
+
+	// Clean up metadata
+	metadata := crd.Object["metadata"].(map[string]interface{})
+	
+	// Initialize labels if not present
+	if metadata["labels"] == nil {
+		metadata["labels"] = make(map[string]interface{})
+	}
+	
+	// Add cluster information
+	metadata["labels"].(map[string]interface{})["cluster"] = clusterName
+
+	// Remove managedFields
+	delete(metadata, "managedFields")
+
+	// Extract schema and validation information from the CRD
+	// spec := crd.Object["spec"].(map[string]interface{})
+	
+	// Return the CRD with its spec, which includes the schema
+	common.Success(c, gin.H{
+		"crd": crd.Object,
+	})
+}
+
+// handleUpdateCRD handles PUT requests to update a CustomResourceDefinition
+func handleUpdateCRD(c *gin.Context) {
+	// Get cluster name and CRD name from path parameters
+	clusterName := c.Param("clustername")
+	if clusterName == "" {
+		common.Fail(c, fmt.Errorf("cluster name is required"))
+		return
+	}
+
+	crdName := c.Param("crdname")
+	if crdName == "" {
+		common.Fail(c, fmt.Errorf("CRD name is required"))
+		return
+	}
+
+	// Parse the request body
+	var crdData map[string]interface{}
+	if err := c.ShouldBindJSON(&crdData); err != nil {
+		klog.ErrorS(err, "Failed to bind JSON")
+		common.Fail(c, fmt.Errorf("failed to parse request body: %w", err))
+		return
+	}
+
+	// Get member cluster config
+	memberConfig, err := client.GetMemberConfig()
+	if err != nil {
+		klog.ErrorS(err, "Failed to get member config")
+		common.Fail(c, fmt.Errorf("failed to get member config: %w", err))
+		return
+	}
+
+	karmadaConfig, _, err := client.GetKarmadaConfig()
+	if err != nil {
+		klog.ErrorS(err, "Failed to get karmada config")
+		common.Fail(c, fmt.Errorf("failed to get karmada config: %w", err))
+		return
+	}
+
+	// Set up member cluster proxy URL with the correct format
+	memberConfig.Host = fmt.Sprintf("%s/apis/cluster.karmada.io/v1alpha1/clusters/%s/proxy", karmadaConfig.Host, clusterName)
+	klog.V(4).InfoS("Using member config", "host", memberConfig.Host)
+
+	// Create dynamic client
+	dynamicClient, err := dynamic.NewForConfig(memberConfig)
+	if err != nil {
+		klog.ErrorS(err, "Failed to create dynamic client")
+		common.Fail(c, fmt.Errorf("failed to create dynamic client: %w", err))
+		return
+	}
+
+	// Define the GVR for CustomResourceDefinitions
+	crdGVR := schema.GroupVersionResource{
+		Group:    "apiextensions.k8s.io",
+		Version:  "v1",
+		Resource: "customresourcedefinitions",
+	}
+
+	// Clean up the object for update
+	// Remove cluster label from metadata as it's not part of the original object
+	if metadata, ok := crdData["metadata"].(map[string]interface{}); ok {
+		if labels, ok := metadata["labels"].(map[string]interface{}); ok {
+			delete(labels, "cluster")
+		}
+	}
+
+	// Create unstructured object from the data
+	obj := &unstructured.Unstructured{
+		Object: crdData,
+	}
+
+	// Update the CRD
+	updatedCrd, err := dynamicClient.Resource(crdGVR).Update(c, obj, metav1.UpdateOptions{})
+	if err != nil {
+		klog.ErrorS(err, "Failed to update CRD", "cluster", clusterName, "crd", crdName)
+		common.Fail(c, fmt.Errorf("failed to update CRD %s: %w", crdName, err))
+		return
+	}
+
+	// Clean up metadata for response
+	metadata := updatedCrd.Object["metadata"].(map[string]interface{})
+	
+	// Initialize labels if not present
+	if metadata["labels"] == nil {
+		metadata["labels"] = make(map[string]interface{})
+	}
+	
+	// Add cluster information
+	metadata["labels"].(map[string]interface{})["cluster"] = clusterName
+
+	// Remove managedFields
+	delete(metadata, "managedFields")
+	
+	// Return the updated CRD
+	common.Success(c, gin.H{
+		"crd": updatedCrd.Object,
+	})
+}
+
 func init() {
 	r := router.MemberV1()
-	r.GET("/customresource/resource/:resourcedefinition", handleGetCustomResources)
-	r.GET("/customresource/definition/:groupname", handleGetCustomResourceDefinitions)
 	r.GET("/customresource/resource", handleListCustomResourcesByGroupAndCRD)
+	r.GET("/customresource/definition", handleGetClusterCRDs)
+	r.GET("/customresource/definition/:crdname", handleGetCRDByName)
+	r.PUT("/customresource/definition/:crdname", handleUpdateCRD)
 }

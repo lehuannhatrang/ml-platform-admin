@@ -56,11 +56,11 @@ const MonitoringConfig: FC = () => {
                             <Flex
                                 justify="center"
                                 align="center"
-                                className="h-[100%]"
+                                className="h-[100%] text-blue-500"
                             >
                                 <PlusOutlined />
-                                <Typography.Text className='ml-2 text-lg'>
-                                    New monitoring source
+                                <Typography.Text className='ml-2 text-lg text-blue-500'>
+                                    New source
                                 </Typography.Text>
                             </Flex>
                         </Card>

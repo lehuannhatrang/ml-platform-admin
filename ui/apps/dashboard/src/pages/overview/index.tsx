@@ -21,6 +21,7 @@ import {
   Popconfirm,
   Row,
   Spin,
+  Typography,
   message,
 } from 'antd';
 
@@ -248,14 +249,21 @@ const Overview = () => {
               ...(data?.metricsDashboards?.map((dashboard: MetricsDashboard) => ({
                 label: dashboard.name,
                 key: dashboard.name,
+                closable: false,
               })) || []),
-              {
-                label: <Flex>
-                  <PlusOutlined className='mr-2' /> Add Dashboard
-                </Flex>,
-                key: 'add-new-dashboard',
-              }
             ]}
+            tabProps={{
+              type: 'editable-card',
+              addIcon: <Flex className='text-blue-500'>
+                <PlusOutlined className='mr-2' />
+                <span>Add Dashboard</span>
+              </Flex>,
+              onEdit: (_e: any, action: 'add' | 'remove') => {
+                if (action === 'add') {
+                  setIsNewDashboardModalOpen(true);
+                }
+              },
+            }}
             activeTabKey={selectedDashboard?.name || ''}
             onTabChange={(key: string) => {
               if (key === 'add-new-dashboard') {

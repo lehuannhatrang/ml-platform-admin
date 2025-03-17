@@ -49,6 +49,9 @@ import { ConfigKind, ServiceKind, WorkloadKind } from '@/services/base';
 import CustomResourcePage from '@/pages/multicloud-custom-resource/custom-resource';
 import CustomResourceDefinitionPage from '@/pages/multicloud-custom-resource/custom-resource-definition';
 import MonitoringConfig from '@/pages/basic-config/monitoring-config';
+import ContinuousDeliveryApplicationPage from '@/pages/continuous-delivery/application';
+import ContinuousDeliveryProjectPage from '@/pages/continuous-delivery/project';
+import ContinuousDeliveryApplicationSetPage from '@/pages/continuous-delivery/application-set';
 
 export interface IRouteObjectHandle {
   icon?: ReactNode;
@@ -298,6 +301,41 @@ export function getRoutes() {
               },
             },
           ],
+        },
+        {
+          path: '/continuous-delivery',
+          handle: {
+            sidebarKey: 'CONTINUOUS-DELIVERY',
+            sidebarName: 'Continuous Delivery',
+            icon: <Icons.continuousDelivery {...IconStyles} />,
+            isPage: false,
+          },
+          children: [
+            {
+              path: 'application',
+              element: <ContinuousDeliveryApplicationPage />,
+              handle: {
+                sidebarKey: 'APPLICATION',
+                sidebarName: 'Application',
+              },
+            },
+            {
+              path: 'application-set',
+              element: <ContinuousDeliveryApplicationSetPage />,
+              handle: {
+                sidebarKey: 'APPLICATION-SET',
+                sidebarName: 'Application Set',
+              },
+            },
+            {
+              path: 'project',
+              element: <ContinuousDeliveryProjectPage />,
+              handle: {
+                sidebarKey: 'PROJECT',
+                sidebarName: 'Project',
+              },
+            },
+          ]
         },
         {
           path: '/basic-config',

@@ -27,6 +27,8 @@ import { message } from 'antd';
 import { DeleteMemberResource } from '@/services/unstructured.ts';
 import { useQueryClient } from '@tanstack/react-query';
 import SecretTable from '@/pages/multicloud-resource-manage/config/components/secret-table.tsx';
+import SecretDrawer from '@/pages/multicloud-resource-manage/config/components/secret-drawer';
+import { useState } from 'react';
 
 export type ConfigPageProps = {
   kind: ConfigKind;
@@ -54,6 +56,17 @@ const ConfigPage = ({ kind }: ConfigPageProps) => {
   );
   const queryClient = useQueryClient();
   const [messageApi, messageContextHolder] = message.useMessage();
+  
+  // State for SecretDrawer
+  const [secretDrawerOpen, setSecretDrawerOpen] = useState(false);
+  const [secretData, setSecretData] = useState<any>(null);
+  const [secretClusterName, setSecretClusterName] = useState<string>('');
+
+  // Function to handle closing of secret drawer
+  const handleCloseSecretDrawer = () => {
+    setSecretDrawerOpen(false);
+  };
+
   return (
     <Panel>
       <QueryFilter
@@ -111,7 +124,10 @@ const ConfigPage = ({ kind }: ConfigPageProps) => {
           searchText={filter.searchText}
           selectedWorkSpace={filter.selectedWorkspace}
           onViewSecret={(r, clusterName) => {
-            viewConfig(stringify(r), clusterName);
+            // Open SecretDrawer instead of YAML editor
+            setSecretData(r);
+            setSecretClusterName(clusterName);
+            setSecretDrawerOpen(true);
           }}
           onEditSecret={(r, clusterName) => {
             editConfig(stringify(r), clusterName);
@@ -142,6 +158,14 @@ const ConfigPage = ({ kind }: ConfigPageProps) => {
           }}
         />
       )}
+
+      {/* Secret Drawer Component */}
+      <SecretDrawer
+        open={secretDrawerOpen}
+        onClose={handleCloseSecretDrawer}
+        secret={secretData}
+        clusterName={secretClusterName}
+      />
 
       <ConfigEditorModal
         cluster={editor.cluster}
