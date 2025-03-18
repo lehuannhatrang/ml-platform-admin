@@ -26,6 +26,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/klog/v2"
+	"k8s.io/client-go/dynamic"
+	"github.com/gin-gonic/gin"
 )
 
 // LoadRestConfig creates a rest.Config using the passed kubeconfig. If context is empty, current context in kubeconfig will be used.
@@ -124,4 +126,29 @@ func karmadaClientFromRequest(request *http.Request) (karmadaclientset.Interface
 	}
 
 	return karmadaclientset.NewForConfig(config)
+}
+
+// GetDynamicClientForMember returns a dynamic client for a member cluster.
+// If clusterName is provided, it will configure the client to use the Karmada proxy to access the member cluster.
+// If clusterName is empty, it will return a regular dynamic client for the member cluster.
+func GetDynamicClientForMember(ctx *gin.Context, clusterName string) (dynamic.Interface, error) {
+	memberConfig, err := GetMemberConfig()
+	if err != nil {
+		klog.ErrorS(err, "Failed to get member config")
+		return nil, fmt.Errorf("failed to get member config: %w", err)
+	}
+
+	// If a cluster name is provided, configure the client to use the Karmada proxy
+	if clusterName != "" {
+		karmadaConfig, _, err := GetKarmadaConfig()
+		if err != nil {
+			klog.ErrorS(err, "Failed to get karmada config")
+			return nil, fmt.Errorf("failed to get karmada config: %w", err)
+		}
+		
+		memberConfig.Host = karmadaConfig.Host + fmt.Sprintf("/apis/cluster.karmada.io/v1alpha1/clusters/%s/proxy/", clusterName)
+		klog.V(4).InfoS("Using member config with proxy", "host", memberConfig.Host)
+	}
+
+	return dynamic.NewForConfig(memberConfig)
 }

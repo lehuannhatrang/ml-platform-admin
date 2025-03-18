@@ -1,21 +1,33 @@
 import { useMemo, useState } from 'react';
-import { Button, Input, Popconfirm, Select, Space, Table, Tag, Tooltip } from 'antd';
+import { Button, Input, Popconfirm, Select, Space, Table, Tag } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
-import { SearchOutlined } from '@ant-design/icons';
-import { ArgoApplication, GetArgoApplications } from '../../../services/argocd';
-import useCluster, { DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
+import { SearchOutlined, PlusOutlined } from '@ant-design/icons';
+import { ArgoApplication, DeleteArgoApplication, GetArgoApplications } from '../../../services/argocd';
+import useCluster, { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
 import { calculateDuration } from '@/utils/time';
 import Panel from '@/components/panel';
 import i18nInstance from '@/utils/i18n';
+import EditApplicationModal from './edit-application-modal';
+import ApplicationInfoDrawer from './application-info-drawer';
 
 export default function ContinuousDeliveryApplicationPage() {
     const [filter, setFilter] = useState({
         selectedCluster: DEFAULT_CLUSTER_OPTION,
         searchText: '',
     });
+    const [modalState, setModalState] = useState({
+        open: false,
+        mode: 'create' as 'create' | 'edit',
+        application: undefined as ArgoApplication | undefined,
+        cluster: '',
+    });
+    const [drawerState, setDrawerState] = useState({
+        open: false,
+        application: undefined as ArgoApplication | undefined,
+    });
 
-    const { data: argoApplicationsData, isLoading } = useQuery({
+    const { data: argoApplicationsData, isLoading, refetch } = useQuery({
         queryKey: ['get-argo-applications', filter.selectedCluster.value],
         queryFn: async () => {
             const applications = await GetArgoApplications({
@@ -114,49 +126,54 @@ export default function ContinuousDeliveryApplicationPage() {
             ),
         },
         {
-            title: 'Repository',
-            dataIndex: ['spec', 'source', 'repoURL'],
-            key: 'repository',
-            render: (repo) => (
-                <Tooltip title={repo}>
-                    <div style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {repo}
-                    </div>
-                </Tooltip>
-            ),
-        },
-        {
             title: 'Age',
             dataIndex: ['metadata', 'creationTimestamp'],
             key: 'created',
             render: (timestamp) => calculateDuration(timestamp),
+            width: 120,
+            defaultSortOrder: 'descend',
+            sorter: (a, b) => new Date(a.metadata?.creationTimestamp).getTime() - new Date(b.metadata?.creationTimestamp).getTime(),
         },
         {
             title: 'Action',
             key: 'action',
-            render: (_, r) => (
+            render: (_, record) => (
                 <Space.Compact>
                     <Button
                         size={'small'}
                         type="link"
-                        onClick={() => {}}
+                        onClick={() => {
+                            setDrawerState({
+                                open: true,
+                                application: record,
+                            });
+                        }}
                     >
                         {i18nInstance.t('607e7a4f377fa66b0b28ce318aab841f', '查看')}
                     </Button>
                     <Button
                         size={'small'}
                         type="link"
-                        onClick={() => {}}
+                        onClick={() => {
+                            setModalState({
+                                open: true,
+                                mode: 'edit',
+                                application: record,
+                                cluster: record.metadata?.labels?.cluster || filter.selectedCluster.value,
+                            });
+                        }}
                     >
                         {i18nInstance.t('95b351c86267f3aedf89520959bce689', '编辑')}
                     </Button>
 
                     <Popconfirm
                         placement="topRight"
-                        title={`Do you want to delete "${r.metadata?.name}" application?`}
+                        title={`Do you want to delete "${record.metadata?.name}" application?`}
                         onConfirm={async () => {
-                            // todo after delete, need to wait until resource deleted
-
+                            const response = await DeleteArgoApplication(record.metadata?.labels?.cluster || filter.selectedCluster.value, record.metadata?.name);
+                            if (response.code === 200) {
+                                refetch();
+                            }
                         }}
                         okText={i18nInstance.t(
                             'e83a256e4f5bb4ff8b3d804b5473217a',
@@ -181,9 +198,11 @@ export default function ContinuousDeliveryApplicationPage() {
             <div className={'flex flex-row justify-between space-x-4 mb-4'}>
                 <Space wrap>
                     <Select
-                        value={filter.selectedCluster}
+                        value={filter.selectedCluster?.value}
                         style={{ width: 200 }}
-                        onChange={(value) => setFilter({ ...filter, selectedCluster: value })}
+                        onChange={(_v: string, option: ClusterOption | ClusterOption[]) => 
+                            setFilter({ ...filter, selectedCluster: option as ClusterOption })
+                        }
                         options={clusterOptions}
                         loading={isClusterDataLoading}
                         placeholder="Select Cluster"
@@ -196,13 +215,46 @@ export default function ContinuousDeliveryApplicationPage() {
                         style={{ width: 250 }}
                     />
                 </Space>
-
+                <Button 
+                    type="primary" 
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                        setModalState({
+                            open: true,
+                            mode: 'create',
+                            application: undefined,
+                            cluster: '',
+                        });
+                    }}
+                >
+                    Create Application
+                </Button>
             </div>
             <Table
                 columns={columns}
                 dataSource={filteredApplications}
                 rowKey={(record) => `${record?.metadata?.name}-${record?.metadata?.namespace}-${record?.metadata?.labels?.cluster}`}
                 loading={isLoading}
+            />
+
+            {/* Application Create/Edit Modal */}
+            <EditApplicationModal
+                mode={modalState.mode}
+                open={modalState.open}
+                cluster={modalState.cluster}
+                application={modalState.application}
+                onCancel={() => setModalState({ ...modalState, open: false })}
+                onSuccess={() => {
+                    setModalState({ ...modalState, open: false });
+                    refetch();
+                }}
+            />
+
+            {/* Application Info Drawer */}
+            <ApplicationInfoDrawer
+                open={drawerState.open}
+                application={drawerState.application}
+                onClose={() => setDrawerState({ ...drawerState, open: false })}
             />
         </Panel>
     );

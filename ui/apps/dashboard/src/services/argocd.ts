@@ -183,6 +183,116 @@ export interface ArgoFilter {
   searchText: string;
 }
 
+export interface CreateArgoProjectRequest {
+  metadata: {
+    name: string;
+    labels?: {
+      [key: string]: string;
+    };
+  };
+  spec: {
+    description?: string;
+    sourceRepos?: string[];
+    destinations?: Array<{
+      namespace: string;
+      server: string;
+    }>;
+  };
+}
+
+export interface CreateArgoApplicationRequest {
+  metadata: {
+    name: string;
+    labels?: {
+      [key: string]: string;
+    };
+  };
+  spec: {
+    project: string;
+    source: {
+      repoURL: string;
+      path: string;
+      targetRevision: string;
+    };
+    destination: {
+      server: string;
+      namespace: string;
+    };
+    syncPolicy?: {
+      automated?: {
+        prune: boolean;
+        selfHeal: boolean;
+      };
+    };
+  };
+}
+
+/**
+ * Creates a new ArgoCD Project in the specified cluster
+ */
+export async function CreateArgoProject(
+  clusterName: string,
+  data: CreateArgoProjectRequest
+): Promise<IResponse<ArgoProject>> {
+  const response = await karmadaClient.post(`/member/${clusterName}/argocd/project`, data);
+  return response.data;
+}
+
+/**
+ * Updates an existing ArgoCD Project in the specified cluster
+ */
+export async function UpdateArgoProject(
+  clusterName: string,
+  data: CreateArgoProjectRequest
+): Promise<IResponse<ArgoProject>> {
+  const response = await karmadaClient.put(`/member/${clusterName}/argocd/project/${data.metadata.name}`, data);
+  return response.data;
+}
+
+/**
+ * Deletes an ArgoCD Project in the specified cluster
+ */
+export async function DeleteArgoProject(
+  clusterName: string,
+  projectName: string
+): Promise<IResponse<ArgoProject>> {
+  const response = await karmadaClient.delete(`/member/${clusterName}/argocd/project/${projectName}`);
+  return response.data;
+}
+
+/**
+ * Creates a new ArgoCD Application in the specified cluster
+ */
+export async function CreateArgoApplication(
+  clusterName: string,
+  data: CreateArgoApplicationRequest
+): Promise<IResponse<ArgoApplication>> {
+  const response = await karmadaClient.post(`/member/${clusterName}/argocd/application`, data);
+  return response.data;
+}
+
+/**
+ * Updates an existing ArgoCD Application in the specified cluster
+ */
+export async function UpdateArgoApplication(
+  clusterName: string,
+  data: CreateArgoApplicationRequest
+): Promise<IResponse<ArgoApplication>> {
+  const response = await karmadaClient.put(`/member/${clusterName}/argocd/application/${data.metadata.name}`, data);
+  return response.data;
+}
+
+/**
+ * Deletes an ArgoCD Application in the specified cluster
+ */
+export async function DeleteArgoApplication(
+  clusterName: string,
+  applicationName: string
+): Promise<IResponse<ArgoApplication>> {
+  const response = await karmadaClient.delete(`/member/${clusterName}/argocd/application/${applicationName}`);
+  return response.data;
+}
+
 export const GetArgoApplications = async (params: Partial<ArgoFilter> = {}) => {
   const { selectedCluster: cluster, searchText } = params;
   const requestData = {} as DataSelectQuery;

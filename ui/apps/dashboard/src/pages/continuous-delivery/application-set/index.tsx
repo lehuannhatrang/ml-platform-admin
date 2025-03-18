@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Button, Input, Select, Space, Table, Tag, Tooltip } from 'antd';
+import { Input, Select, Space, Table, Tag, Tooltip } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
 import { SearchOutlined } from '@ant-design/icons';
 
 import { ArgoApplicationSet, GetArgoApplicationSets } from '@/services/argocd';
-import useCluster, { DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
+import useCluster, { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
 import { calculateDuration } from '@/utils/time';
 import Panel from '@/components/panel';
 
@@ -15,7 +15,7 @@ export default function ContinuousDeliveryApplicationSetPage() {
         searchText: '',
     });
 
-    const { data: argoApplicationSetsData, isLoading, refetch } = useQuery({
+    const { data: argoApplicationSetsData, isLoading } = useQuery({
         queryKey: ['get-argo-applicationsets', filter.selectedCluster.value],
         queryFn: async () => {
             const applicationSets = await GetArgoApplicationSets({
@@ -151,9 +151,11 @@ export default function ContinuousDeliveryApplicationSetPage() {
             <div className={'flex flex-row justify-between space-x-4 mb-4'}>
                 <Space wrap>
                     <Select
-                        value={filter.selectedCluster}
+                        value={filter.selectedCluster?.value}
                         style={{ width: 200 }}
-                        onChange={(value) => setFilter({ ...filter, selectedCluster: value })}
+                        onChange={(_v: string, option: ClusterOption | ClusterOption[]) => 
+                            setFilter({ ...filter, selectedCluster: option as ClusterOption })
+                        }
                         options={clusterOptions}
                         loading={isClusterDataLoading}
                         placeholder="Select Cluster"
@@ -165,9 +167,6 @@ export default function ContinuousDeliveryApplicationSetPage() {
                         prefix={<SearchOutlined />}
                         style={{ width: 250 }}
                     />
-                    <Button type="primary" onClick={() => refetch()}>
-                        Refresh
-                    </Button>
                 </Space>
             </div>
             <Table

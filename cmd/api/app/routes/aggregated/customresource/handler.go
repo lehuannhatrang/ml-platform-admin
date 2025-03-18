@@ -9,7 +9,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/klog/v2"
 
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
@@ -53,27 +52,10 @@ func handleGetAggregatedAPIVersions(c *gin.Context) {
 			continue
 		}
 
-		// Get member cluster config
-		memberConfig, err := client.GetMemberConfig()
+		// Create dynamic client for the member cluster
+		dynamicClient, err := client.GetDynamicClientForMember(c, cluster.ObjectMeta.Name)
 		if err != nil {
-			klog.ErrorS(err, "Failed to get member config")
-			continue
-		}
-
-		karmadaConfig, _, err := client.GetKarmadaConfig()
-		if err != nil {
-			klog.ErrorS(err, "Failed to get karmada config")
-			continue
-		}
-
-		// Set up member cluster proxy URL
-		memberConfig.Host = karmadaConfig.Host + fmt.Sprintf("/apis/cluster.karmada.io/v1alpha1/clusters/%s/proxy/", cluster.ObjectMeta.Name)
-		klog.V(4).InfoS("Using member config", "host", memberConfig.Host)
-
-		// Create dynamic client
-		dynamicClient, err := dynamic.NewForConfig(memberConfig)
-		if err != nil {
-			klog.ErrorS(err, "Failed to create dynamic client")
+			klog.ErrorS(err, "Failed to create dynamic client", "cluster", cluster.ObjectMeta.Name)
 			continue
 		}
 
@@ -165,27 +147,10 @@ func handleGetAggregatedCustomResources(c *gin.Context) {
 			continue
 		}
 
-		// Get member cluster config
-		memberConfig, err := client.GetMemberConfig()
+		// Create dynamic client for the member cluster
+		dynamicClient, err := client.GetDynamicClientForMember(c, cluster.ObjectMeta.Name)
 		if err != nil {
-			klog.ErrorS(err, "Failed to get member config")
-			continue
-		}
-
-		karmadaConfig, _, err := client.GetKarmadaConfig()
-		if err != nil {
-			klog.ErrorS(err, "Failed to get karmada config")
-			continue
-		}
-
-		// Set up member cluster proxy URL
-		memberConfig.Host = karmadaConfig.Host + fmt.Sprintf("/apis/cluster.karmada.io/v1alpha1/clusters/%s/proxy/", cluster.ObjectMeta.Name)
-		klog.V(4).InfoS("Using member config", "host", memberConfig.Host)
-
-		// Create dynamic client
-		dynamicClient, err := dynamic.NewForConfig(memberConfig)
-		if err != nil {
-			klog.ErrorS(err, "Failed to create dynamic client")
+			klog.ErrorS(err, "Failed to create dynamic client", "cluster", cluster.ObjectMeta.Name)
 			continue
 		}
 
@@ -265,27 +230,10 @@ func handleGetAggregatedCustomResourceDefinitions(c *gin.Context) {
 			continue
 		}
 
-		// Get member cluster config
-		memberConfig, err := client.GetMemberConfig()
+		// Create dynamic client for the member cluster
+		dynamicClient, err := client.GetDynamicClientForMember(c, cluster.ObjectMeta.Name)
 		if err != nil {
-			klog.ErrorS(err, "Failed to get member config")
-			continue
-		}
-
-		karmadaConfig, _, err := client.GetKarmadaConfig()
-		if err != nil {
-			klog.ErrorS(err, "Failed to get karmada config")
-			continue
-		}
-
-		// Set up member cluster proxy URL
-		memberConfig.Host = karmadaConfig.Host + fmt.Sprintf("/apis/cluster.karmada.io/v1alpha1/clusters/%s/proxy/", cluster.ObjectMeta.Name)
-		klog.V(4).InfoS("Using member config", "host", memberConfig.Host)
-
-		// Create dynamic client
-		dynamicClient, err := dynamic.NewForConfig(memberConfig)
-		if err != nil {
-			klog.ErrorS(err, "Failed to create dynamic client")
+			klog.ErrorS(err, "Failed to create dynamic client", "cluster", cluster.ObjectMeta.Name)
 			continue
 		}
 

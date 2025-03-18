@@ -17,6 +17,7 @@ limitations under the License.
 package member
 
 import (
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/member/argocd"		// Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/member/configmap"       // Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/member/cronjob"        // Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/member/customresource" // Importing member route packages forces route registration
