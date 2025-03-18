@@ -26,6 +26,7 @@ import {
   Tag,
   Row,
   Col,
+  Button,
 } from 'antd';
 import { GetNodeDetail, GetNodePods } from '@/services/node.ts';
 import { useQuery } from '@tanstack/react-query';
@@ -35,6 +36,7 @@ import { cn } from '@/utils/cn';
 import TagList, { convertLabelToTags } from '@/components/tag-list';
 import { calculateDuration } from '@/utils/time.ts';
 import { PodDetail } from '@/services/workload';
+import { useNavigate } from 'react-router-dom';
 
 export interface NodeDetailDrawerProps {
   open: boolean;
@@ -45,6 +47,8 @@ export interface NodeDetailDrawerProps {
 
 const NodeDetailDrawer: FC<NodeDetailDrawerProps> = (props) => {
   const { open, name, onClose, clusterName } = props;
+
+  const navigate = useNavigate();
 
   const enableFetch = useMemo(() => {
     return !!(name && clusterName);
@@ -85,6 +89,7 @@ const NodeDetailDrawer: FC<NodeDetailDrawerProps> = (props) => {
     {
       title: 'Namespace',
       key: 'namespace',
+      width: 150,
       render: (_, r) => {
         return r.metadata.namespace;
       },
@@ -99,10 +104,25 @@ const NodeDetailDrawer: FC<NodeDetailDrawerProps> = (props) => {
     {
       title: 'Age',
       key: 'age',
+      width: 100,
       render: (_, r) => {
         return calculateDuration(r.metadata.creationTimestamp)
       },
     },
+    {
+      title: 'Actions',
+      key: 'actions',
+      render: (_: any, record: PodDetail) => (
+          <Button
+              type="link"
+              onClick={() => {
+                  navigate(`/multicloud-resource-manage/pod?action=view&name=${record.metadata?.name}&namespace=${record.metadata?.namespace}&cluster=${clusterName}`);
+              }}
+          >
+              {i18nInstance.t('View Details')}
+          </Button>
+      ),
+  },
   ];
 
   return (

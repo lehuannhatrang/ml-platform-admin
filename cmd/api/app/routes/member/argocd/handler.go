@@ -17,6 +17,7 @@ import (
 func init() {
 	r := router.MemberV1()
 	r.GET("/argocd/project", handleGetMemberArgoProjects)
+	r.GET("/argocd/project/:projectName", handleGetMemberArgoProject)
 	r.GET("/argocd/application", handleGetMemberArgoApplications)
 	r.GET("/argocd/applicationset", handleGetMemberArgoApplicationSets)
 
@@ -190,6 +191,83 @@ func handleGetMemberArgoApplicationSets(c *gin.Context) {
 		"items":      applicationSetList.Items,
 		"totalItems": len(applicationSetList.Items),
 	})
+}
+
+// handleGetMemberArgoProject handles GET requests to get detailed information about a specific ArgoCD Project
+// including its applications in a member cluster
+func handleGetMemberArgoProject(c *gin.Context) {
+	clusterName := c.Param("clustername")
+	if clusterName == "" {
+		common.Fail(c, fmt.Errorf("cluster name cannot be empty"))
+		return
+	}
+
+	projectName := c.Param("projectName")
+	if projectName == "" {
+		common.Fail(c, fmt.Errorf("project name cannot be empty"))
+		return
+	}
+
+	// Create dynamic client for the member cluster
+	dynamicClient, err := client.GetDynamicClientForMember(c, clusterName)
+	if err != nil {
+		klog.ErrorS(err, "Failed to create dynamic client")
+		common.Fail(c, err)
+		return
+	}
+
+	// Get the project details
+	project, err := dynamicClient.Resource(projectGVR).Namespace(argocdNamespace).Get(c, projectName, metav1.GetOptions{})
+	if err != nil {
+		klog.ErrorS(err, "Failed to get ArgoCD Project", "cluster", clusterName, "projectName", projectName)
+		common.Fail(c, err)
+		return
+	}
+
+	// Get all applications in this project
+	applications, err := dynamicClient.Resource(applicationGVR).Namespace(argocdNamespace).List(c, metav1.ListOptions{})
+	if err != nil {
+		klog.ErrorS(err, "Failed to list ArgoCD Applications", "cluster", clusterName)
+		common.Fail(c, err)
+		return
+	}
+
+	// Filter applications that belong to this project
+	projectApplications := make([]map[string]interface{}, 0)
+	for _, app := range applications.Items {
+		appSpec, ok := app.Object["spec"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		if appSpec["project"] == projectName {
+			// Clean up metadata
+			appMetadata := app.Object["metadata"].(map[string]interface{})
+			if appMetadata["labels"] == nil {
+				appMetadata["labels"] = make(map[string]interface{})
+			}
+			appMetadata["labels"].(map[string]interface{})["cluster"] = clusterName
+			delete(appMetadata, "managedFields")
+
+			projectApplications = append(projectApplications, app.Object)
+		}
+	}
+
+	// Clean up project metadata
+	projectMetadata := project.Object["metadata"].(map[string]interface{})
+	if projectMetadata["labels"] == nil {
+		projectMetadata["labels"] = make(map[string]interface{})
+	}
+	projectMetadata["labels"].(map[string]interface{})["cluster"] = clusterName
+	delete(projectMetadata, "managedFields")
+
+	// Prepare response with project details and its applications
+	response := map[string]interface{}{
+		"project":      project.Object,
+		"applications": projectApplications,
+	}
+
+	common.Success(c, response)
 }
 
 // handleCreateMemberArgoProject handles POST requests to create ArgoCD Projects in a specific member cluster

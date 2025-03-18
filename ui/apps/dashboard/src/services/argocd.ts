@@ -355,3 +355,17 @@ export async function GetArgoApplicationSets(filter: Partial<ArgoFilter> = {}) {
   });
   return resp.data;
 }
+
+/**
+ * Gets detailed information about an ArgoCD Project and its applications
+ */
+export async function GetArgoProjectDetails(
+  clusterName: string,
+  projectName: string
+): Promise<IResponse<{
+  project: ArgoProject;
+  applications: ArgoApplication[];
+}>> {
+  const response = await karmadaClient.get(`/member/${clusterName}/argocd/project/${projectName}`);
+  return response.data;
+}

@@ -34,7 +34,7 @@ import { Icons } from '@/components/icons';
 import type { PodWorkload, Workload } from '@/services/workload';
 import { GetWorkloads } from '@/services/workload';
 import { useQuery } from '@tanstack/react-query';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { DeleteMemberResource, GetMemberResource } from '@/services/unstructured.ts';
 import NewWorkloadEditorModal from './new-workload-editor-modal.tsx';
 import WorkloadDetailDrawer, {
@@ -50,12 +50,22 @@ import { calculateDuration } from '@/utils/time.ts';
 import { getStatusFromCondition } from '@/utils/resource.ts';
 import dayjs from 'dayjs';
 import LogsDrawer, { LogsDrawerProps } from './logs-drawer.tsx';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 type WorkloadPageProps = {
   kind: WorkloadKind;
 }
 
 const WorkloadPage = ({ kind }: WorkloadPageProps) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const action = searchParams.get('action');
+  const name = searchParams.get('name');
+  const cluster = searchParams.get('cluster');
+  const namespace = searchParams.get('namespace');
+
+  const navigate = useNavigate();
+
   const [filter, setFilter] = useState<{
     selectedCluster: ClusterOption;
     selectedWorkSpace: string;
@@ -82,6 +92,7 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
     },
     refetchInterval: 5000,
   });
+
   const [drawerData, setDrawerData] = useState<
     Omit<WorkloadDetailDrawerProps, 'onClose'>
   >({
@@ -91,6 +102,22 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
     name: '',
     cluster: '',
   });
+
+  useEffect(() => {
+    if (action === 'view' && name && cluster && namespace) {
+      const workload = data?.items?.find(w => w.objectMeta.name === name && w.objectMeta.namespace === namespace && w.objectMeta.labels?.cluster === cluster);
+      if (workload) {
+        setDrawerData({
+          open: true,
+          kind,
+          namespace,
+          name,
+          cluster,
+        });
+      }
+    }
+  }, [action, name, cluster, namespace, data]);
+
   const [logsDrawerData, setLogsDrawerData] = useState<
     Omit<LogsDrawerProps, 'onClose'>
   >({
@@ -168,7 +195,9 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
           title: 'Node',
           key: 'node',
           render: (_: any, r: any) => {
-            return r.spec?.nodeName || '-';
+            return <Button type="link" onClick={() => {
+              navigate(`/node-manage?action=view&name=${r.spec?.nodeName}&cluster=${r.objectMeta.labels?.cluster}`);
+            }}>{r.spec?.nodeName || '-'}</Button>;
           },
         },
         {
@@ -463,6 +492,7 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
         namespace={drawerData.namespace}
         cluster={drawerData.cluster}
         onClose={() => {
+          setSearchParams({});
           setDrawerData({
             open: false,
             kind: WorkloadKind.Unknown,

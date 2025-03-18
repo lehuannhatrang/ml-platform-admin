@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Input, Select, Space, Table, Button, Popconfirm } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
@@ -12,8 +12,16 @@ import { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
 import TagList from '@/components/tag-list';
 import EditProjectModal from './edit-project-modal';
 import i18nInstance from '@/utils/i18n';
+import ProjectDrawer from './project-drawer';
+import { useSearchParams } from 'react-router-dom';
 
 export default function ContinuousDeliveryProjectPage() {
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    const action = searchParams.get('action');
+    const name = searchParams.get('name');
+    const cluster = searchParams.get('cluster');
+
     const [filter, setFilter] = useState({
         selectedCluster: DEFAULT_CLUSTER_OPTION,
         searchText: '',
@@ -28,6 +36,15 @@ export default function ContinuousDeliveryProjectPage() {
         mode: 'create',
         cluster: '',
     });
+    const [drawerConfig, setDrawerConfig] = useState<{
+        open: boolean;
+        cluster: string;
+        selectedProject: ArgoProject | undefined;
+    }>({
+        open: false,
+        cluster: '',
+        selectedProject: undefined,
+    });
 
     const { data: argoProjectsData, isLoading, refetch } = useQuery({
         queryKey: ['get-argo-projects', filter.selectedCluster.value],
@@ -38,6 +55,20 @@ export default function ContinuousDeliveryProjectPage() {
             return projects.data || {};
         },
     });
+
+    
+    useEffect(() => {
+        if (action === 'view' && name && cluster && argoProjectsData?.items) {
+            const project = argoProjectsData.items.find(app => app.metadata?.name === name && app.metadata?.labels?.cluster === cluster);
+            if (project) {
+                setDrawerConfig({
+                    open: true,
+                    cluster,
+                    selectedProject: project
+                });
+            }
+        }
+    }, [action, name, cluster, argoProjectsData]);
 
     const { clusterOptions, isClusterDataLoading } = useCluster({});
 
@@ -72,6 +103,22 @@ export default function ContinuousDeliveryProjectPage() {
     const handleCloseModal = () => {
         setModalConfig({
             ...modalConfig,
+            open: false,
+        });
+    };
+
+    const handleOpenDrawer = (project: ArgoProject, cluster: string) => {
+        setDrawerConfig({
+            open: true,
+            cluster,
+            selectedProject: project,
+        });
+    };
+
+    const handleCloseDrawer = () => {
+        setSearchParams({});
+        setDrawerConfig({
+            ...drawerConfig,
             open: false,
         });
     };
@@ -126,6 +173,15 @@ export default function ContinuousDeliveryProjectPage() {
             render: (_: any, record: ArgoProject) => (
                 <Space.Compact>
                     <Button
+                        size={'small'}
+                        type="link"
+                        onClick={() => {
+                            handleOpenDrawer(record, record.metadata?.labels?.cluster || filter.selectedCluster.value);
+                        }}
+                    >
+                        {i18nInstance.t('607e7a4f377fa66b0b28ce318aab841f', '查看')}
+                    </Button>
+                    <Button
                         onClick={() => handleOpenModal('edit', record)}
                         size={'small'}
                         type="link"
@@ -167,7 +223,7 @@ export default function ContinuousDeliveryProjectPage() {
                     <Select
                         value={filter.selectedCluster?.value}
                         style={{ width: 200 }}
-                        onChange={(_v: string, option: ClusterOption | ClusterOption[]) => 
+                        onChange={(_v: string, option: ClusterOption | ClusterOption[]) =>
                             setFilter({ ...filter, selectedCluster: option as ClusterOption })
                         }
                         options={clusterOptions}
@@ -182,8 +238,8 @@ export default function ContinuousDeliveryProjectPage() {
                         style={{ width: 250 }}
                     />
                 </Space>
-                <Button 
-                    type="primary" 
+                <Button
+                    type="primary"
                     onClick={() => handleOpenModal('create')}
                     icon={<PlusOutlined />}
                 >
@@ -197,7 +253,7 @@ export default function ContinuousDeliveryProjectPage() {
                 loading={isLoading}
                 pagination={{ pageSize: 10 }}
             />
-            
+
             <EditProjectModal
                 mode={modalConfig.mode}
                 open={modalConfig.open}
@@ -205,6 +261,12 @@ export default function ContinuousDeliveryProjectPage() {
                 onCancel={handleCloseModal}
                 onSuccess={handleSuccess}
                 cluster={modalConfig.cluster}
+            />
+            <ProjectDrawer
+                open={drawerConfig.open}
+                onClose={handleCloseDrawer}
+                project={drawerConfig.selectedProject}
+                clusterName={drawerConfig.cluster}
             />
         </Panel>
     );

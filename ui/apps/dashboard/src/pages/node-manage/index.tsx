@@ -30,13 +30,20 @@ import {
   Flex,
   Select,
 } from 'antd';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useCluster } from '@/hooks';
 import { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
 import { Node } from '@/services/node';
 import NodeDetailDrawer, { NodeDetailDrawerProps } from './node-detail-drawer';
+import { useSearchParams } from 'react-router-dom';
 
 const NodeManagePage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const action = searchParams.get('action');
+  const name = searchParams.get('name');
+  const cluster = searchParams.get('cluster');
+
   const [filter, setFilter] = useState<{
     selectedCluster: ClusterOption;
     searchText: string;
@@ -59,6 +66,19 @@ const NodeManagePage = () => {
     name: '',
     clusterName: '',
   });
+
+  useEffect(() => {
+    if (action === 'view' && name && cluster) {
+      const node = data?.items?.find(n => n.objectMeta.name === name && n.objectMeta.labels?.cluster === cluster);
+      if (node) {
+        setNodeDetailData({
+          open: true,
+          name: node.objectMeta.name,
+          clusterName: node.objectMeta.annotations?.['cluster.x-k8s.io/cluster-name'] || filter.selectedCluster.label,
+        });
+      }
+    }
+  }, [action, name, cluster, data]);
 
   const { clusterOptions, isClusterDataLoading } = useCluster({});
 
@@ -210,6 +230,7 @@ const NodeManagePage = () => {
         name={nodeDetailData.name}
         clusterName={nodeDetailData.clusterName}
         onClose={() => {
+          setSearchParams({});
           setNodeDetailData({
             open: false,
             name: '',

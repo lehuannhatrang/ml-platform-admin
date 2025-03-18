@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button, Input, Popconfirm, Select, Space, Table, Tag } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
@@ -10,12 +10,23 @@ import Panel from '@/components/panel';
 import i18nInstance from '@/utils/i18n';
 import EditApplicationModal from './edit-application-modal';
 import ApplicationInfoDrawer from './application-info-drawer';
+import { getSyncStatusColor, getHealthStatusColor } from '@/utils/argo';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 export default function ContinuousDeliveryApplicationPage() {
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    const action = searchParams.get('action');
+    const name = searchParams.get('name');
+    const cluster = searchParams.get('cluster');
+
+    const navigate = useNavigate();
+
     const [filter, setFilter] = useState({
         selectedCluster: DEFAULT_CLUSTER_OPTION,
         searchText: '',
     });
+
     const [modalState, setModalState] = useState({
         open: false,
         mode: 'create' as 'create' | 'edit',
@@ -39,6 +50,18 @@ export default function ContinuousDeliveryApplicationPage() {
 
     const { clusterOptions, isClusterDataLoading } = useCluster({});
 
+    useEffect(() => {
+        if (action === 'view' && name && cluster && argoApplicationsData?.items) {
+            const application = argoApplicationsData.items.find(app => app.metadata?.name === name && app.metadata?.labels?.cluster === cluster);
+            if (application) {
+                setDrawerState({
+                    open: true,
+                    application
+                });
+            }
+        }
+    }, [action, name, cluster, argoApplicationsData]);
+
     const filteredApplications = useMemo(() => {
         if (!filter.searchText) {
             return argoApplicationsData?.items || [];
@@ -50,35 +73,6 @@ export default function ContinuousDeliveryApplicationPage() {
             return name.includes(searchLower);
         });
     }, [argoApplicationsData, filter.searchText]);
-
-    const getSyncStatusColor = (status: string) => {
-        switch (status?.toLowerCase()) {
-            case 'synced':
-                return 'green';
-            case 'outofdate':
-            case 'outofsynced':
-                return 'orange';
-            case 'failed':
-                return 'red';
-            default:
-                return 'default';
-        }
-    };
-
-    const getHealthStatusColor = (status: string) => {
-        switch (status?.toLowerCase()) {
-            case 'healthy':
-                return 'green';
-            case 'degraded':
-                return 'red';
-            case 'progressing':
-                return 'blue';
-            case 'suspended':
-                return 'orange';
-            default:
-                return 'default';
-        }
-    };
 
     const columns: ColumnsType<ArgoApplication> = [
         {
@@ -97,8 +91,17 @@ export default function ContinuousDeliveryApplicationPage() {
         }] : []),
         {
             title: 'Project',
-            dataIndex: ['spec', 'project'],
             key: 'project',
+            render: (_: any, record: ArgoApplication) => (
+                <Button
+                    type="link"
+                    onClick={() => {
+                        navigate(`/continuous-delivery/project?action=view&name=${record.spec?.project}&cluster=${record.metadata?.labels?.cluster}`);
+                    }}
+                >
+                    {record.spec?.project}
+                </Button>
+            ),
         },
         {
             title: 'Namespace',
@@ -254,7 +257,10 @@ export default function ContinuousDeliveryApplicationPage() {
             <ApplicationInfoDrawer
                 open={drawerState.open}
                 application={drawerState.application}
-                onClose={() => setDrawerState({ ...drawerState, open: false })}
+                onClose={() => {
+                    setSearchParams({});
+                    setDrawerState({ ...drawerState, open: false })
+                }}
             />
         </Panel>
     );
