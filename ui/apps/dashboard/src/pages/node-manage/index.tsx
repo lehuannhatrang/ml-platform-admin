@@ -26,16 +26,29 @@ import {
   Space,
   Button,
   Input,
-  message,
   Flex,
   Select,
+  Radio,
+  Card,
+  Spin,
 } from 'antd';
+import { Dendrogram } from '@ant-design/graphs';
+
 import { useEffect, useState } from 'react';
 import { useCluster } from '@/hooks';
 import { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
 import { Node } from '@/services/node';
 import NodeDetailDrawer, { NodeDetailDrawerProps } from './node-detail-drawer';
 import { useSearchParams } from 'react-router-dom';
+import { TableOutlined, ApartmentOutlined } from '@ant-design/icons';
+
+interface TreeNode {
+  id: string;
+  label?: string;
+  style?: Record<string, any>;
+  children?: TreeNode[];
+  [key: string]: any;
+}
 
 const NodeManagePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -44,27 +57,37 @@ const NodeManagePage = () => {
   const name = searchParams.get('name');
   const cluster = searchParams.get('cluster');
 
-  const [filter, setFilter] = useState<{
-    selectedCluster: ClusterOption;
-    searchText: string;
-  }>({
-    selectedCluster: DEFAULT_CLUSTER_OPTION,
-    searchText: '',
-  });
-  const [_messageApi, messageContextHolder] = message.useMessage();
-  const { data, isLoading } = useQuery({
-    queryKey: ['GetNodes', filter.selectedCluster, filter.searchText],
-    queryFn: async () => {
-      const ret = await GetNodes({}, filter.selectedCluster);
-      return ret.data;
-    },
-  });
-  const [nodeDetailData, setNodeDetailData] = useState<
-    Omit<NodeDetailDrawerProps, 'onClose'>
-  >({
+  const [nodeDetailData, setNodeDetailData] = useState<Omit<NodeDetailDrawerProps, 'onClose'>>({
     open: false,
     name: '',
     clusterName: '',
+  });
+
+  const [filter, setFilter] = useState({
+    search: '',
+    selectedCluster: DEFAULT_CLUSTER_OPTION,
+  });
+
+  const [viewMode, setViewMode] = useState<'table' | 'graph'>('table');
+
+  const [dendrogramData, setDendrogramData] = useState<TreeNode | null>(null);
+
+  const handleSearch = (value: string) => {
+    setFilter(prevState => ({
+      ...prevState,
+      search: value,
+    }));
+  };
+
+  // Fetch nodes data from API
+  const { data, isLoading } = useQuery({
+    queryKey: ['GetNodes', filter.selectedCluster, filter.search],
+    queryFn: async () => {
+      const ret = await GetNodes({
+        filterBy: ['name', filter.search],
+      }, filter.selectedCluster);
+      return ret.data;
+    },
   });
 
   useEffect(() => {
@@ -79,6 +102,11 @@ const NodeManagePage = () => {
       }
     }
   }, [action, name, cluster, data]);
+
+  useEffect(() => {
+    if (!data?.items) return;
+    prepareDendrogramData();
+  }, [data]);
 
   const { clusterOptions, isClusterDataLoading } = useCluster({});
 
@@ -190,11 +218,66 @@ const NodeManagePage = () => {
       },
     },
   ];
+
+  // Function to prepare Dendrogram data in the format expected by G6
+  const prepareDendrogramData = () => {
+    if (!data?.items) return;
+
+    // Create root node
+    const treeData: TreeNode = {
+      id: 'mgmt-cluster',
+      style: { fill: '#91d5ff', stroke: '#5cdbd3' },
+      children: []
+    };
+
+    // Group nodes by cluster
+    const nodesByCluster: Record<string, TreeNode[]> = {};
+    
+    data.items.forEach((node) => {
+      const clusterName = node.objectMeta.annotations?.['cluster.x-k8s.io/cluster-name'] || 'unknown';
+      
+      if (!nodesByCluster[clusterName]) {
+        nodesByCluster[clusterName] = [];
+      }
+      
+      const nodeRole = Object.keys(node.objectMeta.labels || {}).find(key => key === 'node-role.kubernetes.io/control-plane') ? 'Master' : 'Worker';
+      const nodeStatus = node.status.conditions.find((c) => c.type === 'Ready') ? 'Ready' : 'Not Ready';
+      
+      // Create node object
+      const nodeObj: TreeNode = {
+        id: `${node.objectMeta.name} (Node)`,
+        value: `${node.objectMeta.name}`,
+        nodeRole,
+        nodeStatus,
+        style: { 
+          fill: nodeStatus === 'Ready' ? '#52c41a' : '#f5222d',
+          stroke: nodeStatus === 'Ready' ? '#52c41a' : '#f5222d',
+        },
+        children: []
+      };
+      
+      nodesByCluster[clusterName].push(nodeObj);
+    });
+    
+    // Create cluster nodes
+    Object.keys(nodesByCluster).forEach((clusterName) => {
+      const clusterNode: TreeNode = {
+        id: `${clusterName} (Cluster)`,
+        value: clusterName,
+        style: { fill: '#1890ff', stroke: '#1890ff' },
+        children: nodesByCluster[clusterName]
+      };
+      treeData.children?.push(clusterNode);
+    });
+    
+    setDendrogramData(treeData);
+  };
+
   return (
     <Panel>
-      <div className={'flex flex-row justify-between mb-4'}>
-        <Flex className='mr-4'>
-          <h3 className={'leading-[32px]'}>
+      <div className="flex justify-between mb-4">
+        <Flex>
+          <h3 className="mb-2 mt-2">
             {i18nInstance.t('85fe5099f6807dada65d274810933389')}：
           </h3>
           <Select
@@ -211,20 +294,52 @@ const NodeManagePage = () => {
             }}
           />
         </Flex>
-        <Input.Search
-          placeholder='Search by node name'
-          className={'w-[400px]'}
-        />
+        <Flex>
+          <Input.Search
+            placeholder='Search by node name'
+            className={'w-[400px] mr-4'}
+            onSearch={handleSearch}
+            disabled={viewMode === 'graph'}
+          />
+          <Radio.Group value={viewMode} onChange={e => setViewMode(e.target.value)}>
+            <Radio.Button value="table"><TableOutlined /> Table</Radio.Button>
+            <Radio.Button value="graph"><ApartmentOutlined /> Graph</Radio.Button>
+          </Radio.Group>
+        </Flex>
       </div>
-      <Table
-        rowKey={(r: Node) => r.objectMeta.name || ''}
-        columns={columns}
-        loading={isLoading}
-        dataSource={data?.items || []}
-      />
 
-      {messageContextHolder}
-      
+      {viewMode === 'table' ? (
+        <Table
+          rowKey={(r: Node) => r.objectMeta.name || ''}
+          columns={columns}
+          loading={isLoading}
+          dataSource={data?.items || []}
+        />
+      ) : (
+        <Card style={{ minHeight: 500 }}>
+          {isLoading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+              <Spin size="large" />
+            </div>
+          ) : (
+            <div style={{ height: 500, width: '100%' }}>
+              {dendrogramData ? (
+                <Dendrogram 
+                  data={dendrogramData}
+                  direction="horizontal"
+                  autoFit="view"
+                  behaviors={['click-select']}
+                />
+              ) : (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                  <Spin tip="Preparing visualization data..." />
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+      )}
+
       <NodeDetailDrawer
         open={nodeDetailData.open}
         name={nodeDetailData.name}
