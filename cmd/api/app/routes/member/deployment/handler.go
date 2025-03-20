@@ -17,13 +17,19 @@ limitations under the License.
 package deployment
 
 import (
+	"context"
+
 	"github.com/gin-gonic/gin"
+	v1 "k8s.io/api/core/v1"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
 	"github.com/karmada-io/dashboard/cmd/api/app/types/common"
 	"github.com/karmada-io/dashboard/pkg/client"
+	"github.com/karmada-io/dashboard/pkg/common/types"
 	"github.com/karmada-io/dashboard/pkg/resource/deployment"
 	"github.com/karmada-io/dashboard/pkg/resource/event"
+	"github.com/karmada-io/dashboard/pkg/resource/pod"
 )
 
 func handleGetMemberDeployments(c *gin.Context) {
@@ -42,12 +48,56 @@ func handleGetMemberDeploymentDetail(c *gin.Context) {
 	memberClient := client.InClusterClientForMemberCluster(c.Param("clustername"))
 	namespace := c.Param("namespace")
 	name := c.Param("deployment")
-	result, err := deployment.GetDeploymentDetail(memberClient, namespace, name)
+	
+	// Get deployment details
+	deploymentDetail, err := deployment.GetDeploymentDetail(memberClient, namespace, name)
 	if err != nil {
 		common.Fail(c, err)
 		return
 	}
-	common.Success(c, result)
+	
+	// We need to get pods directly using the Kubernetes API with the labels
+	labelSelector := metaV1.FormatLabelSelector(&metaV1.LabelSelector{
+		MatchLabels: deploymentDetail.Selector,
+	})
+	
+	// Get pod list using the deployment's label selector
+	podList, err := memberClient.CoreV1().Pods(namespace).List(context.TODO(), metaV1.ListOptions{
+		LabelSelector: labelSelector,
+	})
+	
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
+	
+	// Convert to dashboard pod list format
+	pods := &pod.PodList{
+		ListMeta: types.ListMeta{TotalItems: len(podList.Items)},
+		Items:    make([]pod.Pod, 0),
+		Errors:   []error{},
+	}
+	
+	for _, item := range podList.Items {
+		pods.Items = append(pods.Items, pod.Pod{
+			ObjectMeta: types.NewObjectMeta(item.ObjectMeta),
+			TypeMeta:   types.NewTypeMeta("Pod"),
+			Status:     item.Status,
+			Spec:       item.Spec,
+		})
+	}
+	
+	// Create response with both deployment and pod details
+	response := struct {
+		*deployment.DeploymentDetail `json:",inline"`
+		PodList                      *pod.PodList `json:"podList"`
+		PodStatus                    v1.PodPhase  `json:"podStatus,omitempty"`
+	}{
+		DeploymentDetail: deploymentDetail,
+		PodList:          pods,
+	}
+	
+	common.Success(c, response)
 }
 
 func handleGetMemberDeploymentEvents(c *gin.Context) {

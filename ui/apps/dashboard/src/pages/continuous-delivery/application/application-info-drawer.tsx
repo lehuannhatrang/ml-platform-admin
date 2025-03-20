@@ -209,6 +209,7 @@ const ApplicationInfoDrawer: React.FC<ApplicationInfoDrawerProps> = ({
               status: string;
               health?: {
                 status: string;
+                message?: string;
               }
             }, index: number) => (
               <Descriptions.Item
@@ -242,6 +243,7 @@ const ApplicationInfoDrawer: React.FC<ApplicationInfoDrawerProps> = ({
                       </Tag>
                     </div>
                   )}
+                  {resource.health?.message && <Alert type="error" message={resource.health.message} />}
                 </Space>
               </Descriptions.Item>
             ))}

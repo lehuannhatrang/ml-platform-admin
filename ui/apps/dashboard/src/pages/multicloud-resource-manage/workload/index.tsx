@@ -368,6 +368,17 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
       },
     },
   ];
+  const handleCloseDrawer = () => {
+    setSearchParams({});
+    setDrawerData({
+      open: false,
+      kind: WorkloadKind.Unknown,
+      namespace: '',
+      name: '',
+      cluster: '',
+    });
+  };
+  
   const { message: messageApi } = App.useApp();
 
   return (
@@ -492,14 +503,22 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
         name={drawerData.name}
         namespace={drawerData.namespace}
         cluster={drawerData.cluster}
-        onClose={() => {
-          setSearchParams({});
-          setDrawerData({
-            open: false,
-            kind: WorkloadKind.Unknown,
-            namespace: '',
-            name: '',
-            cluster: '',
+        onClose={handleCloseDrawer}
+        onOpenLogs={({
+          kind,
+          namespace,
+          name,
+          cluster,
+          containers,
+        }) => {
+          handleCloseDrawer();
+          setLogsDrawerData({
+            open: true,
+            kind,
+            namespace,
+            name,
+            cluster,
+            containers,
           });
         }}
       />

@@ -59,6 +59,23 @@ export interface Service {
   clusterIP: string;
 }
 
+export interface ServiceRaw {
+  apiVersion: string;
+  kind: string;
+  metadata: ObjectMeta;
+  spec: {
+    ports: ServicePort[];
+    selector: Selector;
+    type: ServiceType;
+    clusterIP: string;
+  };
+  status: {
+    loadBalancer: {
+      ingress: Endpoint[];
+    };
+  };
+}
+
 export async function GetServices(params: {
   namespace?: string;
   cluster?: ClusterOption;

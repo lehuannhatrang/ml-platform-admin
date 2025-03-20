@@ -19,7 +19,7 @@ import Panel from '@/components/panel';
 import { App, Button, Input, Select, Flex } from 'antd';
 import { ServiceKind } from '@/services/base';
 import { Icons } from '@/components/icons';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useToggle, useWindowSize } from '@uidotdev/usehooks';
 import ServiceTable from './components/service-table';
 import ServiceEditorModal from './components/service-editor-modal';
@@ -30,12 +30,16 @@ import { useQueryClient } from '@tanstack/react-query';
 import { DeleteMemberResource, DeleteResource } from '@/services/unstructured.ts';
 import { useCluster } from '@/hooks';
 import { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
+import ServiceInfoDrawer from './components/service-info-drawer';
+import IngressInfoDrawer from './components/ingress-info-drawer';
+import { useSearchParams } from 'react-router-dom';
 
 export type ServicePageProps = {
   kind: ServiceKind;
 }
 
 const ServicePage = ({ kind }: ServicePageProps) => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [filter, setFilter] = useState<{
     selectedWorkSpace: string;
     searchText: string;
@@ -45,6 +49,80 @@ const ServicePage = ({ kind }: ServicePageProps) => {
     selectedWorkSpace: '',
     searchText: '',
   });
+
+  // Service drawer state
+  const [serviceDrawerData, setServiceDrawerData] = useState<{
+    open: boolean;
+    namespace: string;
+    name: string;
+    cluster: string;
+  }>({
+    open: false,
+    namespace: '',
+    name: '',
+    cluster: '',
+  });
+
+  // Ingress drawer state
+  const [ingressDrawerData, setIngressDrawerData] = useState<{
+    open: boolean;
+    namespace: string;
+    name: string;
+    cluster: string;
+  }>({
+    open: false,
+    namespace: '',
+    name: '',
+    cluster: '',
+  });
+
+  // Handle close drawer functions
+  const handleCloseServiceDrawer = () => {
+    setSearchParams({});
+    setServiceDrawerData({
+      open: false,
+      namespace: '',
+      name: '',
+      cluster: '',
+    });
+  };
+
+  const handleCloseIngressDrawer = () => {
+    setSearchParams({});
+    setIngressDrawerData({
+      open: false,
+      namespace: '',
+      name: '',
+      cluster: '',
+    });
+  };
+
+  // Check URL params for view actions
+  useEffect(() => {
+    const action = searchParams.get('action');
+    const name = searchParams.get('name');
+    const namespace = searchParams.get('namespace');
+    const cluster = searchParams.get('cluster');
+
+    if (action === 'view' && name && namespace && cluster) {
+      if (kind === ServiceKind.Service) {
+        setServiceDrawerData({
+          open: true,
+          name,
+          namespace,
+          cluster,
+        });
+      } else if (kind === ServiceKind.Ingress) {
+        setIngressDrawerData({
+          open: true,
+          name,
+          namespace,
+          cluster,
+        });
+      }
+    }
+  }, [searchParams, kind]);
+
   const { nsOptions, isNsDataLoading } = useNamespace({});
   const size = useWindowSize();
   const labelTagNum = size && size.width! > 1800 ? undefined : 1;
@@ -175,6 +253,20 @@ const ServicePage = ({ kind }: ServicePageProps) => {
               console.log('error', e);
             }
           }}
+          onViewService={(r, clusterName) => {
+            setSearchParams({
+              action: 'view',
+              name: r.objectMeta.name,
+              namespace: r.objectMeta.namespace,
+              cluster: clusterName,
+            });
+            setServiceDrawerData({
+              open: true,
+              name: r.objectMeta.name,
+              namespace: r.objectMeta.namespace,
+              cluster: clusterName,
+            });
+          }}
         />
       )}
       {kind === ServiceKind.Ingress && (
@@ -212,6 +304,20 @@ const ServicePage = ({ kind }: ServicePageProps) => {
             } catch (e) {
               console.log('error', e);
             }
+          }}
+          onViewIngress={(r, clusterName) => {
+            setSearchParams({
+              action: 'view',
+              name: r.objectMeta.name,
+              namespace: r.objectMeta.namespace,
+              cluster: clusterName,
+            });
+            setIngressDrawerData({
+              open: true,
+              name: r.objectMeta.name,
+              namespace: r.objectMeta.namespace,
+              cluster: clusterName,
+            });
           }}
         />
       )}
@@ -259,6 +365,24 @@ const ServicePage = ({ kind }: ServicePageProps) => {
           toggleShowModal(false);
         }}
         kind={kind}
+      />
+
+      {/* Service Info Drawer */}
+      <ServiceInfoDrawer
+        open={serviceDrawerData.open}
+        name={serviceDrawerData.name}
+        namespace={serviceDrawerData.namespace}
+        cluster={serviceDrawerData.cluster}
+        onClose={handleCloseServiceDrawer}
+      />
+
+      {/* Ingress Info Drawer */}
+      <IngressInfoDrawer
+        open={ingressDrawerData.open}
+        name={ingressDrawerData.name}
+        namespace={ingressDrawerData.namespace}
+        cluster={ingressDrawerData.cluster}
+        onClose={handleCloseIngressDrawer}
       />
     </Panel>
   );

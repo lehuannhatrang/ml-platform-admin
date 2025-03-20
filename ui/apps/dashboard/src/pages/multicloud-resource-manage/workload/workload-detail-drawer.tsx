@@ -26,10 +26,12 @@ import {
   Row,
   Col,
   Tag,
+  Button,
 } from 'antd';
 import {
   GetWorkloadDetail,
   ContainerStatuses,
+  ResourceCondition,
 } from '@/services/workload.ts';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -38,18 +40,28 @@ import { WorkloadKind } from '@/services/base.ts';
 import { cn } from '@/utils/cn';
 import TagList, { convertLabelToTags } from '@/components/tag-list';
 import { calculateDuration } from '@/utils/time.ts';
+import { getStatusFromCondition } from '@/utils/resource';
+import { useNavigate } from 'react-router-dom';
 
-export interface WorkloadDetailDrawerProps {
+export type WorkloadDetailDrawerProps = {
   open: boolean;
   kind: WorkloadKind;
   namespace: string;
   name: string;
   cluster: string;
   onClose: () => void;
+  onOpenLogs?: (params: {
+    kind: WorkloadKind;
+    namespace: string;
+    name: string;
+    cluster: string;
+    containers: string[];
+  }) => void;
 }
 
 const WorkloadDetailDrawer: FC<WorkloadDetailDrawerProps> = (props) => {
-  const { open, kind, namespace, name, onClose, cluster } = props;
+  const { open, kind, namespace, name, onClose, cluster, onOpenLogs } = props;
+  const navigate = useNavigate();
 
   const enableFetch = useMemo(() => {
     return !!(kind && name && namespace && cluster);
@@ -92,11 +104,26 @@ const WorkloadDetailDrawer: FC<WorkloadDetailDrawerProps> = (props) => {
         return r.ready ? <Tag color="green">Ready</Tag> : <Tag color="red">Not Ready</Tag>;
       },
     },
+    {
+      title: 'Action',
+      key: 'action',
+      render: () => {
+        return <Button type="link" onClick={() => {
+          onOpenLogs?.({
+            kind,
+            namespace,
+            name,
+            cluster,
+            containers: detailData?.status?.containerStatuses?.map((c) => c.name) || [],
+          });
+        }}>Logs</Button>;
+      },
+    }
   ];
 
   return (
     <Drawer
-      title={i18nInstance.t('0af9d9af618327e912ac9f91bbe6a30f', '工作负载详情')}
+      title={`${kind.toUpperCase()}: ${name}`}
       placement="right"
       open={open}
       width={800}
@@ -176,7 +203,9 @@ const WorkloadDetailDrawer: FC<WorkloadDetailDrawerProps> = (props) => {
           {detailData?.spec && <Col span={8}>
             <Statistic
               title='Node'
-              value={detailData?.spec?.nodeName}
+              valueRender={() => <Button className='px-0 text-xl text-wrap text-left' type="link" onClick={() => {
+                navigate(`/node-manage?action=view&name=${detailData?.spec?.nodeName}&cluster=${cluster}`);
+              }}>{detailData?.spec?.nodeName}</Button>}
             />
           </Col>}
           <Col span={8}>
@@ -213,7 +242,7 @@ const WorkloadDetailDrawer: FC<WorkloadDetailDrawerProps> = (props) => {
           <div className="text-base text-gray-500 mb-2">
             {i18nInstance.t('c11db1c192a765494c8859d854199085', '注解')}
           </div>
-          <div>
+          <div className='overflow-hidden'>
             <TagList
               tags={convertLabelToTags(
                 detailData?.objectMeta?.name || '',
@@ -234,6 +263,60 @@ const WorkloadDetailDrawer: FC<WorkloadDetailDrawerProps> = (props) => {
             columns={containerStatusColumns}
             pagination={false}
             dataSource={detailData?.status?.containerStatuses || []}
+          />
+        </Card>
+      )}
+      {detailData?.podList && (
+        <Card
+          title='Pods'
+          bordered
+          className={cn(styles['schedule-container'], 'mt-[6px]')}
+        >
+          <Table
+            rowKey={(e) => `pod-${e.objectMeta?.name}`}
+            columns={[
+              {
+                title: 'Name',
+                key: 'name',
+                width: 150,
+                dataIndex: ['objectMeta', 'name'],
+                render: (text: string) => {
+                  return <Button type="link" onClick={() => {
+                    navigate(`/multicloud-resource-manage/pod?action=view&name=${text}&cluster=${cluster}&namespace=${namespace}`);
+                  }}>{text}</Button>;
+                },
+              },
+              {
+                title: 'Node',
+                key: 'node',
+                dataIndex: ['spec', 'nodeName'],
+                render: (text: string) => {
+                  return <Button type="link" onClick={() => {
+                    navigate(`/node-manage?action=view&name=${text}&cluster=${cluster}`);
+                  }}>{text}</Button>;
+                },
+              },
+              {
+                title: 'Age',
+                key: 'age',
+                width: 100,
+                dataIndex: ['objectMeta', 'creationTimestamp'],
+                render: (text: string) => {
+                  return calculateDuration(text);
+                },
+              },
+              {
+                title: 'Status',
+                key: 'status',
+                dataIndex: ['status', 'conditions'],
+                render: (conditions: ResourceCondition[]) => {
+                  const status = getStatusFromCondition(conditions)
+                  return <Tag color={status === 'Ready' ? 'blue' : 'orange'}>{status}</Tag>
+                },
+              },
+            ]}
+            pagination={false}
+            dataSource={detailData?.podList.items || []}
           />
         </Card>
       )}

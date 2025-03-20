@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Input, Popconfirm, Select, Space, Table, Tag } from 'antd';
+import { Button, Input, Popconfirm, Select, Space, Table, Tag, Card, Row, Col, Radio, Tooltip, Flex } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
-import { SearchOutlined, PlusOutlined } from '@ant-design/icons';
+import { SearchOutlined, PlusOutlined, TableOutlined, AppstoreOutlined } from '@ant-design/icons';
 import { ArgoApplication, DeleteArgoApplication, GetArgoApplications } from '../../../services/argocd';
 import useCluster, { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
 import { calculateDuration } from '@/utils/time';
@@ -26,6 +26,9 @@ export default function ContinuousDeliveryApplicationPage() {
         selectedCluster: DEFAULT_CLUSTER_OPTION,
         searchText: '',
     });
+
+    // View mode: 'table' or 'card'
+    const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
 
     const [modalState, setModalState] = useState({
         open: false,
@@ -197,6 +200,105 @@ export default function ContinuousDeliveryApplicationPage() {
         }
     ];
 
+    // Card view component for applications
+    const ApplicationCards = () => (
+        <Row gutter={[16, 16]}>
+            {filteredApplications.map((app: ArgoApplication) => (
+                <Col key={`${app?.metadata?.name}-${app?.metadata?.namespace}-${app?.metadata?.labels?.cluster}`} xs={24} sm={12} md={8} lg={6}>
+                    <Card
+                        title={
+                            <Tooltip title={app.metadata?.name}>
+                                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} className='text-blue-500'>
+                                    {app.metadata?.name}
+                                </div>
+                            </Tooltip>
+                        }
+                        extra={
+                            <Space>
+                                <Tag color={getSyncStatusColor(app.status?.sync?.status || '')}>
+                                    {app.status?.sync?.status || 'Unknown'}
+                                </Tag>
+                                <Tag color={getHealthStatusColor(app.status?.health?.status || '')}>
+                                    {app.status?.health?.status || 'Unknown'}
+                                </Tag>
+                            </Space>
+                        }
+                        actions={[
+                            <Button
+                                key="view"
+                                type="text"
+                                onClick={() => {
+                                    setDrawerState({
+                                        open: true,
+                                        application: app,
+                                    });
+                                }}
+                            >
+                                View
+                            </Button>,
+                            <Button
+                                key="edit"
+                                type="text"
+                                onClick={() => {
+                                    setModalState({
+                                        open: true,
+                                        mode: 'edit',
+                                        application: app,
+                                        cluster: app.metadata?.labels?.cluster || filter.selectedCluster.value,
+                                    });
+                                }}
+                            >
+                                Edit
+                            </Button>,
+                            <Popconfirm
+                                key="delete"
+                                placement="topRight"
+                                title={`Do you want to delete "${app.metadata?.name}" application?`}
+                                onConfirm={async () => {
+                                    const response = await DeleteArgoApplication(app.metadata?.labels?.cluster || filter.selectedCluster.value, app.metadata?.name);
+                                    if (response.code === 200) {
+                                        refetch();
+                                    }
+                                }}
+                                okText="Confirm"
+                                cancelText="Cancel"
+                            >
+                                <Button type="text" danger>Delete</Button>
+                            </Popconfirm>,
+                        ]}
+                    >
+                        <div style={{ marginBottom: 12 }}>
+                            {filter.selectedCluster.value === 'ALL' && (
+                                <div style={{ marginBottom: 8 }}>
+                                    <span style={{ fontWeight: 'bold' }}>Cluster:</span> {app.metadata?.labels?.cluster || '-'}
+                                </div>
+                            )}
+                            <div style={{ marginBottom: 8 }}>
+                                <span style={{ fontWeight: 'bold' }}>Project:</span>{' '}
+                                <Button
+                                    type="link"
+                                    size="small"
+                                    style={{ padding: 0 }}
+                                    onClick={() => {
+                                        navigate(`/continuous-delivery/project?action=view&name=${app.spec?.project}&cluster=${app.metadata?.labels?.cluster}`);
+                                    }}
+                                >
+                                    {app.spec?.project}
+                                </Button>
+                            </div>
+                            <div style={{ marginBottom: 8 }}>
+                                <span style={{ fontWeight: 'bold' }}>Namespace:</span> {app.spec?.destination?.namespace || '-'}
+                            </div>
+                            <div>
+                                <span style={{ fontWeight: 'bold' }}>Age:</span> {calculateDuration(app.metadata?.creationTimestamp)}
+                            </div>
+                        </div>
+                    </Card>
+                </Col>
+            ))}
+        </Row>
+    );
+
     return (
         <Panel>
             <div className={'flex flex-row justify-between space-x-4 mb-4'}>
@@ -204,7 +306,7 @@ export default function ContinuousDeliveryApplicationPage() {
                     <Select
                         value={filter.selectedCluster?.value}
                         style={{ width: 200 }}
-                        onChange={(_v: string, option: ClusterOption | ClusterOption[]) => 
+                        onChange={(_v: string, option: ClusterOption | ClusterOption[]) =>
                             setFilter({ ...filter, selectedCluster: option as ClusterOption })
                         }
                         options={clusterOptions}
@@ -219,27 +321,47 @@ export default function ContinuousDeliveryApplicationPage() {
                         style={{ width: 250 }}
                     />
                 </Space>
-                <Button 
-                    type="primary" 
-                    icon={<PlusOutlined />}
-                    onClick={() => {
-                        setModalState({
-                            open: true,
-                            mode: 'create',
-                            application: undefined,
-                            cluster: '',
-                        });
-                    }}
-                >
-                    Create Application
-                </Button>
+                <Flex>
+                    <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        onClick={() => {
+                            setModalState({
+                                open: true,
+                                mode: 'create',
+                                application: undefined,
+                                cluster: '',
+                            });
+                        }}
+                    >
+                        Create Application
+                    </Button>
+                    <Radio.Group className='ml-4' value={viewMode} onChange={e => setViewMode(e.target.value)}>
+                        <Radio.Button value="table"><TableOutlined /> Table</Radio.Button>
+                        <Radio.Button value="card"><AppstoreOutlined /> Cards</Radio.Button>
+                    </Radio.Group>
+                </Flex>
             </div>
-            <Table
-                columns={columns}
-                dataSource={filteredApplications}
-                rowKey={(record) => `${record?.metadata?.name}-${record?.metadata?.namespace}-${record?.metadata?.labels?.cluster}`}
-                loading={isLoading}
-            />
+
+            {/* Conditionally render table or card view based on viewMode */}
+            {viewMode === 'table' ? (
+                <Table
+                    columns={columns}
+                    dataSource={filteredApplications}
+                    rowKey={(record) => `${record?.metadata?.name}-${record?.metadata?.namespace}-${record?.metadata?.labels?.cluster}`}
+                    loading={isLoading}
+                />
+            ) : (
+                <div style={{ position: 'relative', minHeight: '200px' }}>
+                    {isLoading ? (
+                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                            Loading...
+                        </div>
+                    ) : (
+                        <ApplicationCards />
+                    )}
+                </div>
+            )}
 
             {/* Application Create/Edit Modal */}
             <EditApplicationModal

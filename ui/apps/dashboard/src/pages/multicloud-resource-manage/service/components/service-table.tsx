@@ -32,6 +32,7 @@ interface ServiceTableProps {
   searchText: string;
   onEditServiceContent: (r: any, clusterName: string) => void;
   onDeleteServiceContent: (r: Service, clusterName: string) => void;
+  onViewService: (r: Service, clusterName: string) => void;
   clusterOption: ClusterOption;
 }
 const ServiceTable: FC<ServiceTableProps> = (props) => {
@@ -40,6 +41,7 @@ const ServiceTable: FC<ServiceTableProps> = (props) => {
     searchText,
     onEditServiceContent,
     onDeleteServiceContent,
+    onViewService,
     clusterOption
   } = props;
   
@@ -62,7 +64,11 @@ const ServiceTable: FC<ServiceTableProps> = (props) => {
       key: 'serviceName',
       width: 200,
       render: (_, r) => {
-        return r.objectMeta.name;
+        return (
+          <a onClick={() => onViewService(r, r.objectMeta.labels?.cluster || clusterOption.label)}>
+            {r.objectMeta.name}
+          </a>
+        );
       },
     },
     ...(clusterOption.value === 'ALL' ? [{
@@ -153,6 +159,13 @@ const ServiceTable: FC<ServiceTableProps> = (props) => {
             <Button
               size={'small'}
               type="link"
+              onClick={() => onViewService(r, r.objectMeta.labels?.cluster || clusterOption.label)}
+            >
+              View
+            </Button>
+            <Button
+              size={'small'}
+              type="link"
               onClick={async () => {
                 const ret = await GetMemberResource({
                   kind: r.typeMeta.kind,
@@ -188,7 +201,7 @@ const ServiceTable: FC<ServiceTableProps> = (props) => {
         );
       },
     },
-  ], [clusterOption]);
+  ], [clusterOption, onEditServiceContent, onDeleteServiceContent, onViewService]);
   
   return (
     <Table

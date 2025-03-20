@@ -145,6 +145,7 @@ export type ContainerStatuses = {
 export type WorkloadDetail = {
   objectMeta?: ObjectMeta;
   typeMeta?: TypeMeta;
+  podList?: {items: PodWorkload[]};
   pods?: PodStatus;
   containerImages?: string[];
   initContainerImages?: any;

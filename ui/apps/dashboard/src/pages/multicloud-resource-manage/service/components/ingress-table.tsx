@@ -20,7 +20,7 @@ import {
   GetIngress,
   Ingress,
 } from '@/services/service.ts';
-import { FC } from 'react';
+import { FC, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ClusterOption } from '@/hooks/use-cluster';
 import { calculateDuration } from '@/utils/time';
@@ -31,6 +31,7 @@ interface ServiceTableProps {
   searchText: string;
   onEditIngressContent: (r: Ingress, clusterName: string) => void;
   onDeleteIngressContent: (r: Ingress, clusterName: string) => void;
+  onViewIngress: (r: Ingress, clusterName: string) => void;
   clusterOption: ClusterOption;
 }
 const IngressTable: FC<ServiceTableProps> = (props) => {
@@ -39,6 +40,7 @@ const IngressTable: FC<ServiceTableProps> = (props) => {
     searchText,
     onEditIngressContent,
     onDeleteIngressContent,
+    onViewIngress,
     clusterOption,
   } = props;
   
@@ -55,13 +57,17 @@ const IngressTable: FC<ServiceTableProps> = (props) => {
     refetchInterval: 5000,
   });
 
-  const columns: TableColumnProps<Ingress>[] = [
+  const columns: TableColumnProps<Ingress>[] = useMemo(() => [
     {
       title: i18nInstance.t('d7ec2d3fea4756bc1642e0f10c180cf5', '名称'),
       key: 'ingressName',
       width: 300,
       render: (_, r) => {
-        return r.objectMeta.name;
+        return (
+          <a onClick={() => onViewIngress(r, r.objectMeta.labels?.cluster || clusterOption.label)}>
+            {r.objectMeta.name}
+          </a>
+        );
       },
     },
     ...(clusterOption.value === 'ALL' ? [{
@@ -109,6 +115,13 @@ const IngressTable: FC<ServiceTableProps> = (props) => {
             <Button
               size={'small'}
               type="link"
+              onClick={() => onViewIngress(r, r.objectMeta.labels?.cluster || clusterOption.label)}
+            >
+              View
+            </Button>
+            <Button
+              size={'small'}
+              type="link"
               onClick={async () => {
                 const ret = await GetMemberResource({
                   kind: r.typeMeta.kind,
@@ -147,7 +160,8 @@ const IngressTable: FC<ServiceTableProps> = (props) => {
         );
       },
     },
-  ];
+  ], [clusterOption, onEditIngressContent, onDeleteIngressContent, onViewIngress]);
+  
   return (
     <Table
       rowKey={(r: Ingress) =>
