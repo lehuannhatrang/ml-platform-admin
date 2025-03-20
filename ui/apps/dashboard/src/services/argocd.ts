@@ -282,6 +282,14 @@ export async function UpdateArgoApplication(
   return response.data;
 }
 
+export async function SyncArgoApplication(
+  clusterName: string,
+  applicationName: string
+): Promise<IResponse<ArgoApplication>> {
+  const response = await karmadaClient.post(`/member/${clusterName}/argocd/application/${applicationName}/sync`);
+  return response.data;
+}
+
 /**
  * Deletes an ArgoCD Application in the specified cluster
  */

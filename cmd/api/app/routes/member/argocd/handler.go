@@ -33,6 +33,7 @@ func init() {
 	// Add DELETE routes for removing ArgoCD resources
 	r.DELETE("/argocd/project/:projectName", handleDeleteMemberArgoProject)
 	r.DELETE("/argocd/application/:applicationName", handleDeleteMemberArgoApplication)
+	r.POST("/argocd/application/:applicationName/sync", handleSyncMemberArgoApplication)
 }
 
 var applicationGVR = schema.GroupVersionResource{
@@ -671,5 +672,66 @@ func handleDeleteMemberArgoApplication(c *gin.Context) {
 
 	common.Success(c, gin.H{
 		"message": fmt.Sprintf("Application %s deleted successfully", applicationName),
+	})
+}
+
+// handleSyncMemberArgoApplication handles POST requests to sync an ArgoCD Application in a specific member cluster
+func handleSyncMemberArgoApplication(c *gin.Context) {
+	clusterName := c.Param("clustername")
+	applicationName := c.Param("applicationName")
+
+	dynamicClient, err := client.GetDynamicClientForMember(c, clusterName)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"code":    400,
+			"message": fmt.Sprintf("failed to get dynamic client: %v", err),
+		})
+		return
+	}
+
+	var applicationGVR = schema.GroupVersionResource{
+		Group:    "argoproj.io",
+		Version:  "v1alpha1",
+		Resource: "applications",
+	}
+
+	// Get the application first
+	application, err := dynamicClient.Resource(applicationGVR).Namespace(argocdNamespace).Get(c, applicationName, metav1.GetOptions{})
+	if err != nil {
+		c.JSON(400, gin.H{
+			"code":    400,
+			"message": fmt.Sprintf("failed to get application: %v", err),
+		})
+		return
+	}
+
+	// Create a sync operation
+	operation := map[string]interface{}{
+		"operation": map[string]interface{}{
+			"sync": map[string]interface{}{},
+		},
+	}
+
+	// Update the application with the sync operation
+	if err := unstructured.SetNestedField(application.Object, operation["operation"], "operation"); err != nil {
+		c.JSON(400, gin.H{
+			"code":    400,
+			"message": fmt.Sprintf("failed to set sync operation: %v", err),
+		})
+		return
+	}
+
+	_, err = dynamicClient.Resource(applicationGVR).Namespace(argocdNamespace).Update(c, application, metav1.UpdateOptions{})
+	if err != nil {
+		c.JSON(400, gin.H{
+			"code":    400,
+			"message": fmt.Sprintf("failed to sync application: %v", err),
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code":    200,
+		"message": "application sync started successfully",
 	})
 }

@@ -46,6 +46,7 @@ export default function ContinuousDeliveryApplicationPage() {
             });
             return applications.data || {};
         },
+        refetchInterval: 5000,
     });
 
     const { clusterOptions, isClusterDataLoading } = useCluster({});

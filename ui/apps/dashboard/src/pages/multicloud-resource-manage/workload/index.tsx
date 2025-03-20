@@ -105,7 +105,8 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
 
   useEffect(() => {
     if (action === 'view' && name && cluster && namespace) {
-      const workload = data?.items?.find(w => w.objectMeta.name === name && w.objectMeta.namespace === namespace && w.objectMeta.labels?.cluster === cluster);
+      const dataItems = data?.items || data?.deployments || data?.statefulSets || data?.daemonSets || data?.jobs || [];
+      const workload = dataItems?.find(w => w.objectMeta.name === name && w.objectMeta.namespace === namespace && w.objectMeta.labels?.cluster === cluster);
       if (workload) {
         setDrawerData({
           open: true,

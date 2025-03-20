@@ -1,8 +1,9 @@
 import React from 'react';
-import { Drawer, Descriptions, Tag, Typography, Button, Divider, Space, Alert } from 'antd';
+import { Drawer, Descriptions, Tag, Typography, Button, Divider, Space, Alert, message } from 'antd';
 import { SyncOutlined } from '@ant-design/icons';
-import { ArgoApplication } from '@/services/argocd';
+import { ArgoApplication, SyncArgoApplication } from '@/services/argocd';
 import { calculateDuration } from '@/utils/time';
+import { useNavigate } from 'react-router-dom';
 
 const { Text } = Typography;
 
@@ -50,9 +51,28 @@ const ApplicationInfoDrawer: React.FC<ApplicationInfoDrawerProps> = ({
     return null;
   }
 
-  const handleSync = () => {
+  const navigate = useNavigate();
+
+  const handleSync = async () => {
     // TODO: Implement sync functionality
     console.log('Syncing application:', application.metadata?.name);
+    const response = await SyncArgoApplication(application.metadata?.labels?.cluster || '', application.metadata?.name);
+    if (response.code === 200) {
+      message.success('Application sync started successfully');
+    } else {
+      message.error(response.message || 'Failed to sync application');
+    }
+  };
+
+  const handleNavigate = (resource: { kind: string; name: string; namespace: string, cluster: string }) => {
+    const { kind, name, namespace, cluster } = resource;
+    const workloadsKind = ['Deployment', 'StatefulSet', 'DaemonSet'];
+    const servicesKind = ['Service', 'Ingress'];
+    if (workloadsKind.includes(kind)) {
+      navigate(`/multicloud-resource-manage/${kind.toLowerCase()}?action=view&name=${name}&namespace=${namespace}&cluster=${cluster}`);
+    } else if (servicesKind.includes(kind)) {
+      navigate(`/multicloud-service-manage/${kind.toLowerCase()}?action=view&name=${name}&namespace=${namespace}&cluster=${cluster}`);
+    }
   };
 
   return (
@@ -89,7 +109,7 @@ const ApplicationInfoDrawer: React.FC<ApplicationInfoDrawerProps> = ({
 
         </>
       )}
-      
+
       <Descriptions
         title="Application Details"
         column={2}
@@ -193,7 +213,12 @@ const ApplicationInfoDrawer: React.FC<ApplicationInfoDrawerProps> = ({
             }, index: number) => (
               <Descriptions.Item
                 key={index}
-                label={`${resource.kind} / ${resource.name}`}
+                label={<Button 
+                  type="link" 
+                  onClick={() => handleNavigate({ ...resource, cluster: application.metadata.labels?.cluster || '' })}>
+                    {`${resource.kind} / ${resource.name}`}
+                  </Button>
+                }
               >
                 <Space direction="vertical">
                   <div>Namespace: {resource.namespace}</div>
