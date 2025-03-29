@@ -6,3 +6,18 @@ resources:
   - karmada-dashboard-web.yaml
   - karmada-dashboard-api.yaml
   - karmada-dashboard-configmap.yaml
+  - karmada-dashboard-etcd.yaml
+
+# Configuration for secrets that can be created at deploy time
+secretGenerator:
+  # Secret for dashboard admin user
+  - name: karmada-dashboard-admin
+    type: Opaque
+    literals:
+      - password=admin123  # Default password, should be changed in production
+
+  # Secret for JWT token signing
+  - name: karmada-dashboard-jwt
+    type: Opaque
+    literals:
+      - secret=karmada-dashboard-secret-key-change-me-in-production

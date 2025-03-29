@@ -37,6 +37,24 @@ spec:
           env:
             - name: GIN_MODE
               value: release
+            # Etcd connection settings - now using our standalone etcd
+            - name: ETCD_ENDPOINT
+              value: "http://karmada-dashboard-etcd.karmada-system.svc.cluster.local:2379"
+            # No need for TLS settings with our standalone non-TLS etcd
+            # Default admin password (should be changed after first login)
+            - name: KARMADA_DASHBOARD_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: karmada-dashboard-admin
+                  key: password
+                  optional: true
+            # JWT Secret for token signing
+            - name: KARMADA_DASHBOARD_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: karmada-dashboard-jwt
+                  key: secret
+                  optional: true
           livenessProbe:
             failureThreshold: 8
             httpGet:
