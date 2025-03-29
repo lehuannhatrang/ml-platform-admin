@@ -46,9 +46,9 @@ spec:
             - --listen-client-urls
             - http://0.0.0.0:2379
             - --advertise-client-urls
-            - http://karmada-dashboard-etcd.karmada-system.svc.cluster.local:2379
+            - http://karmada-dashboard-etcd.karmada-system.svc:2379
             - --initial-cluster
-            - etcd0=http://karmada-dashboard-etcd-0.karmada-dashboard-etcd.karmada-system.svc.cluster.local:2380
+            - etcd0=http://karmada-dashboard-etcd-0.karmada-dashboard-etcd.karmada-system.svc:2380
             - --initial-cluster-state
             - new
             - --data-dir=/var/lib/etcd
