@@ -47,7 +47,7 @@ import { WorkloadKind } from '@/services/base.ts';
 import useNamespace from '@/hooks/use-namespace.ts';
 import useCluster, { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
 import { calculateDuration } from '@/utils/time.ts';
-import { getStatusFromCondition } from '@/utils/resource.ts';
+import { getStatusFromCondition, getStatusTagColor } from '@/utils/resource.ts';
 import dayjs from 'dayjs';
 import LogsDrawer, { LogsDrawerProps } from './logs-drawer.tsx';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -205,8 +205,9 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
           title: 'Status',
           key: 'status',
           render: (_: any, r: any) => {
-            const status = getStatusFromCondition(r.status?.conditions)
-            return <Tag color={status === 'Ready' ? 'blue' : 'orange'}>{status}</Tag>
+            console.log('stats', r.status, r)
+            const status = getStatusFromCondition(r.status?.conditions || [])
+            return <Tag color={getStatusTagColor(status)}>{status}</Tag>
           },
         }]
       : []

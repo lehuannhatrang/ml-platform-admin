@@ -27,6 +27,7 @@ import {
   Col,
   Tag,
   Button,
+  Alert,
 } from 'antd';
 import {
   GetWorkloadDetail,
@@ -40,7 +41,7 @@ import { WorkloadKind } from '@/services/base.ts';
 import { cn } from '@/utils/cn';
 import TagList, { convertLabelToTags } from '@/components/tag-list';
 import { calculateDuration } from '@/utils/time.ts';
-import { getStatusFromCondition } from '@/utils/resource';
+import { getStatusFromCondition, getStatusTagColor, getWorkloadMessage } from '@/utils/resource';
 import { useNavigate } from 'react-router-dom';
 
 export type WorkloadDetailDrawerProps = {
@@ -121,6 +122,8 @@ const WorkloadDetailDrawer: FC<WorkloadDetailDrawerProps> = (props) => {
     }
   ];
 
+  const workloadAlertMessages = useMemo(() => getWorkloadMessage(detailData?.status?.conditions || []), [detailData?.status?.conditions]);
+
   return (
     <Drawer
       title={`${kind.toUpperCase()}: ${name}`}
@@ -130,6 +133,9 @@ const WorkloadDetailDrawer: FC<WorkloadDetailDrawerProps> = (props) => {
       loading={isDetailDataLoading}
       onClose={onClose}
     >
+      {workloadAlertMessages?.length > 0 && 
+        workloadAlertMessages.map((message, index) => 
+          <Alert className='mb-2' type="error" key={index} message={message} showIcon />)}
       <Card
         title='Information'
         bordered
@@ -205,7 +211,7 @@ const WorkloadDetailDrawer: FC<WorkloadDetailDrawerProps> = (props) => {
               title='Node'
               valueRender={() => <Button className='px-0 text-xl text-wrap text-left' type="link" onClick={() => {
                 navigate(`/node-manage?action=view&name=${detailData?.spec?.nodeName}&cluster=${cluster}`);
-              }}>{detailData?.spec?.nodeName}</Button>}
+              }}>{detailData?.spec?.nodeName || '-'}</Button>}
             />
           </Col>}
           <Col span={8}>
@@ -291,9 +297,9 @@ const WorkloadDetailDrawer: FC<WorkloadDetailDrawerProps> = (props) => {
                 key: 'node',
                 dataIndex: ['spec', 'nodeName'],
                 render: (text: string) => {
-                  return <Button type="link" onClick={() => {
+                  return text ? <Button type="link" onClick={() => {
                     navigate(`/node-manage?action=view&name=${text}&cluster=${cluster}`);
-                  }}>{text}</Button>;
+                  }}>{text}</Button> : '-';
                 },
               },
               {
@@ -311,7 +317,7 @@ const WorkloadDetailDrawer: FC<WorkloadDetailDrawerProps> = (props) => {
                 dataIndex: ['status', 'conditions'],
                 render: (conditions: ResourceCondition[]) => {
                   const status = getStatusFromCondition(conditions)
-                  return <Tag color={status === 'Ready' ? 'blue' : 'orange'}>{status}</Tag>
+                  return <Tag color={getStatusTagColor(status)}>{status}</Tag>
                 },
               },
             ]}
