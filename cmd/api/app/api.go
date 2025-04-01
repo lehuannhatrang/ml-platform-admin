@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/karmada-io/karmada/pkg/sharedcli/klogflag"
 	"github.com/spf13/cobra"
@@ -41,19 +42,22 @@ import (
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/ingress"                  // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/job"                      // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/karmadaconfig"
-	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/member"            // Importing route packages forces route registration
-	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/namespace"         // Importing route packages forces route registration
-	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/overridepolicy"    // Importing route packages forces route registration
-	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/overview"          // Importing route packages forces route registration
-	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/propagationpolicy" // Importing route packages forces route registration
-	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/secret"            // Importing route packages forces route registration
-	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/service"           // Importing route packages forces route registration
-	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/statefulset"       // Importing route packages forces route registration
-	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/unstructured"      // Importing route packages forces route registration
-	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/setting/monitoring"        // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/member"             // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/namespace"          // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/overridepolicy"     // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/overview"           // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/propagationpolicy"  // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/secret"             // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/service"            // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/setting/monitoring" // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/setting/user"       // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/statefulset"        // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/unstructured"       // Importing route packages forces route registration
+	"github.com/karmada-io/dashboard/pkg/auth"
 	"github.com/karmada-io/dashboard/pkg/client"
 	"github.com/karmada-io/dashboard/pkg/config"
 	"github.com/karmada-io/dashboard/pkg/environment"
+	"github.com/karmada-io/dashboard/pkg/etcd"
 )
 
 // NewAPICommand creates a *cobra.Command object with default parameters
@@ -111,12 +115,132 @@ func run(ctx context.Context, opts *options.Options) error {
 		client.WithKubeContext(opts.KubeContext),
 		client.WithInsecureTLSSkipVerify(opts.SkipKubeApiserverTLSVerify),
 	)
+
+	// Initialize etcd client for user management
+	initEtcdClient(ctx, opts)
+
 	ensureAPIServerConnectionOrDie()
 	serve(opts)
 	config.InitDashboardConfig(client.InClusterClient(), ctx.Done())
 	<-ctx.Done()
 	os.Exit(0)
 	return nil
+}
+
+func initEtcdClient(ctx context.Context, opts *options.Options) {
+	// Get admin password for etcd setup
+	adminPassword := os.Getenv("KARMADA_DASHBOARD_ADMIN_PASSWORD")
+	if adminPassword == "" {
+		adminPassword = "admin123" // Default admin password if not specified
+		klog.InfoS("Using default admin password for initialization")
+	}
+
+	// Get etcd host and port from command line flags
+	etcdHost := opts.EtcdHost
+	etcdPort := opts.EtcdPort
+
+	// Determine primary endpoint from environment variable or use the flag values
+	primaryEndpoint := os.Getenv("ETCD_ENDPOINT")
+	if primaryEndpoint == "" {
+		// Use the etcd-host and etcd-port flags to construct the primary endpoint
+		primaryEndpoint = fmt.Sprintf("http://%s:%d", etcdHost, etcdPort)
+		klog.InfoS("Using etcd endpoint from command line flags", "etcdHost", etcdHost, "etcdPort", etcdPort, "endpoint", primaryEndpoint)
+	} else {
+		klog.InfoS("Using etcd endpoint from environment variable", "endpoint", primaryEndpoint)
+	}
+
+	// Create a list of all endpoints to try
+	allEndpoints := []string{
+		primaryEndpoint,
+		fmt.Sprintf("http://%s.svc:%d", etcdHost, etcdPort), // With .svc suffix
+		fmt.Sprintf("http://%s:%d", etcdHost, etcdPort),     // Without namespace part
+		fmt.Sprintf("http://localhost:%d", etcdPort),        // Local connection with specified port
+	}
+
+	// Make the list unique
+	uniqueEndpoints := make([]string, 0, len(allEndpoints))
+	endpointMap := make(map[string]bool)
+
+	for _, endpoint := range allEndpoints {
+		if _, exists := endpointMap[endpoint]; !exists {
+			uniqueEndpoints = append(uniqueEndpoints, endpoint)
+			endpointMap[endpoint] = true
+		}
+	}
+
+	klog.InfoS("Attempting to connect to etcd endpoints", "endpoints", uniqueEndpoints)
+
+	// Try each endpoint
+	var lastError error
+	maxRetries := 3 // Retry each endpoint up to 3 times
+
+	for _, endpoint := range uniqueEndpoints {
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			klog.InfoS("Connecting to etcd endpoint", "endpoint", endpoint, "attempt", attempt)
+
+			etcdOpts := etcd.NewDefaultOptions().
+				WithEndpoints([]string{endpoint}).
+				WithDialTimeout(5 * time.Second).
+				WithRequestTimeout(5 * time.Second)
+
+			err := auth.InitUserManager(etcdOpts)
+			if err == nil {
+				klog.InfoS("Successfully connected to etcd endpoint", "endpoint", endpoint)
+
+				// Ensure admin user creation
+				ensureAdminUserCreated(ctx, adminPassword)
+				return
+			}
+
+			lastError = err
+			klog.ErrorS(err, "Failed to connect to etcd endpoint", "endpoint", endpoint, "attempt", attempt)
+
+			// Add backoff between retries
+			if attempt < maxRetries {
+				time.Sleep(time.Duration(attempt) * 500 * time.Millisecond)
+			}
+		}
+	}
+
+	if lastError != nil {
+		klog.ErrorS(lastError, "Failed to initialize etcd client for user management, password authentication will be disabled")
+		klog.Info("Using only token-based authentication")
+	}
+}
+
+// ensureAdminUserCreated ensures the admin user is created
+func ensureAdminUserCreated(ctx context.Context, adminPassword string) {
+	userManager := auth.GetUserManager()
+	if userManager == nil {
+		klog.Error("User manager is nil, cannot create admin user. Authentication with username/password will not work.")
+		return
+	}
+
+	// Create context with timeout
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	// First check if admin user exists
+	exists, err := userManager.UserExists(ctx, "admin")
+	if err != nil {
+		klog.ErrorS(err, "Failed to check if admin user exists")
+		return
+	}
+
+	if exists {
+		klog.InfoS("Admin user already exists, not creating")
+		return
+	}
+
+	// Admin user doesn't exist, create it
+	klog.InfoS("Creating admin user with provided password")
+	err = userManager.CreateUser(ctx, "admin", adminPassword, "admin@example.com", "admin")
+	if err != nil {
+		klog.ErrorS(err, "Failed to create admin user")
+		return
+	}
+
+	klog.InfoS("Admin user created successfully")
 }
 
 func ensureAPIServerConnectionOrDie() {

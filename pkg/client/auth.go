@@ -17,13 +17,17 @@ limitations under the License.
 package client
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"github.com/karmada-io/dashboard/pkg/etcd"
 )
 
 const (
@@ -31,6 +35,8 @@ const (
 	authorizationHeader = "Authorization"
 	// authorizationTokenPrefix is the default bearer token prefix.
 	authorizationTokenPrefix = "Bearer "
+	// serviceAccountTokenKey is the key used to store the token in etcd
+	serviceAccountTokenKey = "karmada-dashboard/service-account-token"
 )
 
 func karmadaConfigFromRequest(request *http.Request) (*rest.Config, error) {
@@ -68,23 +74,60 @@ func buildConfigFromAuthInfo(authInfo *clientcmdapi.AuthInfo) (*rest.Config, err
 }
 
 func buildAuthInfo(request *http.Request) (*clientcmdapi.AuthInfo, error) {
-	if !HasAuthorizationHeader(request) {
-		return nil, k8serrors.NewUnauthorized("MSG_LOGIN_UNAUTHORIZED_ERROR")
-	}
+	// First try using the authorization header from the request
+	if HasAuthorizationHeader(request) {
+		token := GetBearerToken(request)
+		authInfo := &clientcmdapi.AuthInfo{
+			Token:                token,
+			ImpersonateUserExtra: make(map[string][]string),
+		}
 
-	token := GetBearerToken(request)
-	authInfo := &clientcmdapi.AuthInfo{
-		Token:                token,
-		ImpersonateUserExtra: make(map[string][]string),
+		handleImpersonation(authInfo, request)
+		return authInfo, nil
 	}
+	
+	// If no authorization header is present, try to use the saved service account token
+	token, err := GetServiceAccountTokenFromEtcd(request.Context())
+	if err == nil && token != "" {
+		authInfo := &clientcmdapi.AuthInfo{
+			Token:                token,
+			ImpersonateUserExtra: make(map[string][]string),
+		}
+		return authInfo, nil
+	}
+	
+	return nil, k8serrors.NewUnauthorized("MSG_LOGIN_UNAUTHORIZED_ERROR")
+}
 
-	handleImpersonation(authInfo, request)
-	return authInfo, nil
+// GetServiceAccountTokenFromEtcd retrieves the service account token from etcd
+func GetServiceAccountTokenFromEtcd(ctx context.Context) (string, error) {
+	// Create a timeout context
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	
+	// Get the etcd client
+	etcdClient, err := etcd.GetEtcdClient(nil)
+	if err != nil || etcdClient == nil {
+		return "", err
+	}
+	
+	// Get the token from etcd
+	resp, err := etcdClient.Get(ctx, serviceAccountTokenKey)
+	if err != nil {
+		return "", err
+	}
+	
+	if len(resp.Kvs) == 0 {
+		return "", fmt.Errorf("service account token not found in etcd")
+	}
+	
+	return string(resp.Kvs[0].Value), nil
 }
 
 // HasAuthorizationHeader checks if the request has an authorization header.
 func HasAuthorizationHeader(req *http.Request) bool {
 	header := req.Header.Get(authorizationHeader)
+
 	if len(header) == 0 {
 		return false
 	}

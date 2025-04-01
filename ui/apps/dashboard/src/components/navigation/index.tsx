@@ -24,7 +24,8 @@ import {
   supportedLangConfig,
   getLangTitle,
 } from '@/utils/i18n';
-import { Dropdown } from 'antd';
+import { Button, Dropdown, Popconfirm } from 'antd';
+import { LogoutOutlined } from '@ant-design/icons';
 
 export interface IUserInfo {
   id: number;
@@ -46,6 +47,10 @@ const Navigation: FC<INavigationProps> = (props) => {
     brandText = 'DCN Dashboard',
     userInfo,
   } = props;
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    window.location.href = '/login';
+  };
   return (
     <>
       <div className={styles.navbar}>
@@ -92,6 +97,12 @@ const Navigation: FC<INavigationProps> = (props) => {
                 </div>
               </div>
             )}
+            {/* logout button */}
+            <div className="ml-2">
+              <Popconfirm title="Are you sure to logout?" onConfirm={handleLogout}>
+                <Button type="text" icon={<LogoutOutlined /> } />
+              </Popconfirm>
+            </div>
           </div>
         </div>
         {usePlaceholder && <div className={styles.placeholder} />}

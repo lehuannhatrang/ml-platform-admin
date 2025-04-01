@@ -27,12 +27,14 @@ import { useWindowSize } from "@uidotdev/usehooks";
 const { Sider: AntdSider, Content: AntdContent } = AntdLayout;
 
 export const MainLayout: FC = () => {
-  const { authenticated } = useAuth();
+  const { authenticated, initToken } = useAuth();
   const { width } = useWindowSize();
   const isSmallScreen = width !== null && width <= 768;
 
   if (!authenticated) {
     return <Navigate to="/login" />;
+  } else if (!initToken) {
+    return <Navigate to="/init-token" />;
   }
 
   return (

@@ -31,15 +31,17 @@ spec:
             - --context=karmada
             - --insecure-bind-address=0.0.0.0
             - --bind-address=0.0.0.0
+            - --etcd-host=karmada-dashboard-etcd.karmada-system
+            - --etcd-port=2379
           name: karmada-dashboard-api
           image: lehuannhatrang/dcn-dashboard-api:v0.9
           imagePullPolicy: IfNotPresent
           env:
             - name: GIN_MODE
               value: release
-            # Etcd connection settings - now using our standalone etcd
+            # Optional environment variable for etcd endpoint - can be overridden by --etcd-host flag
             - name: ETCD_ENDPOINT
-              value: "http://karmada-dashboard-etcd.karmada-system.svc.cluster.local:2379"
+              value: ""
             # No need for TLS settings with our standalone non-TLS etcd
             # Default admin password (should be changed after first login)
             - name: KARMADA_DASHBOARD_ADMIN_PASSWORD

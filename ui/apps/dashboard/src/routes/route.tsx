@@ -49,9 +49,11 @@ import { ConfigKind, ServiceKind, WorkloadKind } from '@/services/base';
 import CustomResourcePage from '@/pages/multicloud-custom-resource/custom-resource';
 import CustomResourceDefinitionPage from '@/pages/multicloud-custom-resource/custom-resource-definition';
 import MonitoringConfig from '@/pages/basic-config/monitoring-config';
+import UserSettings from '@/pages/basic-config/users-setting';
 import ContinuousDeliveryApplicationPage from '@/pages/continuous-delivery/application';
 import ContinuousDeliveryProjectPage from '@/pages/continuous-delivery/project';
 import ContinuousDeliveryApplicationSetPage from '@/pages/continuous-delivery/application-set';
+import InitTokenPage from '@/pages/login/init-token';
 
 export interface IRouteObjectHandle {
   icon?: ReactNode;
@@ -371,6 +373,14 @@ export function getRoutes() {
               },
             },
             {
+              path: 'users-setting',
+              element: <UserSettings />,
+              handle: {
+                sidebarKey: 'USERS-SETTING',
+                sidebarName: 'User Settings',
+              },
+            },
+            {
               path: 'karmada-config',
               element: <KarmadaConfig />,
               handle: {
@@ -467,6 +477,11 @@ export function getRoutes() {
       path: '/login',
       errorElement: <ErrorBoundary />,
       element: <Login />,
+    },
+    {
+      path: '/init-token',
+      errorElement: <ErrorBoundary />,
+      element: <InitTokenPage />,
     },
   ];
 

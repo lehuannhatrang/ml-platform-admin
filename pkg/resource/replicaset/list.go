@@ -1,8 +1,6 @@
 package replicaset
 
 import (
-	"log"
-
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	client "k8s.io/client-go/kubernetes"
@@ -16,7 +14,6 @@ import (
 // GetReplicaSetList returns a list of all ReplicaSets in the cluster.
 func GetReplicaSetList(client client.Interface, nsQuery *common.NamespaceQuery,
 	dsQuery *dataselect.DataSelectQuery) (*ReplicaSetList, error) {
-	log.Println("Getting list of replica sets")
 
 	channels := &common.ResourceChannels{
 		ReplicaSetList: common.GetReplicaSetListChannel(client, nsQuery, 1),

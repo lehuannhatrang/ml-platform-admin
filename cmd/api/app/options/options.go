@@ -37,6 +37,8 @@ type Options struct {
 	Namespace                     string
 	DisableCSRFProtection         bool
 	OpenAPIEnabled                bool
+	EtcdHost                      string
+	EtcdPort                      int
 }
 
 // NewOptions returns initialized Options.
@@ -62,4 +64,6 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.Namespace, "namespace", "karmada-dashboard", "Namespace to use when accessing Dashboard specific resources, i.e. configmap")
 	fs.BoolVar(&o.DisableCSRFProtection, "disable-csrf-protection", false, "allows disabling CSRF protection")
 	fs.BoolVar(&o.OpenAPIEnabled, "openapi-enabled", false, "enables OpenAPI v2 endpoint under '/apidocs.json'")
+	fs.StringVar(&o.EtcdHost, "etcd-host", "karmada-dashboard-etcd.karmada-system.svc", "Hostname or IP address of the etcd server used for user authentication")
+	fs.IntVar(&o.EtcdPort, "etcd-port", 2379, "Port number for the etcd server used for user authentication")
 }

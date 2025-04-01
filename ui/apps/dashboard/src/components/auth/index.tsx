@@ -28,10 +28,12 @@ import { useQuery } from '@tanstack/react-query';
 
 const AuthContext = createContext<{
   authenticated: boolean;
+  initToken: boolean;
   token: string;
   setToken: (v: string) => void;
 }>({
   authenticated: false,
+  initToken: false,
   token: '',
   setToken: () => {},
 });
@@ -49,14 +51,12 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
         karmadaClient.defaults.headers.common[
           'Authorization'
         ] = `Bearer ${token}`;
-        // localStorage.setItem("token", token);
         const ret = await Me();
         return ret.data;
       } else {
-        // delete karmadaClient.defaults.headers.common["Authorization"];
-        // localStorage.removeItem("token");
         return {
           authenticated: false,
+          initToken: false,
         };
       }
     },
@@ -65,12 +65,14 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (data && token) {
       return {
         authenticated: !!data.authenticated,
+        initToken: data.initToken,
         token,
         setToken,
       };
     } else {
       return {
         authenticated: false,
+        initToken: false,
         token: '',
         setToken,
       };

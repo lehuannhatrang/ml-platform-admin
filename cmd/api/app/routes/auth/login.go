@@ -17,28 +17,30 @@ limitations under the License.
 package auth
 
 import (
+	"context"
 	"net/http"
+	"time"
 
 	v1 "github.com/karmada-io/dashboard/cmd/api/app/types/api/v1"
-	"github.com/karmada-io/dashboard/pkg/client"
+	"github.com/karmada-io/dashboard/pkg/auth"
 	"github.com/karmada-io/dashboard/pkg/common/errors"
+	"k8s.io/klog/v2"
 )
 
 func login(spec *v1.LoginRequest, request *http.Request) (*v1.LoginResponse, int, error) {
-	ensureAuthorizationHeader(spec, request)
-	karmadaClient, err := client.GetKarmadaClientFromRequest(request)
-	if err != nil {
-		return nil, http.StatusInternalServerError, err
+	// If username and password are provided, use password authentication
+	if spec.Username != "" && spec.Password != "" {
+		ctx, cancel := context.WithTimeout(request.Context(), 5*time.Second)
+		defer cancel()
+
+		token, err := auth.AuthenticateUser(ctx, spec.Username, spec.Password)
+		if err != nil {
+			klog.ErrorS(err, "Authentication failed", "username", spec.Username)
+			return nil, http.StatusUnauthorized, errors.NewUnauthorized("Invalid username or password")
+		}
+
+		return &v1.LoginResponse{Token: token}, http.StatusOK, nil
 	}
 
-	if _, err = karmadaClient.Discovery().ServerVersion(); err != nil {
-		code, err := errors.HandleError(err)
-		return nil, code, err
-	}
-
-	return &v1.LoginResponse{Token: spec.Token}, http.StatusOK, nil
-}
-
-func ensureAuthorizationHeader(spec *v1.LoginRequest, request *http.Request) {
-	client.SetAuthorizationHeader(request, spec.Token)
+	return nil, http.StatusBadRequest, errors.NewBadRequest("No valid authentication method provided")
 }

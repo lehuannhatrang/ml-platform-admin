@@ -16,13 +16,28 @@ limitations under the License.
 
 import { IResponse, karmadaClient } from '@/services/base.ts';
 
-export async function Login(token: string) {
+export async function Login(tokenOrUsername: string, password?: string) {
+  // If password is provided, use username/password login
+  if (password !== undefined) {
+    const resp = await karmadaClient.post<IResponse<{ token: string }>>(
+      `/login`,
+      { username: tokenOrUsername, password },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+    return resp.data;
+  }
+
+  // Otherwise use token-based login (for backward compatibility)
   const resp = await karmadaClient.post<IResponse<{ token: string }>>(
     `/login`,
-    { token },
+    { token: tokenOrUsername },
     {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${tokenOrUsername}`,
         'Content-Type': 'application/json',
       },
     },
@@ -34,7 +49,21 @@ export async function Me() {
   const resp = await karmadaClient.get<
     IResponse<{
       authenticated: boolean;
+      initToken: boolean;
     }>
   >(`me`);
+  return resp.data;
+}
+
+export async function InitToken(token: string) {
+  const resp = await karmadaClient.post<IResponse<{ token: string }>>(
+    `/init-token`,
+    { token },
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+  );
   return resp.data;
 }

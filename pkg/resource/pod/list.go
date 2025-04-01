@@ -17,8 +17,6 @@ limitations under the License.
 package pod
 
 import (
-	"log"
-
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -50,7 +48,6 @@ type PodList struct {
 
 // GetPodList returns a list of all Pods in all cluster.
 func GetPodList(client kubernetes.Interface, nsQuery *common.NamespaceQuery, dsQuery *dataselect.DataSelectQuery) (*PodList, error) {
-	log.Printf("Getting pods")
 	channels := &common.ResourceChannels{
 		PodList: common.GetPodListChannel(client, nsQuery, 1),
 	}

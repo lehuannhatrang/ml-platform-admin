@@ -17,6 +17,8 @@ limitations under the License.
 package auth
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"k8s.io/klog/v2"
 
@@ -29,29 +31,75 @@ func handleLogin(c *gin.Context) {
 	loginRequest := new(v1.LoginRequest)
 	if err := c.Bind(loginRequest); err != nil {
 		klog.ErrorS(err, "Could not read login request")
-		common.Fail(c, err)
+		c.JSON(http.StatusBadRequest, common.BaseResponse{
+			Code: http.StatusBadRequest,
+			Msg:  err.Error(),
+			Data: nil,
+		})
 		return
 	}
-	response, _, err := login(loginRequest, c.Request)
+	response, statusCode, err := login(loginRequest, c.Request)
 	if err != nil {
-		common.Fail(c, err)
+		c.JSON(statusCode, common.BaseResponse{
+			Code: statusCode,
+			Msg:  err.Error(),
+			Data: nil,
+		})
 		return
 	}
-	common.Success(c, response)
+	c.JSON(http.StatusOK, common.BaseResponse{
+		Code: http.StatusOK,
+		Msg:  "success",
+		Data: response,
+	})
 }
 
 func handleMe(c *gin.Context) {
-	response, _, err := me(c.Request)
+	response, statusCode, err := me(c.Request)
 	if err != nil {
-		klog.ErrorS(err, "Could not get user")
-		common.Fail(c, err)
+		c.JSON(statusCode, common.BaseResponse{
+			Code: statusCode,
+			Msg:  err.Error(),
+			Data: nil,
+		})
 		return
 	}
+	c.JSON(http.StatusOK, common.BaseResponse{
+		Code: http.StatusOK,
+		Msg:  "success",
+		Data: response,
+	})
+}
 
-	common.Success(c, response)
+func handleInitToken(c *gin.Context) {
+	initTokenRequest := new(v1.InitTokenRequest)
+	if err := c.Bind(initTokenRequest); err != nil {
+		klog.ErrorS(err, "Could not read init token request")
+		c.JSON(http.StatusBadRequest, common.BaseResponse{
+			Code: http.StatusBadRequest,
+			Msg:  err.Error(),
+			Data: nil,
+		})
+		return
+	}
+	response, statusCode, err := initToken(initTokenRequest, c.Request)
+	if err != nil {
+		c.JSON(statusCode, common.BaseResponse{
+			Code: statusCode,
+			Msg:  err.Error(),
+			Data: nil,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, common.BaseResponse{
+		Code: http.StatusOK,
+		Msg:  "success",
+		Data: response,
+	})
 }
 
 func init() {
 	router.V1().POST("/login", handleLogin)
 	router.V1().GET("/me", handleMe)
+	router.V1().POST("/init-token", handleInitToken)
 }
