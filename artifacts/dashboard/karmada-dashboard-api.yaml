@@ -34,7 +34,7 @@ spec:
             - --etcd-host=karmada-dashboard-etcd.karmada-system
             - --etcd-port=2379
           name: karmada-dashboard-api
-          image: lehuannhatrang/dcn-dashboard-api:v0.9
+          image: lehuannhatrang/dcn-dashboard-api:v0.17
           imagePullPolicy: IfNotPresent
           env:
             - name: GIN_MODE

@@ -1,3 +1,4 @@
+import { USER_ROLE } from './auth';
 import { IResponse, karmadaClient } from './base';
 
 export interface UserSetting {
@@ -9,7 +10,7 @@ export interface UserSetting {
   dateFormat?: string;
   timeFormat?: string;
   preferences?: {
-    role?: 'Administrator' | 'Basic User';
+    role?: USER_ROLE;
     [key: string]: string | undefined;
   };
   dashboard?: {

@@ -16,6 +16,11 @@ limitations under the License.
 
 import { IResponse, karmadaClient } from '@/services/base.ts';
 
+export enum USER_ROLE {
+  ADMIN = 'admin',
+  BASIC_USER = 'basic_user',
+}
+
 export async function Login(tokenOrUsername: string, password?: string) {
   // If password is provided, use username/password login
   if (password !== undefined) {
@@ -50,6 +55,7 @@ export async function Me() {
     IResponse<{
       authenticated: boolean;
       initToken: boolean;
+      role: USER_ROLE;
     }>
   >(`me`);
   return resp.data;

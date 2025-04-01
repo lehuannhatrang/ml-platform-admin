@@ -91,7 +91,7 @@ menu_configs:
         enable: true
         sidebar_key: APPLICATION
       - path: application-set
-        enable: true
+        enable: false
         sidebar_key: APPLICATION-SET
       - path: project
         enable: true
@@ -118,6 +118,10 @@ menu_configs:
       - path: monitoring-config
         enable: true
         sidebar_key: MONITORING-CONFIG
+      - path: users-setting
+        enable: true
+        sidebar_key: USERS-SETTING
+        children: []
   - path: /advanced-config
     enable: false
     sidebar_key: ADVANCED-CONFIG

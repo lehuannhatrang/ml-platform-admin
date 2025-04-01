@@ -22,7 +22,7 @@ import {
   useState,
   useCallback,
 } from 'react';
-import { Me } from '@/services/auth.ts';
+import { Me, USER_ROLE } from '@/services/auth.ts';
 import { karmadaClient } from '@/services';
 import { useQuery } from '@tanstack/react-query';
 
@@ -30,11 +30,13 @@ const AuthContext = createContext<{
   authenticated: boolean;
   initToken: boolean;
   token: string;
+  role?: USER_ROLE;
   setToken: (v: string) => void;
 }>({
   authenticated: false,
   initToken: false,
   token: '',
+  role: undefined,
   setToken: () => {},
 });
 
@@ -57,6 +59,7 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
         return {
           authenticated: false,
           initToken: false,
+          role: undefined,
         };
       }
     },
@@ -67,6 +70,7 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
         authenticated: !!data.authenticated,
         initToken: data.initToken,
         token,
+        role: data?.role,
         setToken,
       };
     } else {
@@ -75,6 +79,7 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
         initToken: false,
         token: '',
         setToken,
+        role: undefined,
       };
     }
   }, [data, token, setToken]);

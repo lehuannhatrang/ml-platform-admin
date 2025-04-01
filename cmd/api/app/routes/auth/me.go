@@ -40,13 +40,29 @@ func me(request *http.Request) (*v1.User, int, error) {
 		return nil, http.StatusUnauthorized, errors.NewUnauthorized("Missing authentication token")
 	}
 
-	_, err := auth.ValidateToken(token)
+	claims, err := auth.ValidateToken(token)
 	if err != nil {
 		klog.ErrorS(err, "Invalid JWT token")
 		return nil, http.StatusUnauthorized, errors.NewUnauthorized("Invalid authentication token")
 	}
 
 	user := getUserFromToken(token)
+	
+	// Set role from the claims if available
+	if claims != nil && claims.Role != "" {
+		user.Role = claims.Role
+	} else if claims != nil && claims.Username != "" {
+		// Try to get user details from the user manager
+		userManager := auth.GetUserManager()
+		if userManager != nil {
+			etcdUser, err := userManager.GetUser(request.Context(), claims.Username)
+			if err == nil && etcdUser != nil {
+				user.Role = etcdUser.Role
+			} else {
+				klog.ErrorS(err, "Failed to get user details from etcd", "username", claims.Username)
+			}
+		}
+	}
 
 	saToken, err := client.GetServiceAccountTokenFromEtcd(request.Context())
 	if err != nil || saToken == "" {

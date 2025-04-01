@@ -47,6 +47,58 @@ func handleGetUserSetting(c *gin.Context) {
 		common.Fail(c, err)
 		return
 	}
+
+	// Get the user's role information
+	var role string
+
+	// First check if user info is already in the context
+	user, exists := c.Get("user")
+	if exists {
+		if userObj, ok := user.(*v1.User); ok && userObj.Role != "" {
+			role = userObj.Role
+		}
+	}
+
+	// If role not found in context, try to get it from token or etcd
+	if role == "" {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader != "" {
+			// Extract token
+			const prefix = "Bearer "
+			if len(authHeader) > len(prefix) && strings.HasPrefix(authHeader, prefix) {
+				tokenString := authHeader[len(prefix):]
+				
+				// Validate token and get claims
+				claims, err := auth.ValidateToken(tokenString)
+				if err == nil && claims != nil && claims.Role != "" {
+					role = claims.Role
+				} else {
+					// If not in token, try etcd
+					userManager := auth.GetUserManager()
+					if userManager != nil {
+						ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+						defer cancel()
+						etcdUser, err := userManager.GetUser(ctx, username)
+						if err == nil && etcdUser != nil {
+							role = etcdUser.Role
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Set the role in the preferences if it's available and not already set
+	if role != "" {
+		if result.Preferences == nil {
+			result.Preferences = make(map[string]string)
+		}
+		// Only set if not already present
+		if _, exists := result.Preferences["role"]; !exists {
+			result.Preferences["role"] = role
+		}
+	}
+
 	common.Success(c, result)
 }
 

@@ -2,15 +2,16 @@ import Panel from '@/components/panel';
 import { getAllUserSettings, getUserSetting, deleteUserSetting, UserSetting } from '@/services/user-setting';
 import { useQuery } from '@tanstack/react-query';
 import { FC, useState } from 'react';
-import { Spin, Typography, Row, Col, Card, Flex, Popconfirm, message, Tabs, Table, Button, Empty, Tag, Avatar, Space } from 'antd';
-import { DeleteOutlined, EditOutlined, PlusOutlined, UserOutlined } from '@ant-design/icons';
+import { Spin, Typography, Row, Col, Card, Flex, Popconfirm, message, Tabs, Table, Button, Empty, Tag, Avatar, Space, Tooltip } from 'antd';
+import { DeleteOutlined, EditOutlined, InfoCircleOutlined, PlusOutlined, UserOutlined } from '@ant-design/icons';
 import UserSettingsModal from './edit-user-settings-modal';
 import type { TabsProps, TableProps } from 'antd';
 import { useAuth } from '@/components/auth';
+import { USER_ROLE } from '@/services/auth';
 
 const UserSettings: FC = () => {
-    const { authenticated } = useAuth();
-    const isAdmin = authenticated;
+    const { role } = useAuth();
+    const isAdmin = role === USER_ROLE.ADMIN;
 
     const [userSettingModal, setUserSettingModal] = useState<{
         mode: 'create' | 'edit';
@@ -30,7 +31,7 @@ const UserSettings: FC = () => {
     });
 
     const { data: allUsersSettings, isLoading: isLoadingAllUsers, refetch: refetchAllUsers } = useQuery({
-        queryKey: ['get-all-user-settings'],
+        queryKey: ['get-all-users'],
         queryFn: async () => {
             if (!isAdmin) return { users: [] };
             const resp = await getAllUserSettings();
@@ -46,11 +47,8 @@ const UserSettings: FC = () => {
         }
     };
 
-    const getRoleTag = (role?: string) => {
-        if (role === 'Administrator') {
-            return <Tag color="red">{role}</Tag>;
-        }
-        return <Tag color="blue">{role || 'Basic User'}</Tag>;
+    const getRoleTag = (role?: USER_ROLE) => {
+        return <Tag color={role === USER_ROLE.ADMIN ? 'blue' : 'gray'}>{role || '-'}</Tag>;
     };
 
     const columns: TableProps<UserSetting>['columns'] = [
@@ -66,22 +64,28 @@ const UserSettings: FC = () => {
             ),
         },
         {
-            title: 'Display Name',
-            dataIndex: 'displayName',
-            key: 'displayName',
+            title: 'Email',
+            dataIndex: ['preferences', 'email'],
+            key: 'email',
             render: (text) => text || '-',
         },
         {
             title: 'Role',
             key: 'role',
-            render: (_, record) => getRoleTag(record.preferences?.role),
+            dataIndex: ['preferences', 'role'],
+            render: (role: USER_ROLE) => getRoleTag(role),
         },
         {
             title: 'Cluster Permissions',
             key: 'clusterPermissions',
             render: (_, record) => {
-                if (record.preferences?.role === 'Administrator') {
-                    return <Typography.Text type="secondary">All clusters</Typography.Text>;
+                if (record.preferences?.role === USER_ROLE.ADMIN) {
+                    return <Typography.Text type="secondary">
+                        All clusters
+                        <Tooltip title="Adminstrator can access all clusters">
+                            <InfoCircleOutlined className="ml-1" />
+                        </Tooltip>
+                    </Typography.Text>;
                 }
                 
                 if (record.preferences?.clusterPermissions) {
@@ -262,32 +266,27 @@ const UserSettings: FC = () => {
             children: (
                 <Spin spinning={isLoadingAllUsers}>
                     <Card title="User Management" extra={
-                        <Typography.Text type="secondary">
-                            Administrator can create, edit, and delete users
-                        </Typography.Text>
+                        <Flex gap={8} align="center">
+                            <Typography.Text type="secondary">
+                                Administrator can create, edit, and delete users
+                            </Typography.Text>
+                            <Button
+                                type="primary"
+                                icon={<PlusOutlined />}
+                                onClick={() => setUserSettingModal({
+                                    mode: 'create',
+                                    open: true,
+                                })}
+                            >
+                                Create User
+                            </Button>
+                        </Flex>
                     }>
-                        <Row className="mb-4">
-                            <Col span={24}>
-                                <Flex justify="end" align="center">
-                                    <Button
-                                        type="primary"
-                                        icon={<PlusOutlined />}
-                                        onClick={() => setUserSettingModal({
-                                            mode: 'create',
-                                            open: true,
-                                        })}
-                                    >
-                                        Create User
-                                    </Button>
-                                </Flex>
-                            </Col>
-                        </Row>
                         <Table
                             columns={columns}
                             dataSource={allUsersSettings?.users || []}
                             rowKey="username"
-                            pagination={{ pageSize: 10 }}
-                        />
+                            />
                     </Card>
                 </Spin>
             ),

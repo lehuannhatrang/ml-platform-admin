@@ -5,6 +5,7 @@ import { IResponse } from '@/services/base';
 import { UserSetting, createUserSetting, updateUserSetting } from '@/services/user-setting';
 import { useCluster } from '@/hooks';
 import { ClusterOption } from '@/hooks/use-cluster';
+import { USER_ROLE } from '@/services/auth';
 
 interface UserSettingsModalProps {
   mode: 'create' | 'edit';
@@ -15,8 +16,8 @@ interface UserSettingsModalProps {
 }
 
 const roleOptions = [
-  { label: 'Administrator', value: 'Admin' },
-  { label: 'Basic User', value: 'Basic_User' },
+  { label: 'Administrator', value: USER_ROLE.ADMIN},
+  { label: 'Basic User', value: USER_ROLE.BASIC_USER },
 ];
 
 interface ClusterItem {
@@ -41,7 +42,7 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
   useEffect(() => {
     if (initialData) {
       form.setFieldsValue(initialData);
-      setShowClusterPermissions(initialData.preferences?.role === 'Basic User');
+      setShowClusterPermissions(initialData.preferences?.role === USER_ROLE.BASIC_USER);
       // Initialize selected clusters if available
       if (initialData.preferences?.clusterPermissions) {
         try {
@@ -59,15 +60,15 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
       // Set default role for new users
       form.setFieldsValue({
         preferences: {
-          role: 'Basic User'
+          role: USER_ROLE.BASIC_USER
         }
       });
       setShowClusterPermissions(true);
     }
   }, [initialData, form]);
 
-  const handleRoleChange = (value: string) => {
-    setShowClusterPermissions(value === 'Basic User');
+  const handleRoleChange = (value: USER_ROLE) => {
+    setShowClusterPermissions(value === USER_ROLE.BASIC_USER);
   };
 
   const handleTransferChange = (nextTargetKeys: React.Key[]) => {
