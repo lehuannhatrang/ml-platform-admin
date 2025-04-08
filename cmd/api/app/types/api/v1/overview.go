@@ -27,6 +27,7 @@ type OverviewResponse struct {
 	MemberClusterStatus   *MemberClusterStatus   `json:"memberClusterStatus"`
 	ClusterResourceStatus *ClusterResourceStatus `json:"clusterResourceStatus"`
 	MetricsDashboards     []MetricsDashboard     `json:"metricsDashboards"`
+	ArgoMetrics           *ArgoMetrics           `json:"argoMetrics"`
 }
 
 // KarmadaInfo contains information about the Karmada system.
@@ -82,4 +83,21 @@ type ClusterResourceStatus struct {
 type MetricsDashboard struct {
 	Name string `json:"name"`
 	URL  string `json:"url"`
+}
+
+// ArgoMetrics represents ArgoCD metrics across all clusters
+type ArgoMetrics struct {
+	ApplicationCount int `json:"applicationCount"`
+	ProjectCount     int `json:"projectCount"`
+}
+
+// MemberOverviewResponse is the response of the member cluster overview API
+type MemberOverviewResponse struct {
+	KarmadaInfo         *KarmadaInfo         `json:"karmadaInfo"`
+	ClusterName         string               `json:"clusterName"`
+	ArgoMetrics         *ArgoMetrics         `json:"argoMetrics"`
+	DeploymentCount     int                  `json:"deploymentCount"`
+	MemberClusterStatus *MemberClusterStatus `json:"memberClusterStatus"`
+	MetricsDashboards   []MetricsDashboard   `json:"metricsDashboards"`
+	NamespaceCount      int                  `json:"namespaceCount"`
 }

@@ -26,7 +26,7 @@ function generateUrlForUnstructuredParams(params: UnstructuredParams) {
 }
 
 function generateUrlForMemberUnstructuredParams(params: MemberUnstructuredParams) {
-  const { kind, name, namespace, cluster } = params;
+  const { kind, name, namespace='default', cluster } = params;
   return !!name ? `/member/${cluster}/_raw/${kind}/${namespace}/${name}` : `/member/${cluster}/_raw/${kind}/${namespace}`;
 }
 
@@ -84,7 +84,7 @@ interface MemberUnstructuredParams {
   kind: string;
   cluster: string;
   name?: string;
-  namespace: string;
+  namespace?: string;
 }
 
 

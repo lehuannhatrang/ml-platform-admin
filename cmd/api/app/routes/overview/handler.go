@@ -63,11 +63,21 @@ func handleGetOverview(c *gin.Context) {
 
 	metricsDashboards := getMetricsDashboards()
 
+	// Get ArgoCD metrics from all member clusters
+	argoMetrics, err := GetArgoMetrics()
+	if err != nil {
+		argoMetrics = &v1.ArgoMetrics{
+			ApplicationCount: 0,
+			ProjectCount:     0,
+		}
+	}
+
 	common.Success(c, v1.OverviewResponse{
 		KarmadaInfo:           karmadaInfo,
 		MemberClusterStatus:   memberClusterStatus,
 		ClusterResourceStatus: clusterResourceStatus,
 		MetricsDashboards:     metricsDashboards,
+		ArgoMetrics:           argoMetrics,
 	})
 }
 

@@ -24,17 +24,20 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/gin-gonic/gin"
+
+	v1 "github.com/karmada-io/dashboard/cmd/api/app/types/api/v1"
+	"github.com/karmada-io/dashboard/cmd/api/app/types/common"
+	"github.com/karmada-io/dashboard/pkg/client"
+	"github.com/karmada-io/dashboard/pkg/dataselect"
+	"github.com/karmada-io/dashboard/pkg/resource/cluster"
 	"github.com/karmada-io/karmada/pkg/version"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
-
-	v1 "github.com/karmada-io/dashboard/cmd/api/app/types/api/v1"
-	"github.com/karmada-io/dashboard/pkg/client"
-	"github.com/karmada-io/dashboard/pkg/dataselect"
-	"github.com/karmada-io/dashboard/pkg/resource/cluster"
 )
 
 const (
@@ -266,4 +269,61 @@ func GetClusterResourceStatus() (*v1.ClusterResourceStatus, error) {
 	clusterResourceStatus.ServiceNum += len(ingressRet.Items)
 
 	return clusterResourceStatus, nil
+}
+
+// GetArgoMetrics retrieves ArgoCD application and project counts from all member clusters
+func GetArgoMetrics() (*v1.ArgoMetrics, error) {
+	ctx := context.TODO()
+	karmadaClient := client.InClusterKarmadaClient()
+
+	ds := common.ParseDataSelectPathParameter(&gin.Context{})
+	clusterList, err := cluster.GetClusterList(karmadaClient, ds)
+	if err != nil {
+		return nil, err
+	}
+
+	var applicationCount, projectCount int
+
+	// Define the GVRs for ArgoCD resources
+	applicationGVR := schema.GroupVersionResource{
+		Group:    "argoproj.io",
+		Version:  "v1alpha1",
+		Resource: "applications",
+	}
+
+	projectGVR := schema.GroupVersionResource{
+		Group:    "argoproj.io",
+		Version:  "v1alpha1",
+		Resource: "appprojects",
+	}
+
+	// For each ready cluster, get argocd resources using dynamic client
+	for _, cluster := range clusterList.Clusters {
+		if cluster.Ready != metav1.ConditionTrue {
+			continue
+		}
+
+		// Create a dynamic client with this config
+		dynamicClient, err := client.GetDynamicClientForMember(&gin.Context{}, cluster.ObjectMeta.Name)
+		if err != nil {
+			continue
+		}
+
+		// Count ArgoCD applications
+		applications, err := dynamicClient.Resource(applicationGVR).List(ctx, metav1.ListOptions{})
+		if err == nil {
+			applicationCount += len(applications.Items)
+		}
+
+		// Count ArgoCD projects
+		projects, err := dynamicClient.Resource(projectGVR).List(ctx, metav1.ListOptions{})
+		if err == nil {
+			projectCount += len(projects.Items)
+		}
+	}
+
+	return &v1.ArgoMetrics{
+		ApplicationCount: applicationCount,
+		ProjectCount:     projectCount,
+	}, nil
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Select, Space, Table } from 'antd';
+import { Input, Select, Space, Table } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import _ from 'lodash';
 import { useCluster } from '@/hooks';
@@ -9,30 +9,28 @@ import { CustomResourceDefinition, CustomResourceDefinitionByGroup, GetCustomRes
 import { calculateDuration } from '@/utils/time';
 import CustomResourceDrawer from './custom-resource-drawer';
 import Panel from '@/components/panel';
+import i18nInstance from '@/utils/i18n';
 
 
 const CustomResourcePage: React.FC = () => {
+  const { selectedCluster } = useCluster({});
+
   const [filter, setFilter] = useState<{
-    selectedCluster: ClusterOption;
-    selectedWorkSpace: string;
     searchText: string;
   }>({
-    selectedCluster: DEFAULT_CLUSTER_OPTION,
-    selectedWorkSpace: '',
     searchText: '',
   });
 
   const { data: crdByGroupData, isLoading } = useQuery({
-    queryKey: ['get-api-versions', JSON.stringify(filter)],
+    queryKey: ['get-api-versions', JSON.stringify(filter), selectedCluster.value],
     queryFn: async () => {
       const clusters = await GetCustomResourceDefinitionByGroup({
-        cluster: filter.selectedCluster,
+        cluster: selectedCluster,
       });
       return clusters.data || {};
     },
   });
 
-  const { clusterOptions, isClusterDataLoading } = useCluster({});
 
   const columns: ColumnsType<CustomResourceDefinitionByGroup> = [
     {
@@ -98,24 +96,20 @@ const CustomResourcePage: React.FC = () => {
   return (
     <Panel>
       <div className={'flex flex-row justify-between space-x-4 mb-4'}>
-
-        <Space>
-          <Select
-            options={clusterOptions}
-            className={'min-w-[200px]'}
-            value={filter.selectedCluster?.value}
-            loading={isClusterDataLoading}
-            showSearch
-            onChange={(_v: string, option: ClusterOption | ClusterOption[]) => {
-              setFilter({
-                ...filter,
-                selectedCluster: option as ClusterOption,
-              });
-            }}
-          />
-        </Space>
+        <Input.Search
+          placeholder={i18nInstance.t(
+            'cfaff3e369b9bd51504feb59bf0972a0',
+            '按命名空间搜索',
+          )}
+          className={'w-[300px]'}
+          onPressEnter={(e) => {
+            const input = e.currentTarget.value;
+            setFilter({
+              ...filter,
+              searchText: input,
+            });
+          }} />
       </div>
-
       <Table
         columns={columns}
         dataSource={crdByGroupData?.groups || []}

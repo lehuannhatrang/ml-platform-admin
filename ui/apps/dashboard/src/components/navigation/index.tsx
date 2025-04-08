@@ -24,8 +24,11 @@ import {
   supportedLangConfig,
   getLangTitle,
 } from '@/utils/i18n';
-import { Button, Dropdown, Popconfirm } from 'antd';
-import { LogoutOutlined } from '@ant-design/icons';
+import { Button, Dropdown, Flex, Popconfirm, Select, Tooltip } from 'antd';
+import { KubernetesOutlined, LogoutOutlined } from '@ant-design/icons';
+import useCluster from '@/hooks/use-cluster';
+import { getClusterColorByValue } from '@/utils/cluster';
+import { useLocation } from 'react-router-dom';
 
 export interface IUserInfo {
   id: number;
@@ -40,17 +43,43 @@ interface INavigationProps {
   userInfo?: IUserInfo;
 }
 
+const disabledClusterSelectionPaths: string[] = [
+  "/overview", 
+  "/cluster-manage", 
+  "/basic-config/monitoring-config",
+  "/basic-config/users-setting",
+  "/basic-config/karmada-config"
+];
+
 const Navigation: FC<INavigationProps> = (props) => {
+  const { pathname } = useLocation();
+
   const {
     headerStyle = {},
     usePlaceholder = true,
     brandText = 'DCN Dashboard',
     userInfo,
   } = props;
+
+  const { 
+    clusterOptions, 
+    isClusterDataLoading,
+    selectedCluster,
+    setSelectedCluster,
+  } = useCluster({});
+  
   const handleLogout = () => {
     localStorage.removeItem('token');
     window.location.href = '/login';
   };
+
+  const handleClusterChange = (value: string) => {
+    const selectedOption = clusterOptions.find(opt => opt.value === value);
+    if (selectedOption) {
+      setSelectedCluster(selectedOption);
+    }
+  };
+
   return (
     <>
       <div className={styles.navbar}>
@@ -64,7 +93,28 @@ const Navigation: FC<INavigationProps> = (props) => {
             </div>
           </div>
           <div className={styles.center}>
-            {/* placeholder for center element */}
+            {!disabledClusterSelectionPaths.includes(pathname) && <Flex gap={8} align='center' className='m-auto'>
+              <Tooltip title="Select Cluster">
+                <KubernetesOutlined style={{ fontSize: 36, color: getClusterColorByValue(selectedCluster.value) }} />
+              </Tooltip>
+              <Select
+                className=""
+                size="large"
+                loading={isClusterDataLoading}
+                value={selectedCluster.value}
+                onChange={handleClusterChange}
+                options={clusterOptions}
+                style={{ width: 300 }}
+                optionRender={(option) => {
+                  const value = typeof option.value === 'string' ? option.value : String(option.value);
+                  return <Flex gap={8} align='center'>
+                    <KubernetesOutlined style={{ fontSize: 36, color: getClusterColorByValue(value) }}/>
+                    {option.label}
+                    </Flex>;
+                }}
+                placeholder="Select cluster"
+              />
+            </Flex>}
           </div>
           <div className={styles.right}>
             {/* extra components */}

@@ -54,6 +54,7 @@ import ContinuousDeliveryApplicationPage from '@/pages/continuous-delivery/appli
 import ContinuousDeliveryProjectPage from '@/pages/continuous-delivery/project';
 import ContinuousDeliveryApplicationSetPage from '@/pages/continuous-delivery/application-set';
 import InitTokenPage from '@/pages/login/init-token';
+import PersistentVolumePage from '@/pages/multicloud-storage-manage/persistent-volume';
 
 export interface IRouteObjectHandle {
   icon?: ReactNode;
@@ -104,7 +105,7 @@ export function getRoutes() {
           element: <ClusterManage />,
           handle: {
             sidebarKey: 'CLUSTER-MANAGE',
-            sidebarName: i18nInstance.t('74ea72bbd64d8251bbc2642cc38e7bb1'),
+            sidebarName: 'Clusters',
             icon: <Icons.clusters {...IconStyles} />,
           },
         },
@@ -227,7 +228,7 @@ export function getRoutes() {
           path: '/multicloud-storage-manage',
           handle: {
             sidebarKey: 'MULTICLOUD-STORAGE-MANAGE',
-            sidebarName: 'Storage',
+            sidebarName: 'Config and Storage',
             icon: <Icons.storage {...IconStyles} />,
             isPage: false,
           },
@@ -246,6 +247,14 @@ export function getRoutes() {
               handle: {
                 sidebarKey: 'SECRET',
                 sidebarName: 'Secret',
+              },
+            },
+            {
+              path: 'persistent-volume',
+              element: <PersistentVolumePage />,
+              handle: {
+                sidebarKey: 'PERSISTENT-VOLUME',
+                sidebarName: 'Persistent Volume',
               },
             },
           ]

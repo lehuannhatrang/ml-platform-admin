@@ -45,7 +45,7 @@ import { stringify } from 'yaml';
 import TagList from '@/components/tag-list';
 import { WorkloadKind } from '@/services/base.ts';
 import useNamespace from '@/hooks/use-namespace.ts';
-import useCluster, { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
+import useCluster from '@/hooks/use-cluster';
 import { calculateDuration } from '@/utils/time.ts';
 import { getStatusFromCondition, getStatusTagColor } from '@/utils/resource.ts';
 import dayjs from 'dayjs';
@@ -66,27 +66,26 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
 
   const navigate = useNavigate();
 
+  const { clusterOptions, selectedCluster } = useCluster({});
+
   const [filter, setFilter] = useState<{
-    selectedCluster: ClusterOption;
     selectedWorkSpace: string;
     searchText: string;
   }>({
-    selectedCluster: DEFAULT_CLUSTER_OPTION,
     selectedWorkSpace: '',
     searchText: '',
   });
-  const { clusterOptions, isClusterDataLoading } = useCluster({});
 
-  const { nsOptions, isNsDataLoading } = useNamespace({ clusterFilter: filter.selectedCluster });
+  const { nsOptions, isNsDataLoading } = useNamespace({ clusterFilter: selectedCluster });
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['GetWorkloads', kind, JSON.stringify(filter)],
+    queryKey: ['GetWorkloads', kind, JSON.stringify(filter), selectedCluster.value],
     queryFn: async () => {
       const clusters = await GetWorkloads({
         kind,
         namespace: filter.selectedWorkSpace,
         keyword: filter.searchText,
-        cluster: filter.selectedCluster,
+        cluster: selectedCluster,
       });
       return clusters.data || {};
     },
@@ -156,7 +155,7 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
         return r.objectMeta.name;
       },
     },
-    ...(filter.selectedCluster.value === 'ALL' ? [{
+    ...(selectedCluster.value === 'ALL' ? [{
       title: 'Cluster',
       key: 'cluster',
       filters: clusterOptions.filter(option => option.value !== 'ALL').map((i) => ({ text: i.label, value: i.label })),
@@ -291,7 +290,7 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
                   kind: r.typeMeta.kind as WorkloadKind,
                   name: r.objectMeta.name,
                   namespace: r.objectMeta.namespace,
-                  cluster: r.objectMeta.labels?.cluster || filter.selectedCluster.label,
+                  cluster: r.objectMeta.labels?.cluster || selectedCluster.label,
                 });
               }}
             >
@@ -306,7 +305,7 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
                   kind: r.typeMeta.kind as WorkloadKind,
                   name: r.objectMeta.name,
                   namespace: r.objectMeta.namespace,
-                  cluster: r.objectMeta.labels?.cluster || filter.selectedCluster.label,
+                  cluster: r.objectMeta.labels?.cluster || selectedCluster.label,
                   containers: (r as PodWorkload).spec?.containers?.map((i: any) => i.name) || [],
                 });
               }}
@@ -321,12 +320,12 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
                   kind: r.typeMeta.kind as WorkloadKind,
                   name: r.objectMeta.name,
                   namespace: r.objectMeta.namespace,
-                  cluster: r.objectMeta.labels?.cluster || filter.selectedCluster.label,
+                  cluster: r.objectMeta.labels?.cluster || selectedCluster.label,
                 });
                 setEditorState({
                   mode: 'edit',
                   content: stringify(ret.data),
-                  cluster: r.objectMeta.labels?.cluster || filter.selectedCluster.label,
+                  cluster: r.objectMeta.labels?.cluster || selectedCluster.label,
                 });
                 toggleShowModal(true);
               }}
@@ -345,7 +344,7 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
                   kind: r.typeMeta.kind,
                   name: r.objectMeta.name,
                   namespace: r.objectMeta.namespace,
-                  cluster: r.objectMeta.labels?.cluster || filter.selectedCluster.label,
+                  cluster: r.objectMeta.labels?.cluster || selectedCluster.label,
                 });
                 if (ret.code === 200) {
                   await refetch();
@@ -386,24 +385,6 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
     <Panel>
       <div className={'flex flex-row justify-between space-x-4 mb-4'}>
         <Flex>
-          <Flex className='mr-4'>
-            <h3 className={'leading-[32px]'}>
-              {i18nInstance.t('85fe5099f6807dada65d274810933389')}：
-            </h3>
-            <Select
-              options={clusterOptions}
-              className={'min-w-[200px]'}
-              value={filter.selectedCluster?.value}
-              loading={isClusterDataLoading}
-              showSearch
-              onChange={(_v: string, option: ClusterOption | ClusterOption[]) => {
-                setFilter({
-                  ...filter,
-                  selectedCluster: option as ClusterOption,
-                });
-              }}
-            />
-          </Flex>
           <Flex className='mr-4'>
             <h3 className={'leading-[32px]'}>
               {i18nInstance.t('280c56077360c204e536eb770495bc5f', '命名空间')}：
@@ -453,7 +434,7 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
       </div>
       <Table
         rowKey={(r: Workload) =>
-          `${r.objectMeta.labels?.cluster || filter.selectedCluster.label}-${kind}-${r.objectMeta.namespace}-${r.objectMeta.name}` || ''
+          `${r.objectMeta.labels?.cluster || selectedCluster.label}-${kind}-${r.objectMeta.namespace}-${r.objectMeta.name}` || ''
         }
         columns={columns}
         loading={isLoading}

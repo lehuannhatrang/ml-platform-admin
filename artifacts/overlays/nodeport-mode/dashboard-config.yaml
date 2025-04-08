@@ -57,6 +57,9 @@ menu_configs:
       - path: secret
         enable: true
         sidebar_key: SECRET
+      - path: persistent-volume
+        enable: true
+        sidebar_key: PERSISTENT-VOLUME
   - path: /multicloud-policy-manage
     enable: true
     sidebar_key: MULTICLOUD-POLICY-MANAGE

@@ -20,8 +20,7 @@ import { Icons } from '@/components/icons';
 import { FC } from 'react';
 import { FilterState } from '../types';
 import { ConfigKind } from '@/services/base.ts';
-import { useCluster } from '@/hooks';
-import { ClusterOption } from '@/hooks/use-cluster';
+
 interface QueryFilterProps {
   filter: FilterState;
   setFilter: (d: Partial<FilterState>) => void;
@@ -36,31 +35,12 @@ interface QueryFilterProps {
 
 const QueryFilter: FC<QueryFilterProps> = (props) => {
   const { filter, setFilter, onNewConfig, nsOptions, isNsDataLoading, kind } = props;
-  const { clusterOptions, isClusterDataLoading } = useCluster({});
 
   return (
     <div className={'flex flex-row justify-between space-x-4 mb-4'}>
         <Flex>
           <Flex className='mr-4'>
-            <h3 className={'leading-[32px]'}>
-              {i18nInstance.t('85fe5099f6807dada65d274810933389')}：
-            </h3>
-            <Select
-              options={clusterOptions}
-              className={'min-w-[200px]'}
-              value={filter.selectedCluster?.value}
-              loading={isClusterDataLoading}
-              showSearch
-              onChange={(_v: string, option: ClusterOption | ClusterOption[]) => {
-                setFilter({
-                  ...filter,
-                  selectedCluster: option as ClusterOption,
-                });
-              }}
-            />
-          </Flex>
-          <Flex className='mr-4'>
-            <h3 className={'leading-[32px]'}>
+            <h3 className={'leading-[32px] mr-2'}>
               {i18nInstance.t('a4b28a416f0b6f3c215c51e79e517298', '命名空间')}
             </h3>
             <Select

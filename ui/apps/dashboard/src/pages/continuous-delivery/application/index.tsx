@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Input, Popconfirm, Select, Space, Table, Tag, Card, Row, Col, Radio, Tooltip, Flex } from 'antd';
+import { Button, Input, Popconfirm, Space, Table, Tag, Card, Row, Col, Radio, Tooltip, Flex } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
 import { SearchOutlined, PlusOutlined, TableOutlined, AppstoreOutlined } from '@ant-design/icons';
 import { ArgoApplication, DeleteArgoApplication, GetArgoApplications } from '../../../services/argocd';
-import useCluster, { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
+import useCluster from '@/hooks/use-cluster';
 import { calculateDuration } from '@/utils/time';
 import Panel from '@/components/panel';
 import i18nInstance from '@/utils/i18n';
@@ -22,8 +22,9 @@ export default function ContinuousDeliveryApplicationPage() {
 
     const navigate = useNavigate();
 
+    const { clusterOptions, selectedCluster } = useCluster({});
+
     const [filter, setFilter] = useState({
-        selectedCluster: DEFAULT_CLUSTER_OPTION,
         searchText: '',
     });
 
@@ -42,17 +43,15 @@ export default function ContinuousDeliveryApplicationPage() {
     });
 
     const { data: argoApplicationsData, isLoading, refetch } = useQuery({
-        queryKey: ['get-argo-applications', filter.selectedCluster.value],
+        queryKey: ['get-argo-applications', selectedCluster.value],
         queryFn: async () => {
             const applications = await GetArgoApplications({
-                selectedCluster: filter.selectedCluster,
+                selectedCluster,
             });
             return applications.data || {};
         },
         refetchInterval: 5000,
     });
-
-    const { clusterOptions, isClusterDataLoading } = useCluster({});
 
     useEffect(() => {
         if (action === 'view' && name && cluster && argoApplicationsData?.items) {
@@ -84,7 +83,7 @@ export default function ContinuousDeliveryApplicationPage() {
             dataIndex: ['metadata', 'name'],
             key: 'name',
         },
-        ...(filter.selectedCluster.value === 'ALL' ? [{
+        ...(selectedCluster.value === 'ALL' ? [{
             title: 'Cluster',
             key: 'cluster',
             filters: clusterOptions.filter(option => option.value !== 'ALL').map((i) => ({ text: i.label, value: i.label })),
@@ -166,7 +165,7 @@ export default function ContinuousDeliveryApplicationPage() {
                                 open: true,
                                 mode: 'edit',
                                 application: record,
-                                cluster: record.metadata?.labels?.cluster || filter.selectedCluster.value,
+                                cluster: record.metadata?.labels?.cluster || selectedCluster.value,
                             });
                         }}
                     >
@@ -177,7 +176,7 @@ export default function ContinuousDeliveryApplicationPage() {
                         placement="topRight"
                         title={`Do you want to delete "${record.metadata?.name}" application?`}
                         onConfirm={async () => {
-                            const response = await DeleteArgoApplication(record.metadata?.labels?.cluster || filter.selectedCluster.value, record.metadata?.name);
+                            const response = await DeleteArgoApplication(record.metadata?.labels?.cluster || selectedCluster.value, record.metadata?.name);
                             if (response.code === 200) {
                                 refetch();
                             }
@@ -244,7 +243,7 @@ export default function ContinuousDeliveryApplicationPage() {
                                         open: true,
                                         mode: 'edit',
                                         application: app,
-                                        cluster: app.metadata?.labels?.cluster || filter.selectedCluster.value,
+                                        cluster: app.metadata?.labels?.cluster || selectedCluster.value,
                                     });
                                 }}
                             >
@@ -255,7 +254,7 @@ export default function ContinuousDeliveryApplicationPage() {
                                 placement="topRight"
                                 title={`Do you want to delete "${app.metadata?.name}" application?`}
                                 onConfirm={async () => {
-                                    const response = await DeleteArgoApplication(app.metadata?.labels?.cluster || filter.selectedCluster.value, app.metadata?.name);
+                                    const response = await DeleteArgoApplication(app.metadata?.labels?.cluster || selectedCluster.value, app.metadata?.name);
                                     if (response.code === 200) {
                                         refetch();
                                     }
@@ -268,7 +267,7 @@ export default function ContinuousDeliveryApplicationPage() {
                         ]}
                     >
                         <div style={{ marginBottom: 12 }}>
-                            {filter.selectedCluster.value === 'ALL' && (
+                            {selectedCluster.value === 'ALL' && (
                                 <div style={{ marginBottom: 8 }}>
                                     <span style={{ fontWeight: 'bold' }}>Cluster:</span> {app.metadata?.labels?.cluster || '-'}
                                 </div>
@@ -303,16 +302,6 @@ export default function ContinuousDeliveryApplicationPage() {
         <Panel>
             <div className={'flex flex-row justify-between space-x-4 mb-4'}>
                 <Space wrap>
-                    <Select
-                        value={filter.selectedCluster?.value}
-                        style={{ width: 200 }}
-                        onChange={(_v: string, option: ClusterOption | ClusterOption[]) =>
-                            setFilter({ ...filter, selectedCluster: option as ClusterOption })
-                        }
-                        options={clusterOptions}
-                        loading={isClusterDataLoading}
-                        placeholder="Select Cluster"
-                    />
                     <Input
                         placeholder="Search applications..."
                         value={filter.searchText}

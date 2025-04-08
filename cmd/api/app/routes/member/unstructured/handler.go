@@ -76,10 +76,7 @@ func validateResourceParams(kind, namespace, name string) error {
 
 // getGroupVersionResource returns the GroupVersionResource for a given kind
 func getGroupVersionResource(kind string) schema.GroupVersionResource {
-	// Convert kind to lowercase for case-insensitive matching
-	kind = strings.ToLower(kind)
-
-	// Add mappings for different resource types
+	lowerKind := strings.ToLower(kind)
 	kindToGVR := map[string]schema.GroupVersionResource{
 		"deployment": {
 			Group:    "apps",
@@ -136,10 +133,15 @@ func getGroupVersionResource(kind string) schema.GroupVersionResource {
 			Version:  "v1",
 			Resource: "secrets",
 		},
+		"persistentvolume": {
+			Group:    "",
+			Version:  "v1",
+			Resource: "persistentvolumes",
+		},
 		// Add more mappings as needed
 	}
 
-	if gvr, ok := kindToGVR[kind]; ok {
+	if gvr, ok := kindToGVR[lowerKind]; ok {
 		klog.V(4).InfoS("Using predefined GVR", "kind", kind, "group", gvr.Group, "version", gvr.Version, "resource", gvr.Resource)
 		return gvr
 	}
@@ -148,10 +150,25 @@ func getGroupVersionResource(kind string) schema.GroupVersionResource {
 	defaultGVR := schema.GroupVersionResource{
 		Group:    "",
 		Version:  "v1",
-		Resource: kind + "s", // Simple pluralization, might need more complex logic
+		Resource: lowerKind + "s", // Simple pluralization, might need more complex logic
 	}
 	klog.V(4).InfoS("Using default GVR", "kind", kind, "group", defaultGVR.Group, "version", defaultGVR.Version, "resource", defaultGVR.Resource)
 	return defaultGVR
+}
+
+// isClusterScopedResource returns true if the resource is cluster-scoped (not namespaced)
+func isClusterScopedResource(kind string) bool {
+	// List of known cluster-scoped resources
+	clusterScopedResources := map[string]bool{
+		"persistentvolume": true,
+		"node":             true,
+		"clusterrole":      true,
+		"clusterrolebinding": true,
+		"storageclass":     true,
+		"namespace":        true,
+	}
+	
+	return clusterScopedResources[strings.ToLower(kind)]
 }
 
 func handleGetResource(c *gin.Context) {
@@ -174,7 +191,17 @@ func handleGetResource(c *gin.Context) {
 	klog.V(4).InfoS("Getting resource", "kind", kind, "namespace", namespace, "name", name)
 
 	gvr := getGroupVersionResource(strings.ToLower(kind))
-	result, err := dynamicClient.Resource(gvr).Namespace(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	
+	var result *unstructured.Unstructured
+	
+	if isClusterScopedResource(kind) {
+		// Handle cluster-scoped resources without namespace
+		result, err = dynamicClient.Resource(gvr).Get(context.Background(), name, metav1.GetOptions{})
+	} else {
+		// Handle namespaced resources
+		result, err = dynamicClient.Resource(gvr).Namespace(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	}
+	
 	if err != nil {
 		klog.ErrorS(err, "Failed to get resource", "kind", kind, "namespace", namespace, "name", name, "gvr", gvr)
 		common.Fail(c, err)
@@ -196,7 +223,15 @@ func handleDeleteResource(c *gin.Context) {
 	name := c.Param("name")
 
 	gvr := getGroupVersionResource(kind)
-	err = dynamicClient.Resource(gvr).Namespace(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
+	
+	if isClusterScopedResource(kind) {
+		// Handle cluster-scoped resources without namespace
+		err = dynamicClient.Resource(gvr).Delete(context.Background(), name, metav1.DeleteOptions{})
+	} else {
+		// Handle namespaced resources
+		err = dynamicClient.Resource(gvr).Namespace(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
+	}
+	
 	if err != nil {
 		klog.ErrorS(err, "Failed to delete resource")
 		common.Fail(c, err)
@@ -223,7 +258,17 @@ func handlePutResource(c *gin.Context) {
 	}
 
 	gvr := getGroupVersionResource(kind)
-	result, err := dynamicClient.Resource(gvr).Namespace(namespace).Update(context.Background(), obj, metav1.UpdateOptions{})
+	
+	var result *unstructured.Unstructured
+	
+	if isClusterScopedResource(kind) {
+		// Handle cluster-scoped resources without namespace
+		result, err = dynamicClient.Resource(gvr).Update(context.Background(), obj, metav1.UpdateOptions{})
+	} else {
+		// Handle namespaced resources
+		result, err = dynamicClient.Resource(gvr).Namespace(namespace).Update(context.Background(), obj, metav1.UpdateOptions{})
+	}
+	
 	if err != nil {
 		klog.ErrorS(err, "Failed to update resource")
 		common.Fail(c, err)
@@ -250,7 +295,17 @@ func handleCreateResource(c *gin.Context) {
 	}
 
 	gvr := getGroupVersionResource(kind)
-	result, err := dynamicClient.Resource(gvr).Namespace(namespace).Create(context.Background(), obj, metav1.CreateOptions{})
+	
+	var result *unstructured.Unstructured
+	
+	if isClusterScopedResource(kind) {
+		// Handle cluster-scoped resources without namespace
+		result, err = dynamicClient.Resource(gvr).Create(context.Background(), obj, metav1.CreateOptions{})
+	} else {
+		// Handle namespaced resources
+		result, err = dynamicClient.Resource(gvr).Namespace(namespace).Create(context.Background(), obj, metav1.CreateOptions{})
+	}
+	
 	if err != nil {
 		klog.ErrorS(err, "Failed to create resource")
 		common.Fail(c, err)
@@ -265,4 +320,10 @@ func init() {
 	r.GET("/_raw/:kind/:namespace/:name", handleGetResource)
 	r.PUT("/_raw/:kind/:namespace/:name", handlePutResource)
 	r.POST("/_raw/:kind/:namespace", handleCreateResource)
+	
+	// Add routes for cluster-scoped resources
+	r.DELETE("/_raw/:kind/name/:name", handleDeleteResource)
+	r.GET("/_raw/:kind/name/:name", handleGetResource)
+	r.PUT("/_raw/:kind/name/:name", handlePutResource)
+	r.POST("/_raw/:kind", handleCreateResource)
 }

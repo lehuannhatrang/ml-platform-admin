@@ -27,7 +27,6 @@ import {
   Button,
   Input,
   Flex,
-  Select,
   Radio,
   Card,
   Spin,
@@ -36,7 +35,6 @@ import { Dendrogram } from '@ant-design/graphs';
 
 import { useEffect, useState } from 'react';
 import { useCluster } from '@/hooks';
-import { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
 import { Node } from '@/services/node';
 import NodeDetailDrawer, { NodeDetailDrawerProps } from './node-detail-drawer';
 import { useSearchParams } from 'react-router-dom';
@@ -63,13 +61,13 @@ const NodeManagePage = () => {
     clusterName: '',
   });
 
+  const { selectedCluster } = useCluster({});
+  
   const [filter, setFilter] = useState({
     search: '',
-    selectedCluster: DEFAULT_CLUSTER_OPTION,
   });
 
   const [viewMode, setViewMode] = useState<'table' | 'graph'>('table');
-
   const [dendrogramData, setDendrogramData] = useState<TreeNode | null>(null);
 
   const handleSearch = (value: string) => {
@@ -81,11 +79,11 @@ const NodeManagePage = () => {
 
   // Fetch nodes data from API
   const { data, isLoading } = useQuery({
-    queryKey: ['GetNodes', filter.selectedCluster, filter.search],
+    queryKey: ['GetNodes', selectedCluster.value, filter.search],
     queryFn: async () => {
       const ret = await GetNodes({
         filterBy: ['name', filter.search],
-      }, filter.selectedCluster);
+      }, selectedCluster);
       return ret.data;
     },
   });
@@ -97,18 +95,16 @@ const NodeManagePage = () => {
         setNodeDetailData({
           open: true,
           name: node.objectMeta.name,
-          clusterName: node.objectMeta.annotations?.['cluster.x-k8s.io/cluster-name'] || filter.selectedCluster.label,
+          clusterName: node.objectMeta.annotations?.['cluster.x-k8s.io/cluster-name'] || selectedCluster.label,
         });
       }
     }
-  }, [action, name, cluster, data]);
+  }, [action, name, cluster, data, selectedCluster]);
 
   useEffect(() => {
     if (!data?.items) return;
     prepareDendrogramData();
   }, [data]);
-
-  const { clusterOptions, isClusterDataLoading } = useCluster({});
 
   const columns: TableColumnProps<Node>[] = [
     {
@@ -119,7 +115,7 @@ const NodeManagePage = () => {
         return r.objectMeta.name;
       },
     },
-    ...(filter.selectedCluster.value === 'ALL' ? [{
+    ...(selectedCluster.value === 'ALL' ? [{
       title: 'Cluster',
       key: 'cluster',
       render: (_: any, r: Node) => {
@@ -208,7 +204,7 @@ const NodeManagePage = () => {
               setNodeDetailData({
                 open: true,
                 name: r.objectMeta.name,
-                clusterName: r.objectMeta.annotations?.['cluster.x-k8s.io/cluster-name'] || filter.selectedCluster.label,
+                clusterName: r.objectMeta.annotations?.['cluster.x-k8s.io/cluster-name'] || selectedCluster.label,
               })
             }}>
               {i18nInstance.t('607e7a4f377fa66b0b28ce318aab841f', '查看')}
@@ -276,31 +272,13 @@ const NodeManagePage = () => {
   return (
     <Panel>
       <div className="flex justify-between mb-4">
+        <Input.Search
+          placeholder='Search by node name'
+          className={'w-[400px] mr-4'}
+          onSearch={handleSearch}
+          disabled={viewMode === 'graph'}
+        />
         <Flex>
-          <h3 className="mb-2 mt-2">
-            {i18nInstance.t('85fe5099f6807dada65d274810933389')}：
-          </h3>
-          <Select
-            options={clusterOptions}
-            className={'min-w-[200px]'}
-            value={filter.selectedCluster?.value}
-            loading={isClusterDataLoading}
-            showSearch
-            onChange={(_v: string, option: ClusterOption | ClusterOption[]) => {
-              setFilter({
-                ...filter,
-                selectedCluster: option as ClusterOption,
-              });
-            }}
-          />
-        </Flex>
-        <Flex>
-          <Input.Search
-            placeholder='Search by node name'
-            className={'w-[400px] mr-4'}
-            onSearch={handleSearch}
-            disabled={viewMode === 'graph'}
-          />
           <Radio.Group value={viewMode} onChange={e => setViewMode(e.target.value)}>
             <Radio.Button value="table"><TableOutlined /> Table</Radio.Button>
             <Radio.Button value="graph"><ApartmentOutlined /> Graph</Radio.Button>

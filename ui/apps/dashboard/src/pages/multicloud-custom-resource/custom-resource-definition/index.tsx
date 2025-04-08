@@ -1,9 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Button, Flex, Input, Popconfirm, Select, Space, Table, message } from 'antd';
+import { Button, Flex, Input, Popconfirm, Space, Table, message } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import _ from 'lodash';
 import { useCluster } from '@/hooks';
-import { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
 import { useQuery } from '@tanstack/react-query';
 import { CustomResourceDefinition, GetCustomResourceDefinitions, UpdateCustomResourceDefinition } from '@/services';
 import i18nInstance from '@/utils/i18n';
@@ -12,11 +11,11 @@ import CustomResourceDefinitionDrawer from './custom-resource-definition-drawer'
 import CustomResourceDefinitionEditModal from './custom-resource-definition-edit-modal';
 
 const CustomResourceDefinitionPage: React.FC = () => {
+    const { clusterOptions, selectedCluster } = useCluster({});
+
     const [filter, setFilter] = useState<{
-        selectedCluster: ClusterOption;
         searchText: string;
     }>({
-        selectedCluster: DEFAULT_CLUSTER_OPTION,
         searchText: '',
     });
 
@@ -29,10 +28,10 @@ const CustomResourceDefinitionPage: React.FC = () => {
     const [editCrd, setEditCrd] = useState<{name: string, cluster: string} | null>(null);
 
     const { data: customResourceDefinitionsData, isLoading, refetch } = useQuery({
-        queryKey: ['get-custom-resource-definitions', filter.selectedCluster.value],
+        queryKey: ['get-custom-resource-definitions', selectedCluster.value],
         queryFn: async () => {
             const clusters = await GetCustomResourceDefinitions({
-                cluster: filter.selectedCluster,
+                cluster: selectedCluster,
             });
             return clusters.data || {};
         },
@@ -47,7 +46,6 @@ const CustomResourceDefinitionPage: React.FC = () => {
         }) || [];
     }, [customResourceDefinitionsData, filter.searchText]);
 
-    const { clusterOptions, isClusterDataLoading } = useCluster({});
 
     // Handler to open the drawer with CRD details
     const handleViewCrd = (crd: CustomResourceDefinition) => {
@@ -122,7 +120,7 @@ const CustomResourceDefinitionPage: React.FC = () => {
             key: 'kind',
             render: (record) => record?.acceptedNames?.kind || '-',
         },
-        ...(filter.selectedCluster.value === 'ALL' ? [{
+        ...(selectedCluster.value === 'ALL' ? [{
             title: 'Cluster',
             key: 'cluster',
             filters: clusterOptions.filter(option => option.value !== 'ALL').map((i) => ({ text: i.label, value: i.label })),
@@ -194,26 +192,12 @@ const CustomResourceDefinitionPage: React.FC = () => {
     return (
         <Panel>
             <div className={'flex flex-row justify-between space-x-4 mb-4'}>
-                <Flex>
-                    <Select
-                        options={clusterOptions}
-                        className={'min-w-[200px]'}
-                        value={filter.selectedCluster?.value}
-                        loading={isClusterDataLoading}
-                        showSearch
-                        onChange={(_v: string, option: ClusterOption | ClusterOption[]) => {
-                            setFilter({
-                                ...filter,
-                                selectedCluster: option as ClusterOption,
-                            });
-                        }}
-                    />
                     <Input.Search
                         placeholder={i18nInstance.t(
                             'cfaff3e369b9bd51504feb59bf0972a0',
                             '按命名空间搜索',
                         )}
-                        className={'w-[300px] ml-4'}
+                        className={'w-[300px]'}
                         onPressEnter={(e) => {
                             const input = e.currentTarget.value;
                             setFilter({
@@ -222,7 +206,6 @@ const CustomResourceDefinitionPage: React.FC = () => {
                             });
                         }}
                     />
-                </Flex>
             </div>
             <Table
                 columns={columns}

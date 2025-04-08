@@ -20,7 +20,7 @@ import { ConfigKind } from '@/services/base.ts';
 import QueryFilter from './components/query-filter';
 import ConfigMapTable from './components/configmap-table';
 import { stringify } from 'yaml';
-import { useTagNum, useNamespace } from '@/hooks/index';
+import { useTagNum, useNamespace, useCluster } from '@/hooks/index';
 import ConfigEditorModal from './components/config-editor-modal';
 import { useStore } from './store.ts';
 import { message } from 'antd';
@@ -35,6 +35,7 @@ export type ConfigPageProps = {
 }
 
 const ConfigPage = ({ kind }: ConfigPageProps) => {
+  const { selectedCluster } = useCluster({});
   const { nsOptions, isNsDataLoading } = useNamespace({});
   const { tagNum } = useTagNum();
   const filter = useStore((state) => state.filter);
@@ -81,7 +82,7 @@ const ConfigPage = ({ kind }: ConfigPageProps) => {
       />
       {kind === ConfigKind.ConfigMap && (
         <ConfigMapTable
-          clusterOption={filter.selectedCluster}
+          clusterOption={selectedCluster}
           labelTagNum={tagNum}
           searchText={filter.searchText}
           selectedWorkSpace={filter.selectedWorkspace}
@@ -119,7 +120,7 @@ const ConfigPage = ({ kind }: ConfigPageProps) => {
       )}
       {kind === ConfigKind.Secret && (
         <SecretTable
-          clusterOption={filter.selectedCluster}
+          clusterOption={selectedCluster}
           labelTagNum={tagNum}
           searchText={filter.searchText}
           selectedWorkSpace={filter.selectedWorkspace}

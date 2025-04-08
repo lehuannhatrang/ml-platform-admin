@@ -23,7 +23,6 @@ import {
   Table,
   TableColumnProps,
   Tag,
-  Select,
   Flex
 } from 'antd';
 import TagList, { convertLabelToTags } from '@/components/tag-list';
@@ -39,30 +38,28 @@ import i18nInstance from '@/utils/i18n';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useCluster } from '@/hooks';
-import { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster.ts';
 import { calculateDuration } from '@/utils/time.ts';
 
 const NamespacePage = () => {
+  const { selectedCluster } = useCluster({});
+
   const [filter, setFilter] = useState<{
-    selectedCluster: ClusterOption;
     searchText: string;
   }>({
-    selectedCluster: DEFAULT_CLUSTER_OPTION,
     searchText: '',
   });
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['GetNamespaces', filter.searchText, filter.selectedCluster],
+    queryKey: ['GetNamespaces', filter.searchText, selectedCluster.value],
     queryFn: async () => {
       const query: DataSelectQuery = {};
       if (filter.searchText) {
         query.filterBy = ['name', filter.searchText];
       }
-      const clusters = await GetNamespaces(query, filter.selectedCluster);
+      const clusters = await GetNamespaces(query, selectedCluster);
       return clusters.data || {};
     },
   });
 
-  const { clusterOptions, isClusterDataLoading } = useCluster({});
 
   const size = useWindowSize();
   const columns: TableColumnProps<Namespace>[] = [
@@ -74,7 +71,7 @@ const NamespacePage = () => {
         return r.objectMeta.name;
       },
     },
-    ...(filter.selectedCluster.value === 'ALL' ? [{
+    ...(selectedCluster.value === 'ALL' ? [{
       title: 'Cluster',
       key: 'cluster',
       width: 200,
@@ -125,7 +122,7 @@ const NamespacePage = () => {
               onConfirm={async () => {
                 const ret = await DeleteNamespace({
                   name: r.objectMeta.name,
-                  cluster: r.objectMeta.labels?.cluster || filter.selectedCluster.value,
+                  cluster: r.objectMeta.labels?.cluster || selectedCluster.value,
                 });
                 if (ret.code === 200) {
                   await messageApi.success(
@@ -169,24 +166,6 @@ const NamespacePage = () => {
     <Panel>
       <div className={'flex flex-row justify-between mb-4'}>
         <Flex>
-          <Flex className='mr-4'>
-            <h3 className={'leading-[32px]'}>
-              {i18nInstance.t('85fe5099f6807dada65d274810933389')}：
-            </h3>
-            <Select
-              options={clusterOptions}
-              className={'min-w-[200px]'}
-              value={filter.selectedCluster?.value}
-              loading={isClusterDataLoading}
-              showSearch
-              onChange={(_v: string, option: ClusterOption| ClusterOption[]) => {
-                setFilter({
-                  ...filter,
-                  selectedCluster: option as ClusterOption,
-                });
-              }}
-            />
-          </Flex>
           <Input.Search
             placeholder={i18nInstance.t(
               'cfaff3e369b9bd51504feb59bf0972a0',
@@ -214,7 +193,7 @@ const NamespacePage = () => {
         </Button>
       </div>
       <Table
-        rowKey={(r: Namespace) => r.objectMeta.name || ''}
+        rowKey={(r: Namespace) => `${r.objectMeta.labels?.cluster || selectedCluster.value}-${r.objectMeta.name}` || ''}
         columns={columns}
         loading={isLoading}
         dataSource={data?.namespaces || []}

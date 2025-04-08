@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+import { ClusterOption } from '@/hooks/use-cluster';
 import { IResponse, karmadaClient } from '@/services/base.ts';
 
 export interface OverviewInfo {
@@ -21,6 +22,14 @@ export interface OverviewInfo {
   memberClusterStatus: MemberClusterStatus;
   clusterResourceStatus: ClusterResourceStatus;
   metricsDashboards: MetricsDashboard[] | null;
+  argoMetrics: ArgoMetrics | null;
+  deploymentCount?: number;
+  namespaceCount?: number;
+}
+
+export interface ArgoMetrics {
+  applicationCount: number;
+  projectCount: number;
 }
 
 export interface KarmadaInfo {
@@ -75,8 +84,9 @@ export interface ClusterResourceStatus {
   configNum: number;
 }
 
-export async function GetOverview() {
-  const resp = await karmadaClient.get<IResponse<OverviewInfo>>('/overview');
+export async function GetOverview(cluster: ClusterOption) {
+  const url = cluster.value === 'ALL' ? '/overview' : `/member/${cluster.label}/overview`;
+  const resp = await karmadaClient.get<IResponse<OverviewInfo>>(url);
   return resp.data;
 }
 

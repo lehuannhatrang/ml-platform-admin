@@ -29,7 +29,6 @@ import useNamespace from '@/hooks/use-namespace.ts';
 import { useQueryClient } from '@tanstack/react-query';
 import { DeleteMemberResource, DeleteResource } from '@/services/unstructured.ts';
 import { useCluster } from '@/hooks';
-import { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
 import ServiceInfoDrawer from './components/service-info-drawer';
 import IngressInfoDrawer from './components/ingress-info-drawer';
 import { useSearchParams } from 'react-router-dom';
@@ -40,12 +39,13 @@ export type ServicePageProps = {
 
 const ServicePage = ({ kind }: ServicePageProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const { selectedCluster } = useCluster({});
+
   const [filter, setFilter] = useState<{
     selectedWorkSpace: string;
     searchText: string;
-    selectedCluster: ClusterOption;
   }>({
-    selectedCluster: DEFAULT_CLUSTER_OPTION,
     selectedWorkSpace: '',
     searchText: '',
   });
@@ -146,30 +146,10 @@ const ServicePage = ({ kind }: ServicePageProps) => {
   const { message: messageApi } = App.useApp();
   const queryClient = useQueryClient();
 
-  const { clusterOptions, isClusterDataLoading } = useCluster({});
-
   return (
     <Panel>
       <div className={'flex flex-row justify-between mb-4'}>
         <Flex>
-          <Flex className='mr-4'>
-            <h3 className={'leading-[32px]'}>
-              {i18nInstance.t('85fe5099f6807dada65d274810933389')}：
-            </h3>
-            <Select
-              options={clusterOptions}
-              className={'min-w-[200px]'}
-              value={filter.selectedCluster?.value}
-              loading={isClusterDataLoading}
-              showSearch
-              onChange={(_v: string, option: ClusterOption | ClusterOption[]) => {
-                setFilter({
-                  ...filter,
-                  selectedCluster: option as ClusterOption,
-                });
-              }}
-            />
-          </Flex>
           <Flex className='mr-4'>
             <h3 className={'leading-[32px] mr-2'}>
               {i18nInstance.t('280c56077360c204e536eb770495bc5f', '命名空间')}:
@@ -217,7 +197,7 @@ const ServicePage = ({ kind }: ServicePageProps) => {
       </div>
       {kind === ServiceKind.Service && (
         <ServiceTable
-          clusterOption={filter.selectedCluster}
+          clusterOption={selectedCluster}
           labelTagNum={labelTagNum}
           searchText={filter.searchText}
           selectedWorkSpace={filter.selectedWorkSpace}
@@ -271,7 +251,7 @@ const ServicePage = ({ kind }: ServicePageProps) => {
       )}
       {kind === ServiceKind.Ingress && (
         <IngressTable
-          clusterOption={filter.selectedCluster}
+          clusterOption={selectedCluster}
           searchText={filter.searchText}
           selectedWorkSpace={filter.selectedWorkSpace}
           onEditIngressContent={(r, clusterName) => {
