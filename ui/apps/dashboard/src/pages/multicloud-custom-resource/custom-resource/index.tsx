@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { Input, Select, Space, Table } from 'antd';
+import { Input, Table } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import _ from 'lodash';
 import { useCluster } from '@/hooks';
-import { ClusterOption, DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
 import { useQuery } from '@tanstack/react-query';
 import { CustomResourceDefinition, CustomResourceDefinitionByGroup, GetCustomResourceDefinitionByGroup } from '@/services';
 import { calculateDuration } from '@/utils/time';

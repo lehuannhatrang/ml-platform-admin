@@ -70,14 +70,14 @@ const UserSettings: FC = () => {
             render: (text) => text || '-',
         },
         {
-            title: 'Role',
-            key: 'role',
+            title: 'Global Permission',
+            key: 'globalPermission',
             dataIndex: ['preferences', 'role'],
             render: (role: USER_ROLE) => getRoleTag(role),
         },
         {
-            title: 'Cluster Permissions',
-            key: 'clusterPermissions',
+            title: 'Cluster Roles',
+            key: 'clusterRoles',
             render: (_, record) => {
                 if (record.preferences?.role === USER_ROLE.ADMIN) {
                     return <Typography.Text type="secondary">

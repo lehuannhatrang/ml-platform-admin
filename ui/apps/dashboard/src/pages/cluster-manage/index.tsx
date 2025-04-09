@@ -39,6 +39,8 @@ import {
 import { Icons } from '@/components/icons';
 import NewClusterModal from './new-cluster-modal';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useCluster } from '@/hooks';
 function getPercentColor(v: number): string {
   // 0~60 #52C41A
   // 60~80 #FAAD14
@@ -68,6 +70,15 @@ const ClusterManagePage = () => {
     mode: 'create',
     open: false,
   });
+
+  const navigate = useNavigate();
+
+  const { setSelectedCluster } = useCluster({});
+
+  const handleClusterView = (clusterInfo: Cluster) => {
+    setSelectedCluster({ label: clusterInfo.objectMeta.name, value: clusterInfo.objectMeta.uid });
+    navigate(`/overview`);
+  }
   const columns: TableColumnProps<Cluster>[] = [
     {
       title: i18nInstance.t('c3f28b34bbdec501802fa403584267e6', '集群名称'),
@@ -197,7 +208,7 @@ const ClusterManagePage = () => {
       render: (_, r) => {
         return (
           <Space.Compact>
-            <Button size={'small'} type="link" disabled>
+            <Button size={'small'} type="link" onClick={() => handleClusterView(r)}>
               {i18nInstance.t('607e7a4f377fa66b0b28ce318aab841f', '查看')}
             </Button>
             <Button

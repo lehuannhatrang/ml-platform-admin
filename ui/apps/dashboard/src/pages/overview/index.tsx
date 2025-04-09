@@ -44,15 +44,16 @@ import { DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
 const Overview = () => {
   const { clusterOptions, selectedCluster, setSelectedCluster } = useCluster({})
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['GetOverview', selectedCluster],
     queryFn: async () => {
       const ret = await GetOverview(selectedCluster);
       return ret.data;
     },
+    refetchInterval: 5000,
   });
 
-  const { data: metricsDashboards } = useQuery({
+  const { data: metricsDashboards, refetch: refetchDashboards } = useQuery({
     queryKey: ['GetMetricsDashboards'],
     queryFn: async () => {
       const ret = await GetOverview(DEFAULT_CLUSTER_OPTION);
@@ -96,7 +97,7 @@ const Overview = () => {
       message.success('Dashboard deleted successfully');
 
       // Refresh overview data
-      refetch();
+      refetchDashboards();
 
       // Reset selected dashboard if it was deleted
       if (selectedDashboard) {
@@ -142,7 +143,7 @@ const Overview = () => {
                     label='Namespace'
                     value={data?.namespaceCount || '-'}
                     hoverable={true}
-                    onClick={() => navigate('/namespace-manage')}
+                    onClick={() => navigate('/namespace')}
                   />
                 </Col>
                 }
@@ -351,7 +352,7 @@ const Overview = () => {
         onSuccess={() => {
           setIsNewDashboardModalOpen(false);
           // Refetch data after adding a new dashboard
-          refetch();
+          refetchDashboards();
         }}
       />
     </Spin>

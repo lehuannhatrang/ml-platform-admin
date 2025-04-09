@@ -221,7 +221,7 @@ const NodeManagePage = () => {
 
     // Create root node
     const treeData: TreeNode = {
-      id: 'mgmt-cluster',
+      id: 'root',
       style: { fill: '#91d5ff', stroke: '#5cdbd3' },
       children: []
     };

@@ -71,7 +71,6 @@ const EditApplicationModal: React.FC<EditApplicationModalProps> = ({
           repoURL: application.spec?.source?.repoURL,
           path: application.spec?.source?.path,
           targetRevision: application.spec?.source?.targetRevision || 'HEAD',
-          destinationServer: application.spec?.destination?.server,
           destinationNamespace: application.spec?.destination?.namespace,
           automated: !!application.spec?.syncPolicy?.automated,
           prune: application.spec?.syncPolicy?.automated?.prune || false,
@@ -110,7 +109,7 @@ const EditApplicationModal: React.FC<EditApplicationModalProps> = ({
             targetRevision: values.targetRevision,
           },
           destination: {
-            server: values.destinationServer,
+            server: "https://kubernetes.default.svc",
             namespace: values.destinationNamespace,
           },
         },
@@ -259,17 +258,7 @@ const EditApplicationModal: React.FC<EditApplicationModalProps> = ({
         <Divider orientation="left">Destination</Divider>
         
         <Row gutter={[16, 0]}>
-          <Col span={12}>
-            <Form.Item
-              name="destinationServer"
-              label="Server"
-              rules={[{ required: true }]}
-              tooltip="The Kubernetes API server URL"
-            >
-              <Input placeholder="e.g., https://kubernetes.default.svc" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
+          <Col span={24}>
             <Form.Item
               name="destinationNamespace"
               label="Namespace"

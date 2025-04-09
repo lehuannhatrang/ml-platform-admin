@@ -48,7 +48,9 @@ const disabledClusterSelectionPaths: string[] = [
   "/cluster-manage", 
   "/basic-config/monitoring-config",
   "/basic-config/users-setting",
-  "/basic-config/karmada-config"
+  "/basic-config/karmada-config",
+  "/multicloud-policy-manage/propagation-policy",
+  "/multicloud-policy-manage/override-policy"
 ];
 
 const Navigation: FC<INavigationProps> = (props) => {

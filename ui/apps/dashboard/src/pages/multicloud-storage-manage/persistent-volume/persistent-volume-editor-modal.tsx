@@ -180,7 +180,7 @@ const PersistentVolumeEditorModal: FC<PersistentVolumeEditorModalProps> = (props
             rules={[{ required: true }]}
           >
             <Select
-              disabled={!!clusterName}
+              disabled={mode === 'edit'}
               options={clusterOptionsFormated}
               loading={isClusterDataLoading}
               showSearch

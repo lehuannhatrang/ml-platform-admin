@@ -285,13 +285,27 @@ func GetMemberClusterStatus(clusterName string) (*v1.MemberClusterStatus, error)
 		}
 		memberClusterStatus.PodSummary.TotalPod = totalPods
 
-		// Populate CPU summary - totalCPU is int64, allocatedCPU is float64
-		memberClusterStatus.CPUSummary.TotalCPU = totalCPU / 1000.0
-		memberClusterStatus.CPUSummary.AllocatedCPU = float64(allocatedCPU) / 1000.0
+		// Calculate CPU fraction as a percentage
+		var cpuFraction float64
+		if totalCPU > 0 {
+			cpuFraction = float64(allocatedCPU) / float64(totalCPU) * 100
+		}
 
-		// Populate memory summary - totalMemory is int64, allocatedMemory is float64
+		// Calculate memory fraction as a percentage
+		var memoryFraction float64
+		if totalMemory > 0 {
+			memoryFraction = float64(allocatedMemory) / float64(totalMemory) * 100
+		}
+
+		// Populate CPU summary - totalCPU is the capacity in cores
+		memberClusterStatus.CPUSummary.TotalCPU = totalCPU / 1000
+		// AllocatedCPU calculated as a fraction of total capacity
+		memberClusterStatus.CPUSummary.AllocatedCPU = float64(totalCPU/1000) * cpuFraction / 100
+
+		// Populate memory summary - totalMemory is the capacity in bytes
 		memberClusterStatus.MemorySummary.TotalMemory = totalMemory
-		memberClusterStatus.MemorySummary.AllocatedMemory = float64(allocatedMemory)
+		// AllocatedMemory calculated as a fraction of total capacity
+		memberClusterStatus.MemorySummary.AllocatedMemory = float64(totalMemory) * memoryFraction / 100
 	}
 
 	return memberClusterStatus, nil

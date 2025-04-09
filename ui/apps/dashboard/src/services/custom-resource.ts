@@ -125,6 +125,21 @@ export async function UpdateCustomResourceDefinition(params: {
     return resp.data;
 }
 
+export async function CreateCustomResourceDefinition(params: {
+  cluster: string;
+  crdData: any;
+}) {
+    const { cluster, crdData } = params;
+    const url = `/member/${cluster}/customresource/definition`;
+    const resp = await karmadaClient.post<
+      IResponse<{
+        errors: string[];
+        crd: any;
+      }>
+    >(url, crdData);
+    return resp.data;
+}
+
 export async function GetCustomResourceDefinitionByGroup(params: {
   cluster?: ClusterOption;
 }) {

@@ -122,7 +122,7 @@ const NamespacePage = () => {
               onConfirm={async () => {
                 const ret = await DeleteNamespace({
                   name: r.objectMeta.name,
-                  cluster: r.objectMeta.labels?.cluster || selectedCluster.value,
+                  cluster: r.objectMeta.labels?.cluster || selectedCluster.label,
                 });
                 if (ret.code === 200) {
                   await messageApi.success(

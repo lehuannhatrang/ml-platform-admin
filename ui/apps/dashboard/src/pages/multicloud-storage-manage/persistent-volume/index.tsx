@@ -44,6 +44,7 @@ import PersistentVolumeDetailDrawer, {
 import PersistentVolumeEditorModal from './persistent-volume-editor-modal';
 import { DeleteMemberResource, GetMemberResource } from '@/services/unstructured';
 import { stringify } from 'yaml';
+import { PlusOutlined } from '@ant-design/icons';
 
 const PersistentVolumePage = () => {
     const [searchParams] = useSearchParams();
@@ -99,7 +100,7 @@ const PersistentVolumePage = () => {
         mode: 'create',
         open: false,
         pvContent: '',
-        cluster: selectedCluster.label,
+        cluster: '',
     });
 
     useEffect(() => {
@@ -332,11 +333,12 @@ const PersistentVolumePage = () => {
                                 mode: 'create',
                                 open: true,
                                 pvContent: '',
-                                cluster: selectedCluster.label
+                                cluster: selectedCluster.value !== 'ALL' ? selectedCluster.label : '',
                             });
                         }}
+                        icon={<PlusOutlined />}
                     >
-                        Create
+                        Add
                     </Button>
                 </Space>
 
@@ -346,10 +348,6 @@ const PersistentVolumePage = () => {
                     dataSource={(data?.data?.persistentVolumes || []) as PersistentVolume[]}
                     loading={isLoading}
                     scroll={{ x: 'max-content' }}
-                    pagination={{
-                        showSizeChanger: true,
-                        showQuickJumper: true,
-                    }}
                 />
             </Flex>
 

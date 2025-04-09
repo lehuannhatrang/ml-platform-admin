@@ -205,6 +205,8 @@ export default function ContinuousDeliveryApplicationPage() {
             {filteredApplications.map((app: ArgoApplication) => (
                 <Col key={`${app?.metadata?.name}-${app?.metadata?.namespace}-${app?.metadata?.labels?.cluster}`} xs={24} sm={12} md={8} lg={6}>
                     <Card
+                        hoverable
+                        className='shadow-md'
                         title={
                             <Tooltip title={app.metadata?.name}>
                                 <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} className='text-blue-500'>
@@ -238,7 +240,8 @@ export default function ContinuousDeliveryApplicationPage() {
                             <Button
                                 key="edit"
                                 type="text"
-                                onClick={() => {
+                                onClick={(e) => {
+                                    e.stopPropagation();
                                     setModalState({
                                         open: true,
                                         mode: 'edit',

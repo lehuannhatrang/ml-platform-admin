@@ -1,14 +1,15 @@
 import React, { useMemo, useState } from 'react';
-import { Button, Flex, Input, Popconfirm, Space, Table, message } from 'antd';
+import { Button, Input, Popconfirm, Space, Table, message } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import _ from 'lodash';
 import { useCluster } from '@/hooks';
 import { useQuery } from '@tanstack/react-query';
-import { CustomResourceDefinition, GetCustomResourceDefinitions, UpdateCustomResourceDefinition } from '@/services';
+import { CustomResourceDefinition, GetCustomResourceDefinitions, UpdateCustomResourceDefinition, CreateCustomResourceDefinition } from '@/services';
 import i18nInstance from '@/utils/i18n';
 import Panel from '@/components/panel';
 import CustomResourceDefinitionDrawer from './custom-resource-definition-drawer';
 import CustomResourceDefinitionEditModal from './custom-resource-definition-edit-modal';
+import { PlusOutlined } from '@ant-design/icons';
 
 const CustomResourceDefinitionPage: React.FC = () => {
     const { clusterOptions, selectedCluster } = useCluster({});
@@ -26,6 +27,9 @@ const CustomResourceDefinitionPage: React.FC = () => {
     // State for the edit modal
     const [editModalVisible, setEditModalVisible] = useState(false);
     const [editCrd, setEditCrd] = useState<{name: string, cluster: string} | null>(null);
+    
+    // State for the new CRD modal
+    const [newCrdModalVisible, setNewCrdModalVisible] = useState(false);
 
     const { data: customResourceDefinitionsData, isLoading, refetch } = useQuery({
         queryKey: ['get-custom-resource-definitions', selectedCluster.value],
@@ -81,10 +85,20 @@ const CustomResourceDefinitionPage: React.FC = () => {
         }
     };
 
+    // Handler to open the new CRD modal
+    const handleAddCrd = () => {
+        setNewCrdModalVisible(true);
+    };
+
     // Handler to close the edit modal
     const handleCloseEditModal = () => {
         setEditModalVisible(false);
         setEditCrd(null);
+    };
+    
+    // Handler to close the new CRD modal
+    const handleCloseNewCrdModal = () => {
+        setNewCrdModalVisible(false);
     };
 
     // Handler to save CRD changes
@@ -105,6 +119,25 @@ const CustomResourceDefinitionPage: React.FC = () => {
         } catch (error) {
             console.error('Failed to update CRD:', error);
             message.error('Failed to update CRD');
+            return Promise.reject(error);
+        }
+    };
+    
+    // Handler to create new CRD
+    const handleCreateCrd = async (crdData: any) => {
+        try {
+            await CreateCustomResourceDefinition({
+                cluster: crdData.clusterName,
+                crdData: crdData
+            });
+            
+            // Refresh the CRD list
+            await refetch();
+            message.success('CRD created successfully');
+            return Promise.resolve();
+        } catch (error) {
+            console.error('Failed to create CRD:', error);
+            message.error('Failed to create CRD');
             return Promise.reject(error);
         }
     };
@@ -192,20 +225,27 @@ const CustomResourceDefinitionPage: React.FC = () => {
     return (
         <Panel>
             <div className={'flex flex-row justify-between space-x-4 mb-4'}>
-                    <Input.Search
-                        placeholder={i18nInstance.t(
-                            'cfaff3e369b9bd51504feb59bf0972a0',
-                            '按命名空间搜索',
-                        )}
-                        className={'w-[300px]'}
-                        onPressEnter={(e) => {
-                            const input = e.currentTarget.value;
-                            setFilter({
-                                ...filter,
-                                searchText: input,
-                            });
-                        }}
-                    />
+                <Input.Search
+                    placeholder={i18nInstance.t(
+                        'cfaff3e369b9bd51504feb59bf0972a0',
+                        '按命名空间搜索',
+                    )}
+                    className={'w-[300px]'}
+                    onPressEnter={(e) => {
+                        const input = e.currentTarget.value;
+                        setFilter({
+                            ...filter,
+                            searchText: input,
+                        });
+                    }}
+                />
+                <Button 
+                    type="primary" 
+                    icon={<PlusOutlined />} 
+                    onClick={handleAddCrd}
+                >
+                    Add CRD
+                </Button>
             </div>
             <Table
                 columns={columns}
@@ -234,6 +274,16 @@ const CustomResourceDefinitionPage: React.FC = () => {
                     clusterName={editCrd.cluster}
                 />
             )}
+            
+            {/* New CRD Modal */}
+            <CustomResourceDefinitionEditModal
+                open={newCrdModalVisible}
+                onClose={handleCloseNewCrdModal}
+                onSave={handleCreateCrd}
+                crdName=""
+                clusterName=""
+                isNew={true}
+            />
         </Panel>
     );
 };
