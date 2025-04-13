@@ -23,7 +23,9 @@ import (
 	"github.com/karmada-io/karmada/pkg/apis/cluster/v1alpha1"
 	karmadaclientset "github.com/karmada-io/karmada/pkg/generated/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
 
+	"github.com/karmada-io/dashboard/pkg/auth/fga"
 	"github.com/karmada-io/dashboard/pkg/common/errors"
 	"github.com/karmada-io/dashboard/pkg/common/helpers"
 	"github.com/karmada-io/dashboard/pkg/common/types"
@@ -49,14 +51,83 @@ type ClusterList struct {
 	Errors []error `json:"errors"`
 }
 
-// GetClusterList returns a list of all Nodes in the cluster.
-func GetClusterList(client karmadaclientset.Interface, dsQuery *dataselect.DataSelectQuery) (*ClusterList, error) {
+// GetClusterList returns a list of clusters that the user has permission to access.
+// If username is empty, all clusters are returned.
+func GetClusterList(client karmadaclientset.Interface, dsQuery *dataselect.DataSelectQuery, username ...string) (*ClusterList, error) {
+	// Get all clusters first
 	clusters, err := client.ClusterV1alpha1().Clusters().List(context.TODO(), helpers.ListEverything)
 	nonCriticalErrors, criticalError := errors.ExtractErrors(err)
 	if criticalError != nil {
 		return nil, criticalError
 	}
-	return toClusterList(client, clusters.Items, nonCriticalErrors, dsQuery), nil
+
+	// Extract username if provided, otherwise use empty string
+	user := ""
+	if len(username) > 0 && username[0] != "" {
+		user = username[0]
+	}
+
+	// If no username provided or username is empty, return all clusters
+	if user == "" {
+		klog.V(4).InfoS("No username provided, returning all clusters")
+		return toClusterList(client, clusters.Items, nonCriticalErrors, dsQuery), nil
+	}
+
+	// Filter clusters based on user permissions
+	klog.V(4).InfoS("Filtering clusters by user permissions", "username", user)
+	var authorizedClusters []v1alpha1.Cluster
+	
+	// Get the FGA service
+	fgaService := fga.FGAService
+	if fgaService == nil {
+		klog.V(4).InfoS("OpenFGA service not initialized, returning all clusters", "username", user)
+		return toClusterList(client, clusters.Items, nonCriticalErrors, dsQuery), nil
+	}
+
+	// Check the user's role, if admin, return all clusters
+	// First, check if user has admin relation with dashboard
+	isAdmin, err := fgaService.GetClient().Check(context.TODO(), user, "admin", "dashboard", "dashboard")
+	if err != nil {
+		klog.ErrorS(err, "Failed to check if user is admin", "username", user)
+		// Continue with cluster-specific checks in case of error
+	} else if isAdmin {
+		klog.V(4).InfoS("User is admin, returning all clusters", "username", user)
+		return toClusterList(client, clusters.Items, nonCriticalErrors, dsQuery), nil
+	}
+
+	// If not admin, check cluster-specific permissions
+	for _, cluster := range clusters.Items {
+		// Check if user has either owner or member relation with the cluster
+		isOwner, err := fgaService.GetClient().Check(context.TODO(), user, "owner", "cluster", cluster.Name)
+		if err != nil {
+			klog.ErrorS(err, "Failed to check owner permission", "username", user, "cluster", cluster.Name)
+			// Skip this cluster on error to be safe
+			continue
+		}
+		
+		if isOwner {
+			authorizedClusters = append(authorizedClusters, cluster)
+			continue
+		}
+		
+		isMember, err := fgaService.GetClient().Check(context.TODO(), user, "member", "cluster", cluster.Name)
+		if err != nil {
+			klog.ErrorS(err, "Failed to check member permission", "username", user, "cluster", cluster.Name)
+			// Skip this cluster on error to be safe
+			continue
+		}
+		
+		if isMember {
+			authorizedClusters = append(authorizedClusters, cluster)
+		}
+	}
+
+	klog.V(4).InfoS("Filtered clusters by permissions", 
+		"username", user, 
+		"totalClusters", len(clusters.Items), 
+		"authorizedClusters", len(authorizedClusters))
+	
+	return toClusterList(client, authorizedClusters, nonCriticalErrors, dsQuery), nil
 }
 
 func toClusterList(_ karmadaclientset.Interface, clusters []v1alpha1.Cluster, nonCriticalErrors []error, dsQuery *dataselect.DataSelectQuery) *ClusterList {

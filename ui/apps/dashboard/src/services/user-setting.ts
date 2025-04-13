@@ -25,7 +25,15 @@ export interface UserSetting {
       height: number;
     }>;
   };
+  clusterPermissions?: ClusterPermission[];
 }
+
+export interface ClusterPermission {
+  cluster: string;
+  roles: string[];
+}
+
+
 
 /**
  * Get current user's settings

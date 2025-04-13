@@ -73,7 +73,7 @@ const useCluster = (props: { clusterFilter?: DataSelectQuery, allowSelectAll?: b
     const clusterOptions: ClusterOption[] = useMemo(() => {
         if (!clusterData?.clusters) return [];
         return [
-            ...(allowSelectAll ? [DEFAULT_CLUSTER_OPTION] : []),
+            ...(allowSelectAll && clusterData.clusters.length > 1 ? [DEFAULT_CLUSTER_OPTION] : []),
             ...clusterData.clusters.map((item) => ({
                 label: item.objectMeta.name,
                 value: item.objectMeta.uid,

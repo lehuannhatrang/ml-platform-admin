@@ -19,6 +19,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -32,6 +33,7 @@ import (
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
 	v1 "github.com/karmada-io/dashboard/cmd/api/app/types/api/v1"
 	"github.com/karmada-io/dashboard/cmd/api/app/types/common"
+	"github.com/karmada-io/dashboard/pkg/auth"
 	"github.com/karmada-io/dashboard/pkg/client"
 	"github.com/karmada-io/dashboard/pkg/resource/cluster"
 )
@@ -39,7 +41,12 @@ import (
 func handleGetClusterList(c *gin.Context) {
 	karmadaClient := client.InClusterKarmadaClient()
 	dataSelect := common.ParseDataSelectPathParameter(c)
-	result, err := cluster.GetClusterList(karmadaClient, dataSelect)
+	
+	// Get the authenticated username
+	username := getAuthenticatedUser(c)
+	
+	// Call GetClusterList with the username to filter by permissions
+	result, err := cluster.GetClusterList(karmadaClient, dataSelect, username)
 	if err != nil {
 		klog.ErrorS(err, "GetClusterList failed")
 		common.Fail(c, err)
@@ -231,6 +238,39 @@ func parseEndpointFromKubeconfig(kubeconfigContents string) (string, error) {
 		return "", err
 	}
 	return restConfig.Host, nil
+}
+
+// getAuthenticatedUser retrieves the username of the currently authenticated user
+func getAuthenticatedUser(c *gin.Context) string {
+	// First check if user info is already in the context (may have been set by middleware)
+	user, exists := c.Get("user")
+	if exists {
+		if userObj, ok := user.(*v1.User); ok {
+			return userObj.Name
+		}
+	}
+
+	// If not in context, extract from Authorization header
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		return ""
+	}
+
+	// The header format should be "Bearer <token>"
+	const prefix = "Bearer "
+	if len(authHeader) <= len(prefix) || !strings.HasPrefix(authHeader, prefix) {
+		return ""
+	}
+
+	tokenString := authHeader[len(prefix):]
+
+	// Validate the token
+	claims, err := auth.ValidateToken(tokenString)
+	if err != nil {
+		return ""
+	}
+
+	return claims.Username
 }
 
 func init() {

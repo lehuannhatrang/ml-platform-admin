@@ -22,6 +22,8 @@ type UserSetting struct {
 	Username string `json:"username"`
 	// DisplayName is the human-readable name for the user
 	DisplayName string `json:"displayName,omitempty"`
+	// Password is the user's password (only used during creation/update, never returned)
+	Password string `json:"password,omitempty"`
 	// Theme represents the UI theme preference (e.g., "light", "dark")
 	Theme string `json:"theme,omitempty"`
 	// Language represents the preferred language for the UI
@@ -34,6 +36,16 @@ type UserSetting struct {
 	Preferences map[string]string `json:"preferences,omitempty"`
 	// Dashboard contains dashboard configuration settings
 	Dashboard *DashboardSettings `json:"dashboard,omitempty"`
+	// ClusterPermissions contains the user's cluster-specific roles and permissions
+	ClusterPermissions []ClusterPermission `json:"clusterPermissions,omitempty"`
+}
+
+// ClusterPermission represents a user's permissions for a specific cluster
+type ClusterPermission struct {
+	// Cluster is the name of the cluster
+	Cluster string `json:"cluster"`
+	// Roles is a list of roles assigned to the user for this cluster (e.g., "owner", "member")
+	Roles []string `json:"roles"`
 }
 
 // DashboardSettings represents user preferences specific to the dashboard view

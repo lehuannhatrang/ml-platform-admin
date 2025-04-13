@@ -58,6 +58,7 @@ import (
 	"github.com/karmada-io/dashboard/pkg/config"
 	"github.com/karmada-io/dashboard/pkg/environment"
 	"github.com/karmada-io/dashboard/pkg/etcd"
+	"github.com/karmada-io/dashboard/pkg/auth/fga"
 )
 
 // NewAPICommand creates a *cobra.Command object with default parameters
@@ -115,6 +116,13 @@ func run(ctx context.Context, opts *options.Options) error {
 		client.WithKubeContext(opts.KubeContext),
 		client.WithInsecureTLSSkipVerify(opts.SkipKubeApiserverTLSVerify),
 	)
+
+	// Initialize OpenFGA service
+	if err := fga.InitFGAService(opts.OpenFGAAPIURL); err != nil {
+		klog.ErrorS(err, "Failed to initialize OpenFGA service")
+		return err
+	}
+	klog.InfoS("OpenFGA service initialized", "apiURL", opts.OpenFGAAPIURL)
 
 	// Initialize etcd client for user management
 	initEtcdClient(ctx, opts)

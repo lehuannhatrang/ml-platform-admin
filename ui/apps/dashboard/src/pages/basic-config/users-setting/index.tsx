@@ -8,6 +8,7 @@ import UserSettingsModal from './edit-user-settings-modal';
 import type { TabsProps, TableProps } from 'antd';
 import { useAuth } from '@/components/auth';
 import { USER_ROLE } from '@/services/auth';
+import TagList from '@/components/tag-list';
 
 const UserSettings: FC = () => {
     const { role } = useAuth();
@@ -64,9 +65,9 @@ const UserSettings: FC = () => {
             ),
         },
         {
-            title: 'Email',
-            dataIndex: ['preferences', 'email'],
-            key: 'email',
+            title: 'Display Name',
+            dataIndex: 'displayName',
+            key: 'displayName',
             render: (text) => text || '-',
         },
         {
@@ -88,25 +89,9 @@ const UserSettings: FC = () => {
                     </Typography.Text>;
                 }
                 
-                if (record.preferences?.clusterPermissions) {
+                if (record.clusterPermissions) {
                     try {
-                        const permissions = typeof record.preferences.clusterPermissions === 'string' 
-                            ? JSON.parse(record.preferences.clusterPermissions) 
-                            : record.preferences.clusterPermissions;
-                        
-                        if (Array.isArray(permissions) && permissions.length > 0) {
-                            const displayCount = 2;
-                            return (
-                                <>
-                                    {permissions.slice(0, displayCount).map((cluster, index) => (
-                                        <Tag key={index} color="green">{cluster}</Tag>
-                                    ))}
-                                    {permissions.length > displayCount && (
-                                        <Tag color="default">+{permissions.length - displayCount} more</Tag>
-                                    )}
-                                </>
-                            );
-                        }
+                        return <TagList tags={record.clusterPermissions.map(p => ({ key: p.cluster, value: `${p.cluster}: ${p.roles.join(', ')}` }))} />
                     } catch (e) {
                         // Parsing error, just display none
                     }

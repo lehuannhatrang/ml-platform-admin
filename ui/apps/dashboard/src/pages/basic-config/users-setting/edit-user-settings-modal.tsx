@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Form, Input, Select, Typography, Divider, Transfer, Space } from 'antd';
+import { Modal, Form, Input, Select, Typography, Divider, Transfer, Flex } from 'antd';
 import i18nInstance from '@/utils/i18n';
 import { IResponse } from '@/services/base';
-import { UserSetting, createUserSetting, updateUserSetting } from '@/services/user-setting';
+import { ClusterPermission, UserSetting, createUserSetting, updateUserSetting } from '@/services/user-setting';
 import { useCluster } from '@/hooks';
 import { ClusterOption } from '@/hooks/use-cluster';
 import { USER_ROLE } from '@/services/auth';
@@ -15,9 +15,14 @@ interface UserSettingsModalProps {
   onOk: (ret: IResponse<any>) => Promise<void>;
 }
 
-const roleOptions = [
+const globalRoleOptions = [
   { label: 'Administrator', value: USER_ROLE.ADMIN},
   { label: 'Basic User', value: USER_ROLE.BASIC_USER },
+];
+
+const clusterRoleOptions = [
+  { label: 'Owner', value: 'owner' },
+  { label: 'Member', value: 'member' },
 ];
 
 interface ClusterItem {
@@ -36,6 +41,7 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
   const [form] = Form.useForm<UserSetting>();
   const [targetKeys, setTargetKeys] = useState<React.Key[]>([]);
   const [showClusterPermissions, setShowClusterPermissions] = useState<boolean>(false);
+  const [clusterRoles, setClusterRoles] = useState<Record<string, string[]>>({});
 
   const { clusterOptions } = useCluster({allowSelectAll: false});
 
@@ -44,14 +50,17 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
       form.setFieldsValue(initialData);
       setShowClusterPermissions(initialData.preferences?.role === USER_ROLE.BASIC_USER);
       // Initialize selected clusters if available
-      if (initialData.preferences?.clusterPermissions) {
+      if (initialData?.clusterPermissions) {
         try {
-          const clusterPerms = typeof initialData.preferences.clusterPermissions === 'string' 
-            ? JSON.parse(initialData.preferences.clusterPermissions) 
-            : initialData.preferences.clusterPermissions;
-          setTargetKeys(Array.isArray(clusterPerms) ? clusterPerms : []);
+          const clusterPerms = initialData.clusterPermissions;
+          setTargetKeys(Array.isArray(clusterPerms) ? clusterPerms.map(p => clusterOptions.find(c => c.label === p.cluster)?.value || '') : []);
+          setClusterRoles(clusterPerms.reduce((acc, p) => {
+            acc[p.cluster] = p.roles;
+            return acc;
+          }, {} as Record<string, string[]>));
         } catch (e) {
           setTargetKeys([]);
+          setClusterRoles({});
         }
       }
     } else {
@@ -96,13 +105,17 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
       destroyOnClose={true}
       onOk={async () => {
         const submitData = await form.validateFields();
-        
+        const clusterPermissions: ClusterPermission[] = Object.entries(clusterRoles).map(([cluster, roles]) => ({
+          cluster,
+          roles
+        }));
+          
         // Add cluster permissions to form data if applicable
         if (showClusterPermissions && targetKeys.length > 0) {
           if (!submitData.preferences) {
             submitData.preferences = {};
           }
-          submitData.preferences.clusterPermissions = JSON.stringify(targetKeys);
+          submitData.clusterPermissions = clusterPermissions;
         }
         
         const ret = mode === 'create'
@@ -159,7 +172,7 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
           rules={[{ required: true, message: 'Please select a role' }]}
         >
           <Select
-            options={roleOptions}
+            options={globalRoleOptions}
             placeholder="Select user role"
             onChange={handleRoleChange}
           />
@@ -179,12 +192,23 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
               targetKeys={targetKeys}
               onChange={handleTransferChange}
               render={item => (
-                <Space>
+                <Flex justify="space-between" align='center'>
                   <span>{item.title}</span>
-                  <Typography.Text type="secondary" style={{ fontSize: '12px' }}>
-                    ({item.description})
-                  </Typography.Text>
-                </Space>
+                  <Select
+                    options={clusterRoleOptions}
+                    placeholder="Select cluster role"
+                    mode="multiple"
+                    style={{ width: 200 }}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(value) => {
+                      setClusterRoles({
+                        ...clusterRoles,
+                        [item.title]: value
+                      });
+                    }}
+                    value={clusterRoles[item.title] || []}
+                  />
+                </Flex>
               )}
               listStyle={{ width: 350, height: 300 }}
             />

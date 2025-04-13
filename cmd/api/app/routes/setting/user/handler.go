@@ -67,7 +67,7 @@ func handleGetUserSetting(c *gin.Context) {
 			const prefix = "Bearer "
 			if len(authHeader) > len(prefix) && strings.HasPrefix(authHeader, prefix) {
 				tokenString := authHeader[len(prefix):]
-				
+
 				// Validate token and get claims
 				claims, err := auth.ValidateToken(tokenString)
 				if err == nil && claims != nil && claims.Role != "" {
@@ -116,9 +116,6 @@ func handlePostUserSetting(c *gin.Context) {
 		common.Fail(c, err)
 		return
 	}
-
-	// Ensure the username in the setting matches the authenticated user
-	userSettingRequest.Username = username
 
 	err := setting.CreateUserSetting(context.TODO(), userSettingRequest.UserSetting)
 	if err != nil {
