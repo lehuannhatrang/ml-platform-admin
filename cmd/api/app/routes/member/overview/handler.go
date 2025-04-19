@@ -29,7 +29,7 @@ func HandleGetMemberOverview(c *gin.Context) {
 	}
 
 	// Get the ArgoCD metrics
-	argoMetrics, err := GetMemberArgoMetrics(clusterName)
+	argoMetrics, err := GetMemberArgoMetrics(c, clusterName)
 	if err != nil {
 		// Don't fail if we can't get ArgoCD metrics
 		argoMetrics = &v1.ArgoMetrics{
@@ -96,7 +96,7 @@ func HandleGetMemberOverview(c *gin.Context) {
 }
 
 // GetMemberArgoMetrics retrieves ArgoCD application and project counts from a specific member cluster
-func GetMemberArgoMetrics(clusterName string) (*v1.ArgoMetrics, error) {
+func GetMemberArgoMetrics(c *gin.Context, clusterName string) (*v1.ArgoMetrics, error) {
 	ctx := context.TODO()
 
 	// Define the GVRs for ArgoCD resources
@@ -113,7 +113,7 @@ func GetMemberArgoMetrics(clusterName string) (*v1.ArgoMetrics, error) {
 	}
 
 	// Create a dynamic client for the member cluster
-	dynamicClient, err := client.GetDynamicClientForMember(&gin.Context{}, clusterName)
+	dynamicClient, err := client.GetDynamicClientForMember(c, clusterName)
 	if err != nil {
 		return nil, err
 	}

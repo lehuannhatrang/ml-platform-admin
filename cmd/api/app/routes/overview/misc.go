@@ -27,10 +27,10 @@ import (
 	"github.com/gin-gonic/gin"
 
 	v1 "github.com/karmada-io/dashboard/cmd/api/app/types/api/v1"
-	"github.com/karmada-io/dashboard/cmd/api/app/types/common"
 	"github.com/karmada-io/dashboard/pkg/client"
 	"github.com/karmada-io/dashboard/pkg/dataselect"
 	"github.com/karmada-io/dashboard/pkg/resource/cluster"
+	clusterv1alpha1 "github.com/karmada-io/karmada/pkg/apis/cluster/v1alpha1"
 	"github.com/karmada-io/karmada/pkg/version"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,6 +38,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/klog/v2"
+
+	"github.com/karmada-io/dashboard/pkg/auth/fga"
 )
 
 const (
@@ -176,7 +179,28 @@ func GetMemberClusterInfo(ds *dataselect.DataSelectQuery) (*v1.MemberClusterStat
 		MemorySummary: &v1.MemorySummary{},
 		PodSummary:    &v1.PodSummary{},
 	}
+
+	// Get the current user for permission checks
+	username := client.GetCurrentUser()
+	var fgaClient fga.Client
+	if username != "" && fga.FGAService != nil && fga.FGAService.GetClient() != nil {
+		fgaClient = fga.FGAService.GetClient()
+	}
+
 	for _, clusterItem := range result.Clusters {
+		// Check if user has access to this cluster
+		if username != "" && fgaClient != nil {
+			allowed, err := fga.HasClusterAccess(context.Background(), fgaClient, username, clusterItem.ObjectMeta.Name)
+			if err != nil {
+				klog.ErrorS(err, "Failed to check cluster access", "user", username, "cluster", clusterItem.ObjectMeta.Name)
+				continue // Skip this cluster on error
+			}
+			if !allowed {
+				klog.V(4).InfoS("Skipping cluster due to access restrictions", "user", username, "cluster", clusterItem.ObjectMeta.Name)
+				continue // Skip this cluster if user doesn't have access
+			}
+		}
+
 		// handle node summary
 		memberClusterStatus.NodeSummary.ReadyNum += clusterItem.NodeSummary.ReadyNum
 		memberClusterStatus.NodeSummary.TotalNum += clusterItem.NodeSummary.TotalNum
@@ -272,19 +296,9 @@ func GetClusterResourceStatus() (*v1.ClusterResourceStatus, error) {
 }
 
 // GetArgoMetrics retrieves ArgoCD application and project counts from all member clusters
-func GetArgoMetrics() (*v1.ArgoMetrics, error) {
+func GetArgoMetrics(c *gin.Context) (*v1.ArgoMetrics, error) {
 	ctx := context.TODO()
-	karmadaClient := client.InClusterKarmadaClient()
 
-	ds := common.ParseDataSelectPathParameter(&gin.Context{})
-	clusterList, err := cluster.GetClusterList(karmadaClient, ds)
-	if err != nil {
-		return nil, err
-	}
-
-	var applicationCount, projectCount int
-
-	// Define the GVRs for ArgoCD resources
 	applicationGVR := schema.GroupVersionResource{
 		Group:    "argoproj.io",
 		Version:  "v1alpha1",
@@ -297,14 +311,28 @@ func GetArgoMetrics() (*v1.ArgoMetrics, error) {
 		Resource: "appprojects",
 	}
 
-	// For each ready cluster, get argocd resources using dynamic client
-	for _, cluster := range clusterList.Clusters {
-		if cluster.Ready != metav1.ConditionTrue {
+	// Get a list of all clusters
+	karmadaClient := client.InClusterKarmadaClient()
+	if karmadaClient == nil {
+		return nil, errors.New("failed to get Karmada client")
+	}
+
+	clusterList, err := karmadaClient.ClusterV1alpha1().Clusters().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	// Count applications and projects across all clusters
+	var applicationCount, projectCount int
+
+	for _, cluster := range clusterList.Items {
+		// Skip clusters that aren't ready
+		if !isClusterReady(&cluster) {
 			continue
 		}
 
 		// Create a dynamic client with this config
-		dynamicClient, err := client.GetDynamicClientForMember(&gin.Context{}, cluster.ObjectMeta.Name)
+		dynamicClient, err := client.GetDynamicClientForMember(c, cluster.ObjectMeta.Name)
 		if err != nil {
 			continue
 		}
@@ -326,4 +354,14 @@ func GetArgoMetrics() (*v1.ArgoMetrics, error) {
 		ApplicationCount: applicationCount,
 		ProjectCount:     projectCount,
 	}, nil
+}
+
+// isClusterReady checks if the cluster is in a ready state
+func isClusterReady(cluster *clusterv1alpha1.Cluster) bool {
+	for _, condition := range cluster.Status.Conditions {
+		if condition.Type == clusterv1alpha1.ClusterConditionReady {
+			return condition.Status == metav1.ConditionTrue
+		}
+	}
+	return false
 }

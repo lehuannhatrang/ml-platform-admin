@@ -18,6 +18,7 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/karmada-io/karmada/pkg/apis/cluster/v1alpha1"
@@ -54,6 +55,11 @@ type ClusterList struct {
 // GetClusterList returns a list of clusters that the user has permission to access.
 // If username is empty, all clusters are returned.
 func GetClusterList(client karmadaclientset.Interface, dsQuery *dataselect.DataSelectQuery, username ...string) (*ClusterList, error) {
+	// Handle nil client to prevent panic
+	if client == nil {
+		return nil, fmt.Errorf("karmada client is nil")
+	}
+	
 	// Get all clusters first
 	clusters, err := client.ClusterV1alpha1().Clusters().List(context.TODO(), helpers.ListEverything)
 	nonCriticalErrors, criticalError := errors.ExtractErrors(err)

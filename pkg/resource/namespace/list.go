@@ -18,6 +18,7 @@ package namespace
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	v1 "k8s.io/api/core/v1"
@@ -54,6 +55,12 @@ type Namespace struct {
 // GetNamespaceList returns a list of all namespaces in the cluster.
 func GetNamespaceList(client kubernetes.Interface, dsQuery *dataselect.DataSelectQuery) (*NamespaceList, error) {
 	log.Println("Getting list of namespaces")
+
+	// Handle nil client to prevent panic
+	if client == nil {
+		return nil, fmt.Errorf("kubernetes client is nil")
+	}
+
 	namespaces, err := client.CoreV1().Namespaces().List(context.TODO(), helpers.ListEverything)
 
 	nonCriticalErrors, criticalError := errors.ExtractErrors(err)

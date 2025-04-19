@@ -106,6 +106,7 @@ const Navigation: FC<INavigationProps> = (props) => {
                 value={selectedCluster.value}
                 onChange={handleClusterChange}
                 options={clusterOptions}
+                disabled={clusterOptions.length === 0}
                 style={{ width: 300 }}
                 optionRender={(option) => {
                   const value = typeof option.value === 'string' ? option.value : String(option.value);

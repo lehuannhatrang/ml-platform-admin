@@ -17,6 +17,7 @@ limitations under the License.
 package statefulset
 
 import (
+	"fmt"
 	"log"
 
 	apps "k8s.io/api/apps/v1"
@@ -53,6 +54,11 @@ type StatefulSet struct {
 // GetStatefulSetList returns a list of all Stateful Sets in the cluster.
 func GetStatefulSetList(client kubernetes.Interface, nsQuery *common.NamespaceQuery,
 	dsQuery *dataselect.DataSelectQuery) (*StatefulSetList, error) {
+	// Handle nil client to prevent panic
+	if client == nil {
+		return nil, fmt.Errorf("kubernetes client is nil")
+	}
+
 	log.Print("Getting list of all stateful sets in the cluster")
 
 	channels := &common.ResourceChannels{

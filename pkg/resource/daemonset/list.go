@@ -26,6 +26,8 @@ import (
 	"github.com/karmada-io/dashboard/pkg/dataselect"
 	"github.com/karmada-io/dashboard/pkg/resource/common"
 	"github.com/karmada-io/dashboard/pkg/resource/event"
+
+	"fmt"
 )
 
 // DaemonSetList contains a list of Daemon Sets in the cluster.
@@ -49,6 +51,11 @@ type DaemonSet struct {
 
 // GetDaemonSetList returns a list of all Daemon Set in the cluster.
 func GetDaemonSetList(client kubernetes.Interface, nsQuery *common.NamespaceQuery, dsQuery *dataselect.DataSelectQuery) (*DaemonSetList, error) {
+	// Handle nil client to prevent panic
+	if client == nil {
+		return nil, fmt.Errorf("kubernetes client is nil")
+	}
+	
 	channels := &common.ResourceChannels{
 		DaemonSetList: common.GetDaemonSetListChannel(client, nsQuery, 1),
 		ServiceList:   common.GetServiceListChannel(client, nsQuery, 1),

@@ -4,6 +4,7 @@ import (
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	client "k8s.io/client-go/kubernetes"
+	"fmt"
 
 	"github.com/karmada-io/dashboard/pkg/common/errors"
 	"github.com/karmada-io/dashboard/pkg/common/types"
@@ -14,6 +15,10 @@ import (
 // GetReplicaSetList returns a list of all ReplicaSets in the cluster.
 func GetReplicaSetList(client client.Interface, nsQuery *common.NamespaceQuery,
 	dsQuery *dataselect.DataSelectQuery) (*ReplicaSetList, error) {
+	// Handle nil client to prevent panic
+	if client == nil {
+		return nil, fmt.Errorf("kubernetes client is nil")
+	}
 
 	channels := &common.ResourceChannels{
 		ReplicaSetList: common.GetReplicaSetListChannel(client, nsQuery, 1),

@@ -17,6 +17,7 @@ limitations under the License.
 package node
 
 import (
+	"fmt"
 	"github.com/karmada-io/karmada/pkg/apis/cluster/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,6 +50,11 @@ type NodeList struct {
 
 // GetNodeList returns a list of all Nodes in all cluster.
 func GetNodeList(client kubernetes.Interface, dsQuery *dataselect.DataSelectQuery) (*NodeList, error) {
+	// Handle nil client to prevent panic
+	if client == nil {
+		return nil, fmt.Errorf("kubernetes client is nil")
+	}
+	
 	channels := &common.ResourceChannels{
 		NodeList: common.GetNodeListChannel(client, 1),
 	}

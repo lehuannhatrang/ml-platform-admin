@@ -17,6 +17,7 @@ limitations under the License.
 package service
 
 import (
+	"fmt"
 	"log"
 
 	v1 "k8s.io/api/core/v1"
@@ -66,6 +67,11 @@ type ServiceList struct {
 // GetServiceList returns a list of all services in the cluster.
 func GetServiceList(client client.Interface, nsQuery *common.NamespaceQuery,
 	dsQuery *dataselect.DataSelectQuery) (*ServiceList, error) {
+	// Handle nil client to prevent panic
+	if client == nil {
+		return nil, fmt.Errorf("kubernetes client is nil")
+	}
+
 	log.Print("Getting list of all services in the cluster")
 
 	channels := &common.ResourceChannels{

@@ -64,7 +64,7 @@ func handleGetOverview(c *gin.Context) {
 	metricsDashboards := getMetricsDashboards()
 
 	// Get ArgoCD metrics from all member clusters
-	argoMetrics, err := GetArgoMetrics()
+	argoMetrics, err := GetArgoMetrics(c)
 	if err != nil {
 		argoMetrics = &v1.ArgoMetrics{
 			ApplicationCount: 0,

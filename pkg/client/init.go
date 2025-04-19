@@ -17,11 +17,13 @@ limitations under the License.
 package client
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"sync"
 
+	"github.com/karmada-io/dashboard/pkg/auth/fga"
 	karmadaclientset "github.com/karmada-io/karmada/pkg/generated/clientset/versioned"
 	kubeclient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -42,6 +44,10 @@ var (
 	inClusterClientForKarmadaAPIServer kubeclient.Interface
 	inClusterClientForMemberAPIServer  kubeclient.Interface
 	memberClients                      sync.Map
+	// CurrentUser stores the username for permission checks when context isn't available
+	CurrentUser string
+	// CurrentUserMutex protects concurrent access to CurrentUser
+	CurrentUserMutex sync.RWMutex
 )
 
 type configBuilder struct {
@@ -288,6 +294,26 @@ func InClusterClientForMemberCluster(clusterName string) kubeclient.Interface {
 		return nil
 	}
 
+	// Check permissions if we have a cluster name and a current user
+	if clusterName != "" {
+		// Get current username for permission check
+		CurrentUserMutex.RLock()
+		username := CurrentUser
+		CurrentUserMutex.RUnlock()
+		if username != "" && fga.FGAService != nil && fga.FGAService.GetClient() != nil {
+			// Check if the user has access to this cluster
+			allowed, err := fga.HasClusterAccess(context.Background(), fga.FGAService.GetClient(), username, clusterName)
+			if err != nil {
+				klog.ErrorS(err, "Failed to check cluster access", "user", username, "cluster", clusterName)
+				return nil
+			}
+			if !allowed {
+				klog.InfoS("Access denied", "user", username, "cluster", clusterName)
+				return nil
+			}
+		}
+	}
+
 	// Load and return Interface for member apiserver if already exist
 	if value, ok := memberClients.Load(clusterName); ok {
 		if inClusterClientForMemberAPIServer, ok = value.(kubeclient.Interface); ok {
@@ -339,4 +365,20 @@ func ConvertRestConfigToAPIConfig(restConfig *rest.Config) *clientcmdapi.Config 
 	}
 	clientcmdConfig.CurrentContext = "contextName"
 	return clientcmdConfig
+}
+
+// SetCurrentUser sets the current user for permission checks
+// This should be called during authentication to ensure username is available for cluster access checks
+func SetCurrentUser(username string) {
+	CurrentUserMutex.Lock()
+	defer CurrentUserMutex.Unlock()
+	CurrentUser = username
+	klog.V(4).InfoS("Current user set", "username", username)
+}
+
+// GetCurrentUser returns the currently set username
+func GetCurrentUser() string {
+	CurrentUserMutex.RLock()
+	defer CurrentUserMutex.RUnlock()
+	return CurrentUser
 }

@@ -18,6 +18,7 @@ package common
 
 import (
 	"context"
+	"fmt"
 
 	apps "k8s.io/api/apps/v1"
 	autoscaling "k8s.io/api/autoscaling/v1"
@@ -155,6 +156,16 @@ func GetReplicaSetListChannelWithOptions(client client.Interface, nsQuery *Names
 	}
 
 	go func() {
+		// Guard against nil client
+		if err := NilClientCheck(client); err != nil {
+			list := &apps.ReplicaSetList{}
+			for i := 0; i < numReads; i++ {
+				channel.List <- list
+				channel.Error <- err
+			}
+			return
+		}
+		
 		list, err := client.AppsV1().ReplicaSets(nsQuery.ToRequestParam()).
 			List(context.TODO(), options)
 		var filteredItems []apps.ReplicaSet
@@ -183,14 +194,29 @@ type DeploymentListChannel struct {
 // that both must be read numReads times.
 func GetDeploymentListChannel(client client.Interface,
 	nsQuery *NamespaceQuery, numReads int) DeploymentListChannel {
+	return GetDeploymentListChannelWithOptions(client, nsQuery, helpers.ListEverything, numReads)
+}
+
+// GetDeploymentListChannelWithOptions is GetDeploymentListChannel plus listing options.
+func GetDeploymentListChannelWithOptions(client client.Interface, nsQuery *NamespaceQuery,
+	options metaV1.ListOptions, numReads int) DeploymentListChannel {
 	channel := DeploymentListChannel{
 		List:  make(chan *apps.DeploymentList, numReads),
 		Error: make(chan error, numReads),
 	}
 
 	go func() {
-		list, err := client.AppsV1().Deployments(nsQuery.ToRequestParam()).
-			List(context.TODO(), helpers.ListEverything)
+		// Guard against nil client
+		if err := NilClientCheck(client); err != nil {
+			list := &apps.DeploymentList{}
+			for i := 0; i < numReads; i++ {
+				channel.List <- list
+				channel.Error <- err
+			}
+			return
+		}
+		
+		list, err := client.AppsV1().Deployments(nsQuery.ToRequestParam()).List(context.TODO(), options)
 		var filteredItems []apps.Deployment
 		for _, item := range list.Items {
 			if nsQuery.Matches(item.ObjectMeta.Namespace) {
@@ -222,6 +248,16 @@ func GetDaemonSetListChannel(client client.Interface, nsQuery *NamespaceQuery, n
 	}
 
 	go func() {
+		// Guard against nil client
+		if err := NilClientCheck(client); err != nil {
+			list := &apps.DaemonSetList{}
+			for i := 0; i < numReads; i++ {
+				channel.List <- list
+				channel.Error <- err
+			}
+			return
+		}
+		
 		list, err := client.AppsV1().DaemonSets(nsQuery.ToRequestParam()).List(context.TODO(), helpers.ListEverything)
 		var filteredItems []apps.DaemonSet
 		for _, item := range list.Items {
@@ -254,6 +290,16 @@ func GetJobListChannel(client client.Interface,
 	}
 
 	go func() {
+		// Guard against nil client
+		if err := NilClientCheck(client); err != nil {
+			list := &batch.JobList{}
+			for i := 0; i < numReads; i++ {
+				channel.List <- list
+				channel.Error <- err
+			}
+			return
+		}
+		
 		list, err := client.BatchV1().Jobs(nsQuery.ToRequestParam()).List(context.TODO(), helpers.ListEverything)
 		var filteredItems []batch.Job
 		for _, item := range list.Items {
@@ -285,6 +331,16 @@ func GetCronJobListChannel(client client.Interface, nsQuery *NamespaceQuery, num
 	}
 
 	go func() {
+		// Guard against nil client
+		if err := NilClientCheck(client); err != nil {
+			list := &batch.CronJobList{}
+			for i := 0; i < numReads; i++ {
+				channel.List <- list
+				channel.Error <- err
+			}
+			return
+		}
+		
 		list, err := client.BatchV1().CronJobs(nsQuery.ToRequestParam()).List(context.TODO(), helpers.ListEverything)
 		var filteredItems []batch.CronJob
 		for _, item := range list.Items {
@@ -317,6 +373,15 @@ func GetServiceListChannel(client client.Interface, nsQuery *NamespaceQuery,
 		Error: make(chan error, numReads),
 	}
 	go func() {
+		// Guard against nil client
+		if err := NilClientCheck(client); err != nil {
+			list := &v1.ServiceList{}
+			for i := 0; i < numReads; i++ {
+				channel.List <- list
+				channel.Error <- err
+			}
+			return
+		}
 		list, err := client.CoreV1().Services(nsQuery.ToRequestParam()).List(context.TODO(), helpers.ListEverything)
 		var filteredItems []v1.Service
 		for _, item := range list.Items {
@@ -349,8 +414,23 @@ func GetEndpointListChannelWithOptions(client client.Interface,
 	}
 
 	go func() {
+		// Guard against nil client
+		if err := NilClientCheck(client); err != nil {
+			list := &v1.EndpointsList{}
+			for i := 0; i < numReads; i++ {
+				channel.List <- list
+				channel.Error <- err
+			}
+			return
+		}
 		list, err := client.CoreV1().Endpoints(nsQuery.ToRequestParam()).List(context.TODO(), opt)
-
+		var filteredItems []v1.Endpoints
+		for _, item := range list.Items {
+			if nsQuery.Matches(item.ObjectMeta.Namespace) {
+				filteredItems = append(filteredItems, item)
+			}
+		}
+		list.Items = filteredItems
 		for i := 0; i < numReads; i++ {
 			channel.List <- list
 			channel.Error <- err
@@ -388,6 +468,16 @@ func GetPodListChannelWithOptions(client client.Interface, nsQuery *NamespaceQue
 	}
 
 	go func() {
+		// Guard against nil client
+		if err := NilClientCheck(client); err != nil {
+			list := &v1.PodList{}
+			for i := 0; i < numReads; i++ {
+				channel.List <- list
+				channel.Error <- err
+			}
+			return
+		}
+		
 		list, err := client.CoreV1().Pods(nsQuery.ToRequestParam()).List(context.TODO(), options)
 		var filteredItems []v1.Pod
 		for _, item := range list.Items {
@@ -427,6 +517,15 @@ func GetEventListChannelWithOptions(client client.Interface,
 	}
 
 	go func() {
+		// Guard against nil client
+		if err := NilClientCheck(client); err != nil {
+			list := &v1.EventList{}
+			for i := 0; i < numReads; i++ {
+				channel.List <- list
+				channel.Error <- err
+			}
+			return
+		}
 		list, err := client.CoreV1().Events(nsQuery.ToRequestParam()).List(context.TODO(), options)
 		var filteredItems []v1.Event
 		for _, item := range list.Items {
@@ -465,6 +564,16 @@ func GetNodeListChannel(client client.Interface, numReads int) NodeListChannel {
 	}
 
 	go func() {
+		// Guard against nil client
+		if err := NilClientCheck(client); err != nil {
+			list := &v1.NodeList{}
+			for i := 0; i < numReads; i++ {
+				channel.List <- list
+				channel.Error <- err
+			}
+			return
+		}
+		
 		list, err := client.CoreV1().Nodes().List(context.TODO(), helpers.ListEverything)
 		for i := 0; i < numReads; i++ {
 			channel.List <- list
@@ -497,6 +606,15 @@ func GetStatefulSetListChannel(client client.Interface,
 	}
 
 	go func() {
+		// Guard against nil client
+		if err := NilClientCheck(client); err != nil {
+			list := &apps.StatefulSetList{}
+			for i := 0; i < numReads; i++ {
+				channel.List <- list
+				channel.Error <- err
+			}
+			return
+		}
 		statefulSets, err := client.AppsV1().StatefulSets(nsQuery.ToRequestParam()).List(context.TODO(), helpers.ListEverything)
 		var filteredItems []apps.StatefulSet
 		for _, item := range statefulSets.Items {
@@ -530,6 +648,15 @@ func GetConfigMapListChannel(client client.Interface, nsQuery *NamespaceQuery,
 	}
 
 	go func() {
+		// Guard against nil client
+		if err := NilClientCheck(client); err != nil {
+			list := &v1.ConfigMapList{}
+			for i := 0; i < numReads; i++ {
+				channel.List <- list
+				channel.Error <- err
+			}
+			return
+		}
 		list, err := client.CoreV1().ConfigMaps(nsQuery.ToRequestParam()).List(context.TODO(), helpers.ListEverything)
 		var filteredItems []v1.ConfigMap
 		for _, item := range list.Items {
@@ -611,4 +738,13 @@ type RoleBindingListChannel struct {
 type ClusterRoleBindingListChannel struct {
 	List  chan *rbac.ClusterRoleBindingList
 	Error chan error
+}
+
+// NilClientCheck checks if the client is nil and returns a corresponding error
+// This is a utility function to avoid duplicating nil checks in multiple resource channel functions
+func NilClientCheck(client client.Interface) error {
+	if client == nil {
+		return fmt.Errorf("kubernetes client is nil")
+	}
+	return nil
 }

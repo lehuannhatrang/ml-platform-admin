@@ -17,6 +17,7 @@ limitations under the License.
 package job
 
 import (
+	"fmt"
 	"log"
 
 	batch "k8s.io/api/batch/v1"
@@ -92,6 +93,11 @@ type Job struct {
 func GetJobList(client client.Interface, nsQuery *common.NamespaceQuery,
 	dsQuery *dataselect.DataSelectQuery) (*JobList, error) {
 	log.Print("Getting list of all jobs in the cluster")
+
+	// Handle nil client to prevent panic
+	if client == nil {
+		return nil, fmt.Errorf("kubernetes client is nil")
+	}
 
 	channels := &common.ResourceChannels{
 		JobList:   common.GetJobListChannel(client, nsQuery, 1),

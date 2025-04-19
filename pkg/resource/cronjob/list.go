@@ -17,6 +17,7 @@ limitations under the License.
 package cronjob
 
 import (
+	"fmt"
 	"log"
 
 	batch "k8s.io/api/batch/v1"
@@ -57,6 +58,11 @@ type CronJob struct {
 // GetCronJobList returns a list of all CronJobs in the cluster.
 func GetCronJobList(client client.Interface, nsQuery *common.NamespaceQuery,
 	dsQuery *dataselect.DataSelectQuery) (*CronJobList, error) {
+	// Handle nil client to prevent panic
+	if client == nil {
+		return nil, fmt.Errorf("kubernetes client is nil")
+	}
+	
 	log.Print("Getting list of all cron jobs in the cluster")
 
 	channels := &common.ResourceChannels{

@@ -18,6 +18,7 @@ package ingress
 
 import (
 	"context"
+	"fmt"
 
 	v1 "k8s.io/api/networking/v1"
 	client "k8s.io/client-go/kubernetes"
@@ -53,6 +54,11 @@ type IngressList struct {
 // GetIngressList returns all ingresses in the given namespace.
 func GetIngressList(client client.Interface, namespace *common.NamespaceQuery,
 	dsQuery *dataselect.DataSelectQuery) (*IngressList, error) {
+	// Handle nil client to prevent panic
+	if client == nil {
+		return nil, fmt.Errorf("kubernetes client is nil")
+	}
+	
 	ingressList, err := client.NetworkingV1().Ingresses(namespace.ToRequestParam()).List(context.TODO(), helpers.ListEverything)
 
 	nonCriticalErrors, criticalError := errors.ExtractErrors(err)

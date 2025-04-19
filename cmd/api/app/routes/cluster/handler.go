@@ -246,6 +246,8 @@ func getAuthenticatedUser(c *gin.Context) string {
 	user, exists := c.Get("user")
 	if exists {
 		if userObj, ok := user.(*v1.User); ok {
+			// Set the username for use in non-context functions
+			client.SetCurrentUser(userObj.Name)
 			return userObj.Name
 		}
 	}
@@ -270,6 +272,8 @@ func getAuthenticatedUser(c *gin.Context) string {
 		return ""
 	}
 
+	// Store the username for use in non-context functions
+	client.SetCurrentUser(claims.Username)
 	return claims.Username
 }
 

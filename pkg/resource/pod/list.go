@@ -25,6 +25,7 @@ import (
 	"github.com/karmada-io/dashboard/pkg/common/types"
 	"github.com/karmada-io/dashboard/pkg/dataselect"
 	"github.com/karmada-io/dashboard/pkg/resource/common"
+	"fmt"
 )
 
 // Pod contains information about a single Pod.
@@ -48,6 +49,11 @@ type PodList struct {
 
 // GetPodList returns a list of all Pods in all cluster.
 func GetPodList(client kubernetes.Interface, nsQuery *common.NamespaceQuery, dsQuery *dataselect.DataSelectQuery) (*PodList, error) {
+	// Handle nil client to prevent panic
+	if client == nil {
+		return nil, fmt.Errorf("kubernetes client is nil")
+	}
+	
 	channels := &common.ResourceChannels{
 		PodList: common.GetPodListChannel(client, nsQuery, 1),
 	}

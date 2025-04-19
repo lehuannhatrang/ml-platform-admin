@@ -17,6 +17,7 @@ limitations under the License.
 package deployment
 
 import (
+	"fmt"
 	"log"
 
 	apps "k8s.io/api/apps/v1"
@@ -64,6 +65,11 @@ type Deployment struct {
 // GetDeploymentList returns a list of all Deployments in the cluster.
 func GetDeploymentList(client client.Interface, nsQuery *common.NamespaceQuery, dsQuery *dataselect.DataSelectQuery) (*DeploymentList, error) {
 	log.Print("Getting list of all deployments in the cluster")
+
+	// Handle nil client to prevent panic
+	if client == nil {
+		return nil, fmt.Errorf("kubernetes client is nil")
+	}
 
 	channels := &common.ResourceChannels{
 		DeploymentList: common.GetDeploymentListChannel(client, nsQuery, 1),

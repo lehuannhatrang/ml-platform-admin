@@ -18,6 +18,7 @@ package persistentvolume
 
 import (
 	"context"
+	"fmt"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,6 +53,11 @@ type PersistentVolumeDetail struct {
 
 // GetPersistentVolumeList returns a list of all persistentvolumes in the cluster.
 func GetPersistentVolumeList(client kubernetes.Interface, dsQuery *dataselect.DataSelectQuery) (*PersistentVolumeList, error) {
+	// Handle nil client to prevent panic
+	if client == nil {
+		return nil, fmt.Errorf("kubernetes client is nil")
+	}
+	
 	pvcList, err := client.CoreV1().PersistentVolumes().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -62,6 +68,11 @@ func GetPersistentVolumeList(client kubernetes.Interface, dsQuery *dataselect.Da
 
 // GetPersistentVolumeDetail returns detailed information about a persistentvolume.
 func GetPersistentVolumeDetail(client kubernetes.Interface, name string) (*PersistentVolumeDetail, error) {
+	// Handle nil client to prevent panic
+	if client == nil {
+		return nil, fmt.Errorf("kubernetes client is nil")
+	}
+	
 	pv, err := client.CoreV1().PersistentVolumes().Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err

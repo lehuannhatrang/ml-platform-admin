@@ -19,6 +19,7 @@ package client
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	karmadaclientset "github.com/karmada-io/karmada/pkg/generated/clientset/versioned"
@@ -28,6 +29,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/klog/v2"
+
+	// Added for user extraction and FGA
+	"github.com/karmada-io/dashboard/pkg/auth"
+	"github.com/karmada-io/dashboard/pkg/auth/fga"
+	v1 "k8s.io/api/authentication/v1"
 )
 
 // LoadRestConfig creates a rest.Config using the passed kubeconfig. If context is empty, current context in kubeconfig will be used.
@@ -133,6 +139,78 @@ func karmadaClientFromRequest(request *http.Request) (karmadaclientset.Interface
 // If clusterName is provided, it will configure the client to use the Karmada proxy to access the member cluster.
 // If clusterName is empty, it will return a regular dynamic client for the member cluster.
 func GetDynamicClientForMember(ctx *gin.Context, clusterName string) (dynamic.Interface, error) {
+	// Get the authenticated username using a comprehensive approach that checks:
+	// 1. User object in context (set by middleware)
+	// 2. JWT claims in context
+	// 3. Authorization header (Bearer token)
+	usernameRaw, exists := ctx.Get("user")
+	var username string
+	if exists {
+		if userObj, ok := usernameRaw.(*v1.UserInfo); ok {
+			username = userObj.Username
+		}
+	}
+	if username == "" {
+		// fallback: check JWT claims or other context fields as in getAuthenticatedUser
+		claimsRaw, exists := ctx.Get("claims")
+		if exists {
+			if claims, ok := claimsRaw.(map[string]interface{}); ok {
+				if uname, ok := claims["username"].(string); ok {
+					username = uname
+				}
+			}
+		}
+	}
+	// If still no username, try getting it from the Authorization header
+	if username == "" {
+		// Avoid nil pointer dereference if ctx.Request is nil (happens with empty contexts)
+		if ctx != nil && ctx.Request != nil {
+			authHeader := ctx.GetHeader("Authorization")
+			if authHeader != "" {
+				// The header format should be "Bearer <token>"
+				const prefix = "Bearer "
+				if len(authHeader) > len(prefix) && strings.HasPrefix(authHeader, prefix) {
+					tokenString := authHeader[len(prefix):]
+
+					// Validate the token
+					claims, err := auth.ValidateToken(tokenString)
+					if err == nil && claims != nil {
+						username = claims.Username
+					}
+				}
+			}
+		}
+	}
+
+	// Check cluster access permission if clusterName is provided and username is available
+	if clusterName != "" && username != "" {
+		fgaServiceRaw, exists := ctx.Get("fgaService")
+		var fgaClient fga.Client
+		if exists {
+			if svc, ok := fgaServiceRaw.(*fga.Service); ok {
+				fgaClient = svc.GetClient()
+			}
+		}
+		// Fallback to global FGA service if available
+		if fgaClient == nil && fga.FGAService != nil && fga.FGAService.GetClient() != nil {
+			fgaClient = fga.FGAService.GetClient()
+		}
+		if fgaClient == nil {
+			klog.Warning("OpenFGA client is not initialized, skipping permission check")
+			// Continue without permission check if OpenFGA is not available
+			// This is a fallback to maintain backward compatibility
+		} else {
+			// Only check permissions if we have an FGA client
+			allowed, err := fga.HasClusterAccess(ctx, fgaClient, username, clusterName)
+			if err != nil {
+				return nil, fmt.Errorf("failed to check cluster access: %w", err)
+			}
+			if !allowed {
+				return nil, fmt.Errorf("user %s does not have access to cluster %s", username, clusterName)
+			}
+		}
+	}
+
 	memberConfig, err := GetMemberConfig()
 	if err != nil {
 		klog.ErrorS(err, "Failed to get member config")
