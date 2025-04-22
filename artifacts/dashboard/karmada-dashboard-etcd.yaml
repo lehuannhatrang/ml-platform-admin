@@ -119,7 +119,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: karmada-dashboard-etcd-headless
+  name: karmada-dashboard-etcd
   namespace: karmada-system
   labels:
     app: karmada-dashboard-etcd
@@ -134,3 +134,20 @@ spec:
   selector:
     app: karmada-dashboard-etcd
   clusterIP: None
+---
+# Service for etcd client connections 
+apiVersion: v1
+kind: Service
+metadata:
+  name: karmada-dashboard-etcd-client
+  namespace: karmada-system
+  labels:
+    app: karmada-dashboard-etcd
+spec:
+  ports:
+    - name: client
+      port: 2379
+      targetPort: 2379
+  selector:
+    app: karmada-dashboard-etcd
+  type: ClusterIP
