@@ -3,4 +3,3 @@ kind: Kustomization
 
 resources:
   - openfga-svc.yaml
-  - openfga-authmodel.yaml
