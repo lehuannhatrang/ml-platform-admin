@@ -7,6 +7,7 @@ resources:
   - karmada-dashboard-api.yaml
   - karmada-dashboard-configmap.yaml
   - karmada-dashboard-etcd.yaml
+  - karmada-dashboard-etcd-headless.yaml
 
 # Configuration for secrets that can be created at deploy time
 secretGenerator:
