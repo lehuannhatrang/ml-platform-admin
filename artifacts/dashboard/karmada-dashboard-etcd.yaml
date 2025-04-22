@@ -7,7 +7,7 @@ metadata:
     app: karmada-dashboard-etcd
 spec:
   replicas: 1
-  serviceName: karmada-dashboard-etcd-headless
+  serviceName: karmada-dashboard-etcd
   selector:
     matchLabels:
       app: karmada-dashboard-etcd
@@ -48,7 +48,7 @@ spec:
             - --advertise-client-urls
             - http://karmada-dashboard-etcd.karmada-system.svc:2379
             - --initial-cluster
-            - etcd0=http://karmada-dashboard-etcd-0.karmada-dashboard-etcd-headless.karmada-system.svc:2380
+            - etcd0=http://karmada-dashboard-etcd-0.karmada-dashboard-etcd.karmada-system.svc:2380
             - --initial-cluster-state
             - new
             - --data-dir=/var/lib/etcd
