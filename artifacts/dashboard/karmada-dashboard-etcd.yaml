@@ -114,24 +114,3 @@ spec:
   selector:
     app: karmada-dashboard-etcd
   type: ClusterIP
----
-# Headless service for etcd peer discovery
-apiVersion: v1
-kind: Service
-metadata:
-  name: karmada-dashboard-etcd
-  namespace: karmada-system
-  labels:
-    app: karmada-dashboard-etcd
-spec:
-  ports:
-    - name: client
-      port: 2379
-      targetPort: 2379
-    - name: server
-      port: 2380
-      targetPort: 2380
-  selector:
-    app: karmada-dashboard-etcd
-  clusterIP: None
-
