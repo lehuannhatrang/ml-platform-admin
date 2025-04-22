@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: openfga-api
+  namespace: karmada-system
+  labels:
+    app.kubernetes.io/instance: openfga
+    app.kubernetes.io/name: openfga
+spec:
+  ports:
+    - name: grpc
+      protocol: TCP
+      port: 8081
+      targetPort: grpc
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+    - name: playground
+      protocol: TCP
+      port: 3000
+      targetPort: playground
+  selector:
+    app.kubernetes.io/instance: openfga
+    app.kubernetes.io/name: openfga
+  type: ClusterIP

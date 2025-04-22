@@ -114,7 +114,18 @@ eyJhbGciOiJSUzI1NiIsImtpZCI6InZLdkRNclVZSFB6SUVXczBIRm8zMDBxOHFOanQxbWU4WUk1VVVp
 ### Login Dashboard
 Now open Karmada-dashboard with url [http://your-karmada-host:32000 ]()
 
-copy the token you just generated and paste it into the Enter token field on the login page. 
+Login to the dashboard with username and password:
+
+Default username and password:
+```
+- username: admin
+- password: admin123
+```
+
+![image](docs/images/dashboard-login.png)
+
+
+The 1st time you login, you need to copy the token you just generated and paste it into the Enter token field on the login page. 
 ![image](docs/images/readme-login-en.png)
 Once the process of authentication passed, you can use karmada dashboard freely. You can follow the Usage of karmada-dashboard to have a quick experience of  karmada dashboard.
 

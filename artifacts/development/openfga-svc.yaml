@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: openfga-nodeport
+  namespace: karmada-system
+  labels:
+    app.kubernetes.io/instance: openfga
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: openfga
+    app.kubernetes.io/version: v1.8.9
+    helm.sh/chart: openfga-0.2.26
+spec:
+  ports:
+    - name: grpc
+      protocol: TCP
+      port: 8081
+      targetPort: grpc
+      nodePort: 30081
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+      nodePort: 30080
+    - name: playground
+      protocol: TCP
+      port: 3000
+      targetPort: playground
+      nodePort: 30082
+  selector:
+    app.kubernetes.io/instance: openfga
+    app.kubernetes.io/name: openfga
+  type: NodePort
