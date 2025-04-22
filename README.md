@@ -57,7 +57,7 @@ cd dashboard
 
 Create the secret based on your Karmada config, the Karmada Dashboard will use this config to talk to the Karmada API server.
 ```
-kubectl create secret generic kubeconfig --from-file=kubeconfig=$HOME/.kube/karmada-apiserver.config -n karmada-system
+kubectl create secret generic kubeconfig-karmada-apiserver --from-file=kubeconfig=$HOME/.kube/karmada-apiserver.config -n karmada-system
 ```
 
 Deploy Karmada Dashboard:
