@@ -55,6 +55,9 @@ import ContinuousDeliveryProjectPage from '@/pages/continuous-delivery/project';
 import ContinuousDeliveryApplicationSetPage from '@/pages/continuous-delivery/application-set';
 import InitTokenPage from '@/pages/login/init-token';
 import PersistentVolumePage from '@/pages/multicloud-storage-manage/persistent-volume';
+import FederationNamespacesPage from '@/pages/federation-resources/namespaces';
+import FederationServicesPage from '@/pages/federation-resources/services';
+import FederationWorkloadsPage from '@/pages/federation-resources/workloads';
 
 export interface IRouteObjectHandle {
   icon?: ReactNode;
@@ -260,33 +263,6 @@ export function getRoutes() {
           ]
         },
         {
-          path: '/multicloud-policy-manage',
-          handle: {
-            sidebarKey: 'MULTICLOUD-POLICY-MANAGE',
-            sidebarName: i18nInstance.t('8654db688fcb1f7f11f6d7ea6b208a55'),
-            icon: <Icons.policy {...IconStyles} />,
-            isPage: false,
-          },
-          children: [
-            {
-              path: 'propagation-policy',
-              element: <MultiCloudPropagationPolicy />,
-              handle: {
-                sidebarKey: 'PROPAGATION-POLICY',
-                sidebarName: i18nInstance.t('a95abe7b8eeb55427547e764bf39f1c4'),
-              },
-            },
-            {
-              path: 'override-policy',
-              element: <MultiCloudOverridePolicy />,
-              handle: {
-                sidebarKey: 'OVERRIDE-POLICY',
-                sidebarName: i18nInstance.t('0a7e9443c41575378d2db1e288d3f1cb'),
-              },
-            },
-          ],
-        },
-        {
           path: '/multicloud-custom-resource',
           handle: {
             sidebarKey: 'MULTICLOUD-CUSTOM-RESOURCE',
@@ -347,6 +323,57 @@ export function getRoutes() {
               },
             },
           ]
+        },
+        {
+          path: '/federation-resources',
+          handle: {
+            sidebarKey: 'FEDERATION-RESOURCES',
+            sidebarName: 'Federation Resources',
+            icon: <Icons.federation {...IconStyles} />,
+            isPage: false,
+          },
+          children: [
+            {
+              path: 'namespaces',
+              element: <FederationNamespacesPage />,
+              handle: {
+                sidebarKey: 'FEDERATION-NAMESPACES',
+                sidebarName: 'Namespaces',
+              },
+            },
+            {
+              path: 'workloads',
+              element: <FederationWorkloadsPage />,
+              handle: {
+                sidebarKey: 'FEDERATION-WORKLOADS',
+                sidebarName: 'Workloads',
+              },
+            },
+            {
+              path: 'services',
+              element: <FederationServicesPage />,
+              handle: {
+                sidebarKey: 'FEDERATION-SERVICES',
+                sidebarName: 'Services',
+              },
+            },
+            {
+              path: 'propagation-policy',
+              element: <MultiCloudPropagationPolicy />,
+              handle: {
+                sidebarKey: 'PROPAGATION-POLICY',
+                sidebarName: i18nInstance.t('a95abe7b8eeb55427547e764bf39f1c4'),
+              },
+            },
+            {
+              path: 'override-policy',
+              element: <MultiCloudOverridePolicy />,
+              handle: {
+                sidebarKey: 'OVERRIDE-POLICY',
+                sidebarName: i18nInstance.t('0a7e9443c41575378d2db1e288d3f1cb'),
+              },
+            },
+          ],
         },
         {
           path: '/basic-config',
