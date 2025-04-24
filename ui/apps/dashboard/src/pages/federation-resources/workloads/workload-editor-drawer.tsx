@@ -18,7 +18,7 @@ import { FC, useEffect, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { Button, Drawer, Space, message } from 'antd';
 import { IResponse } from '@/services/base.ts';
-import { parse } from 'yaml';
+import { parse, stringify } from 'yaml';
 import _ from 'lodash';
 import { PutResource } from '@/services/unstructured';
 import axios from 'axios';
@@ -137,6 +137,7 @@ function getTitle(
 }
 
 const WorkloadEditorDrawer: FC<WorkloadEditorDrawerProps> = (props) => {
+  console.log(props);
   const {
     open,
     mode,
@@ -150,17 +151,29 @@ const WorkloadEditorDrawer: FC<WorkloadEditorDrawerProps> = (props) => {
   } = props;
   
   const [content, setContent] = useState<string>(
-    workloadContent || defaultTemplates[type]
+    defaultTemplates[type]
   );
   const [messageApi] = message.useMessage();
 
   useEffect(() => {
     if (workloadContent) {
-      setContent(workloadContent);
+      // Check if workloadContent is already a string
+      if (typeof workloadContent === 'string') {
+        setContent(workloadContent);
+      } else {
+        // If it's an object, stringify it to YAML
+        try {
+          setContent(stringify(workloadContent));
+        } catch (error) {
+          console.error('Error converting content to YAML:', error);
+          messageApi.error('Error preparing content for display');
+          setContent(defaultTemplates[type]);
+        }
+      }
     } else if (mode === 'create') {
       setContent(defaultTemplates[type]);
     }
-  }, [workloadContent, mode, type]);
+  }, [workloadContent, mode, type, messageApi]);
 
   function handleEditorChange(value: string | undefined) {
     setContent(value || '');

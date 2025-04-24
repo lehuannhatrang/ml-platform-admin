@@ -80,7 +80,7 @@ const FederationWorkloadsPage = () => {
   // Function to fetch workload details
   const fetchWorkloadDetails = async (workloadName: string, namespace: string, type: string) => {
     try {
-      const response = await axios.get(`${activeApi}/detail/${namespace}/${workloadName}`);
+      const response = await axios.get(`${activeApi}/${namespace}/${workloadName}`);
       // Handle the response based on the API structure
       if (response.data?.code === 200 && response.data?.data) {
         return response.data.data;

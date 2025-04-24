@@ -141,7 +141,7 @@ const FederationServicesPage = () => {
   // Function to fetch service/ingress details
   const fetchServiceDetails = async (itemName: string, namespace: string, type: string) => {
     try {
-      const response = await axios.get(`${activeApi}/detail/${namespace}/${itemName}`);
+      const response = await axios.get(`${activeApi}/${namespace}/${itemName}`);
       // Handle the response based on the API structure
       if (response.data?.code === 200 && response.data?.data) {
         return response.data.data;
