@@ -39,6 +39,20 @@ func Fail(c *gin.Context, err error) {
 	Response(c, err, nil)
 }
 
+// FailWithStatus generates a fail response with a custom HTTP status code
+func FailWithStatus(c *gin.Context, err error, httpStatus int) {
+	code := 500          // biz status code
+	message := "error"   // biz status message
+	if err != nil {
+		message = err.Error()
+	}
+	c.JSON(httpStatus, BaseResponse{
+		Code: code,
+		Msg:  message,
+		Data: nil,
+	})
+}
+
 // Response generate response
 func Response(c *gin.Context, err error, data interface{}) {
 	code := 200          // biz status code

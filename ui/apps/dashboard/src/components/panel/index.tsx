@@ -19,11 +19,15 @@ import * as React from 'react';
 import { FC, ReactNode, useMemo } from 'react';
 import { IRouteObjectHandle, getRoutes } from '@/routes/route.tsx';
 
-import { Breadcrumb } from 'antd';
+import { Breadcrumb, Flex, Select, Tooltip } from 'antd';
 import { useMatches } from 'react-router-dom';
+import useCluster from '@/hooks/use-cluster';
+import { KubernetesOutlined } from '@ant-design/icons';
+import { getClusterColorByValue } from '@/utils/cluster';
 
 interface IPanelProps {
   children: ReactNode;
+  showSelectCluster?: boolean;
 }
 
 interface MenuItem {
@@ -35,8 +39,9 @@ interface MenuItem {
 }
 
 const Panel: FC<IPanelProps> = (props) => {
-  const { children } = props;
+  const { children, showSelectCluster = true } = props;
   const matches = useMatches();
+  const { clusterOptions, isClusterDataLoading, selectedCluster, setSelectedCluster } = useCluster({});
   const breadcrumbs = useMemo(() => {
     if (!matches || matches.length === 0) return [] as MenuItem[];
     const filteredMatches = matches.filter((m) => Boolean(m.handle));
@@ -63,9 +68,42 @@ const Panel: FC<IPanelProps> = (props) => {
     }
     return menuItems;
   }, [matches]);
+  const handleClusterChange = (value: string) => {
+    const selectedOption = clusterOptions.find(opt => opt.value === value);
+    if (selectedOption) {
+      setSelectedCluster(selectedOption);
+    }
+  };
   return (
     <div className="w-full h-full px-[30px] py-[20px] box-border bg-[#FAFBFC]">
-      <Breadcrumb className="mb-4" items={breadcrumbs} />
+      <Flex justify='space-between' align='center' className='mb-4'>
+        <Flex align='center' gap={8}>
+          {showSelectCluster ? <>
+            <Tooltip title="Select Cluster">
+              <KubernetesOutlined style={{ fontSize: 36, color: getClusterColorByValue(selectedCluster.value) }} />
+            </Tooltip>
+            <Select
+              className=""
+              size="large"
+              loading={isClusterDataLoading}
+              value={selectedCluster.value}
+              onChange={handleClusterChange}
+              options={clusterOptions}
+              disabled={clusterOptions.length === 0}
+              style={{ width: 250 }}
+              optionRender={(option) => {
+                const value = typeof option.value === 'string' ? option.value : String(option.value);
+                return <Flex gap={8} align='center'>
+                  <KubernetesOutlined style={{ fontSize: 36, color: getClusterColorByValue(value) }} />
+                  {option.label}
+                </Flex>;
+              }}
+              placeholder="Select cluster"
+            />
+          </> : <div></div>}
+        </Flex>
+        <Breadcrumb className="mb-4" items={breadcrumbs} />
+      </Flex>
       <div className="w-full h-full bg-white box-border p-[12px] overflow-x-hidden overflow-y-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
         {children}
       </div>

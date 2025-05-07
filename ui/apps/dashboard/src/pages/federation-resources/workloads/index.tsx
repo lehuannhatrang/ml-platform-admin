@@ -340,7 +340,7 @@ const FederationWorkloadsPage = () => {
   ];
 
   return (
-    <Panel>
+    <Panel showSelectCluster={false}>
       <Tabs
         activeKey={activeTab}
         onChange={setActiveTab}

@@ -38,9 +38,11 @@ import {
 } from 'antd';
 import { Icons } from '@/components/icons';
 import NewClusterModal from './new-cluster-modal';
+import ClusterUsersModal from './cluster-users-modal';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCluster } from '@/hooks';
+
 function getPercentColor(v: number): string {
   // 0~60 #52C41A
   // 60~80 #FAAD14
@@ -53,6 +55,7 @@ function getPercentColor(v: number): string {
     return '#F5222D';
   }
 }
+
 const ClusterManagePage = () => {
   const [messageApi, messageContextHolder] = message.useMessage();
   const { data, isLoading, refetch } = useQuery({
@@ -71,6 +74,15 @@ const ClusterManagePage = () => {
     open: false,
   });
 
+  // State for user management modal
+  const [usersModalData, setUsersModalData] = useState<{
+    open: boolean;
+    clusterName: string;
+  }>({
+    open: false,
+    clusterName: '',
+  });
+
   const navigate = useNavigate();
 
   const { setSelectedCluster } = useCluster({});
@@ -79,6 +91,7 @@ const ClusterManagePage = () => {
     setSelectedCluster({ label: clusterInfo.objectMeta.name, value: clusterInfo.objectMeta.uid });
     navigate(`/overview`);
   }
+
   const columns: TableColumnProps<Cluster>[] = [
     {
       title: i18nInstance.t('c3f28b34bbdec501802fa403584267e6', '集群名称'),
@@ -214,6 +227,18 @@ const ClusterManagePage = () => {
             <Button
               size={'small'}
               type="link"
+              onClick={() => {
+                setUsersModalData({
+                  open: true,
+                  clusterName: r.objectMeta.name,
+                });
+              }}
+            >
+              Users
+            </Button>
+            <Button
+              size={'small'}
+              type="link"
               onClick={async () => {
                 const ret = await GetClusterDetail(r.objectMeta.name);
                 setModalData({
@@ -266,8 +291,9 @@ const ClusterManagePage = () => {
       },
     },
   ];
+
   return (
-    <Panel>
+    <Panel showSelectCluster={false}>
       <div className={'flex flex-row justify-between mb-4'}>
         <Input.Search
           placeholder={i18nInstance.t(
@@ -349,6 +375,22 @@ const ClusterManagePage = () => {
           });
         }}
         clusterDetail={clusterModalData.clusterDetail}
+      />
+
+      {/* Add the Cluster Users Modal */}
+      <ClusterUsersModal
+        clusterName={usersModalData.clusterName}
+        open={usersModalData.open}
+        onClose={() => {
+          setUsersModalData({
+            open: false,
+            clusterName: '',
+          });
+        }}
+        onSuccess={() => {
+          // Refetch cluster list after successful user updates
+          refetch();
+        }}
       />
 
       {messageContextHolder}

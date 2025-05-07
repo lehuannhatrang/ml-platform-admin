@@ -37,12 +37,10 @@ const LoginPage = () => {
             '11427a1edb98cf7efe26ca229d6f2626',
             '登录成功，即将跳转',
           ),
+          1
         );
-        setTimeout(() => {
-          // Store the received token from the server
-          setToken(ret.data.token);
-          navigate('/overview');
-        }, 1000);
+        setToken(ret.data.token);
+        navigate('/overview');
       } else {
         if (ret.message === "MSG_LOGIN_UNAUTHORIZED_ERROR") {
           navigate('/init-token');
@@ -70,7 +68,7 @@ const LoginPage = () => {
     <div className={'h-screen w-screen  bg-[#FAFBFC]'}>
       <div className="h-full w-full flex justify-center items-center ">
         <Card
-          className={cn('w-1/2', styles['login-card'])}
+          className={cn('w-1/4', styles['login-card'])}
           title={
             <div
               className={

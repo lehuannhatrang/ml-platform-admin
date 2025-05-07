@@ -227,6 +227,24 @@ export interface CreateArgoApplicationRequest {
   };
 }
 
+export interface ArgoApplicationResourceInfo {
+  kind: string;
+  name: string;
+  namespace: string;
+  uid: string;
+  status: string;
+  creationTimestamp: string;
+  health?: {
+    status: string;
+  };
+  children?: ArgoApplicationResourceInfo[];
+}
+
+export interface ArgoApplicationDetail {
+  application: ArgoApplication;
+  resources: ArgoApplicationResourceInfo[];
+}
+
 /**
  * Creates a new ArgoCD Project in the specified cluster
  */
@@ -375,5 +393,18 @@ export async function GetArgoProjectDetails(
   applications: ArgoApplication[];
 }>> {
   const response = await karmadaClient.get(`/member/${clusterName}/argocd/project/${projectName}`);
+  return response.data;
+}
+
+/**
+ * Gets detailed information about an ArgoCD Application and its resources tree
+ */
+export async function GetArgoApplicationDetail(
+  clusterName: string,
+  applicationName: string
+): Promise<IResponse<ArgoApplicationDetail>> {
+  const response = await karmadaClient.get(
+    `/member/${clusterName}/argocd/application/${applicationName}`
+  );
   return response.data;
 }

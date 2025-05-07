@@ -120,3 +120,36 @@ export async function DeleteCluster(clusterName: string) {
   );
   return resp.data;
 }
+
+// Types for cluster users
+export interface ClusterUser {
+  username: string;
+  displayName: string;
+  email?: string;
+  roles: string[];
+}
+
+export interface ClusterUsersResponse {
+  users: ClusterUser[];
+  errors: string[];
+}
+
+// Get users for a specific cluster
+export async function GetClusterUsers(clusterName: string) {
+  const resp = await karmadaClient.get<IResponse<ClusterUsersResponse>>(
+    `/cluster/${clusterName}/users`
+  );
+  return resp.data;
+}
+
+// Update users for a specific cluster
+export async function UpdateClusterUsers(
+  clusterName: string, 
+  users: { username: string; roles: string[] }[]
+) {
+  const resp = await karmadaClient.put<IResponse<ClusterUsersResponse>>(
+    `/cluster/${clusterName}/users`,
+    { users }
+  );
+  return resp.data;
+}

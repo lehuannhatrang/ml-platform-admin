@@ -258,7 +258,7 @@ const FederationNamespacesPage = () => {
   ];
 
   return (
-    <Panel>
+    <Panel showSelectCluster={false}>
       <div className="flex flex-row mb-4 justify-between">
         <div className="flex flex-row space-x-4">
           <Input.Search
