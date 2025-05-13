@@ -32,6 +32,7 @@ import Panel from '@/components/panel';
 import i18nInstance from '@/utils/i18n';
 import { useQuery } from '@tanstack/react-query';
 import { GetClusters } from '@/services';
+import NodeTopologyGraph from './components/node-topology-graph';
 import { Icons } from '@/components/icons';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -52,6 +53,8 @@ const Overview = () => {
     },
     refetchInterval: 5000,
   });
+  
+
 
   const { data: metricsDashboards, refetch: refetchDashboards } = useQuery({
     queryKey: ['GetMetricsDashboards'],
@@ -79,6 +82,8 @@ const Overview = () => {
       setSelectedDashboard(metricsDashboards?.[0] || null);
     }
   }, [metricsDashboards]);
+  
+
 
   const { allocatedCPU, totalCPU } = data?.memberClusterStatus?.cpuSummary || {};
   const { allocatedMemory, totalMemory } = data?.memberClusterStatus?.memorySummary || {};
@@ -274,6 +279,11 @@ const Overview = () => {
                       </Row>
                     </Col>
                   </Row>
+                </Col>
+              </Row>
+              <Row>
+                <Col span={24}>
+                  <NodeTopologyGraph selectedCluster={selectedCluster} />
                 </Col>
               </Row>
             </Card>
