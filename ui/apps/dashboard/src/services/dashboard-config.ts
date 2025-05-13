@@ -43,6 +43,7 @@ interface DashboardConfig {
   docker_registries: dockerRegistry[];
   chart_registries: chartRegistry[];
   menu_configs: menuConfig[];
+  ai_agent_chat_webhook: string;
 }
 
 export async function GetDashboardConfig() {

@@ -102,11 +102,12 @@ func InitDashboardConfig(k8sClient kubernetes.Interface, stopper <-chan struct{}
 // GetDashboardConfig returns a copy of the current dashboard configuration.
 func GetDashboardConfig() DashboardConfig {
 	return DashboardConfig{
-		DockerRegistries:  dashboardConfig.DockerRegistries,
-		ChartRegistries:   dashboardConfig.ChartRegistries,
-		MenuConfigs:       dashboardConfig.MenuConfigs,
-		PathPrefix:        dashboardConfig.PathPrefix,
-		MetricsDashboards: dashboardConfig.MetricsDashboards,
+		DockerRegistries:   dashboardConfig.DockerRegistries,
+		ChartRegistries:    dashboardConfig.ChartRegistries,
+		MenuConfigs:        dashboardConfig.MenuConfigs,
+		PathPrefix:         dashboardConfig.PathPrefix,
+		MetricsDashboards:  dashboardConfig.MetricsDashboards,
+		AIAgentChatWebHook: dashboardConfig.AIAgentChatWebHook,
 	}
 }
 

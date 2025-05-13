@@ -52,6 +52,9 @@ func SetDashboardConfig(c *gin.Context) {
 	if len(setDashboardConfigRequest.MenuConfigs) > 0 {
 		dashboardConfig.MenuConfigs = setDashboardConfigRequest.MenuConfigs
 	}
+	if setDashboardConfigRequest.AIAgentChatWebHook != "" {
+		dashboardConfig.AIAgentChatWebHook = setDashboardConfigRequest.AIAgentChatWebHook
+	}
 	k8sClient := client.InClusterClient()
 	err := config.UpdateDashboardConfig(k8sClient, dashboardConfig)
 	if err != nil {

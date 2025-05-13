@@ -49,9 +49,10 @@ type MetricsDashboard struct {
 
 // DashboardConfig represents the configuration structure for the Karmada dashboard.
 type DashboardConfig struct {
-	DockerRegistries  []DockerRegistry   `yaml:"docker_registries" json:"docker_registries"`
-	ChartRegistries   []ChartRegistry    `yaml:"chart_registries" json:"chart_registries"`
-	MenuConfigs       []MenuConfig       `yaml:"menu_configs" json:"menu_configs"`
-	PathPrefix        string             `yaml:"path_prefix" json:"path_prefix"`
-	MetricsDashboards []MetricsDashboard `yaml:"metrics_dashboards" json:"metrics_dashboards"`
+	DockerRegistries   []DockerRegistry   `yaml:"docker_registries" json:"docker_registries"`
+	ChartRegistries    []ChartRegistry    `yaml:"chart_registries" json:"chart_registries"`
+	MenuConfigs        []MenuConfig       `yaml:"menu_configs" json:"menu_configs"`
+	PathPrefix         string             `yaml:"path_prefix" json:"path_prefix"`
+	MetricsDashboards  []MetricsDashboard `yaml:"metrics_dashboards" json:"metrics_dashboards"`
+	AIAgentChatWebHook string             `yaml:"ai_agent_chat_webhook" json:"ai_agent_chat_webhook"`
 }

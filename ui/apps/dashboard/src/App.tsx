@@ -24,6 +24,35 @@ import { getAntdLocale } from '@/utils/i18n.tsx';
 
 const queryClient = new QueryClient();
 
+// Helmet configuration component
+const AppHelmet = () => (
+  <Helmet>
+    <title>DCN Dashboard</title>
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="/apple-touch-icon.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="/dcn_lab_logo.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="/dcn_lab_logo.png"
+    />
+    <link
+      rel="shortcut icon"
+      type="image/x-icon"
+      href="/dcn_lab_logo.png"
+    />
+  </Helmet>
+);
+
 function App() {
   return (
     <ConfigProvider
@@ -40,34 +69,7 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <HelmetProvider>
-              <Helmet>
-                <title>DCN Dashboard</title>
-                <link
-                  rel="apple-touch-icon"
-                  sizes="180x180"
-                  href="/apple-touch-icon.png"
-                />
-
-                <link
-                  rel="icon"
-                  type="image/png"
-                  sizes="16x16"
-                  href="/dcn_lab_logo.png"
-                />
-
-                <link
-                  rel="icon"
-                  type="image/png"
-                  sizes="32x32"
-                  href="/dcn_lab_logo.png"
-                />
-
-                <link
-                  rel="shortcut icon"
-                  type="image/x-icon"
-                  href="/dcn_lab_logo.png"
-                />
-              </Helmet>
+              <AppHelmet />
               <Router />
             </HelmetProvider>
           </AuthProvider>
