@@ -9,7 +9,7 @@ spec:
   replicas: 1
   serviceName: karmada-dashboard-etcd-headless
   selector:
-    matchLabels:
+    matchLabels: 
       app: karmada-dashboard-etcd
   updateStrategy:
     type: RollingUpdate
@@ -125,6 +125,7 @@ metadata:
   labels:
     app: karmada-dashboard-etcd
 spec:
+  publishNotReadyAddresses: true
   ports:
     - name: client
       port: 2379
