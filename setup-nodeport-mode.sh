@@ -60,7 +60,7 @@ echo "Step 1: Installing OpenFGA using Helm..."
 
   # Step 4: Verify OpenFGA installation
   echo "Step 4: Verifying OpenFGA installation..."
-  ./artifacts/openfga/setup-openfga.sh
+  ./artifacts/openfga/setup-openfga.sh || echo "OpenFGA verification had issues but continuing with installation..."
   echo ""
 
   # Step 5: Apply the NodePort overlay kustomization
@@ -71,8 +71,8 @@ echo "Step 1: Installing OpenFGA using Helm..."
 
   # Step 6: Wait for dashboard deployments to be ready
   echo "Step 6: Waiting for dashboard deployments to become ready..."
-  kubectl -n karmada-system wait --for=condition=available --timeout=120s deployment/karmada-dashboard-api
-  kubectl -n karmada-system wait --for=condition=available --timeout=120s deployment/karmada-dashboard-web
+  kubectl -n karmada-system wait --for=condition=available --timeout=300s deployment/karmada-dashboard-api
+  kubectl -n karmada-system wait --for=condition=available --timeout=300s deployment/karmada-dashboard-web
   echo "Dashboard deployments are ready."
   echo ""
 

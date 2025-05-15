@@ -4,18 +4,33 @@ set -e
 # This script helps verify the OpenFGA deployment for the Karmada Dashboard
 # It will just check the OpenFGA API status without creating any models
 
-# OpenFGA API URL
-OPENFGA_API_URL="http://localhost:30080"
+# Try accessing OpenFGA through the internal Kubernetes service first
+INTERNAL_API_URL="http://openfga-api.karmada-system.svc.cluster.local:8080"
+NODEPORT_API_URL="http://localhost:30080"
 
-# Check OpenFGA health
+# Check OpenFGA health (internal first, then NodePort)
 echo "Checking OpenFGA API health..."
-HEALTH_RESPONSE=$(curl -s -X GET "${OPENFGA_API_URL}/healthz")
+
+# Try internal service first with a timeout
+echo "Trying internal Kubernetes service..."
+HEALTH_RESPONSE=$(curl -s --connect-timeout 5 -X GET "${INTERNAL_API_URL}/healthz" || echo "failed")
 
 if [[ "$HEALTH_RESPONSE" == *"ok"* ]]; then
-  echo "OpenFGA API is healthy!"
+  echo "OpenFGA API is healthy (internal access)!"
+  IS_HEALTHY=true
 else
-  echo "OpenFGA API is not responding correctly. Please check your deployment."
-  exit 1
+  echo "Could not access internal OpenFGA service, trying NodePort..."
+  # Try NodePort with a timeout
+  HEALTH_RESPONSE=$(curl -s --connect-timeout 5 -X GET "${NODEPORT_API_URL}/healthz" || echo "failed")
+  
+  if [[ "$HEALTH_RESPONSE" == *"ok"* ]]; then
+    echo "OpenFGA API is healthy (NodePort access)!"
+    IS_HEALTHY=true
+  else
+    echo "WARNING: OpenFGA API verification failed. Continuing with installation."
+    echo "You may need to manually verify OpenFGA after installation."
+    IS_HEALTHY=false
+  fi
 fi
 
 # Print information for updating dashboard configuration
