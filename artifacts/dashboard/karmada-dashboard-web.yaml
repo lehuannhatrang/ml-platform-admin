@@ -29,7 +29,7 @@ spec:
             - --bind-address=0.0.0.0
             - --dashboard-config-path=/config/dashboard-config.yaml
           name: karmada-dashboard-web
-          image: lehuannhatrang/dcn-dashboard-web:v0.21
+          image: lehuannhatrang/dcn-dashboard-web:v0.25
           imagePullPolicy: IfNotPresent
           env:
             - name: GIN_MODE
