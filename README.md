@@ -2,7 +2,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/kubernetes/dashboard/blob/master/LICENSE)
 
 Karmada Dashboard is a general-purpose, web-based control panel for Karmada which is a multi-cluster management project.
-![image](docs/images/readme-dashboard-en.png)
+![image](docs/images/readme-dcn_dashboard.png)
 
 ## 🚀QuickStart
 
@@ -62,7 +62,7 @@ kubectl create secret generic kubeconfig-karmada-apiserver --from-file=kubeconfi
 
 Deploy Karmada Dashboard:
 ```
-kubectl apply -k artifacts/overlays/nodeport-mode
+./setup-nodeport-mode.sh
 ```
 
 This will deploy two components in `karmada-system` namespace:
@@ -128,6 +128,15 @@ Default username and password:
 The 1st time you login, you need to copy the token you just generated and paste it into the Enter token field on the login page. 
 ![image](docs/images/readme-login-en.png)
 Once the process of authentication passed, you can use karmada dashboard freely. You can follow the Usage of karmada-dashboard to have a quick experience of  karmada dashboard.
+
+Note: You may need to refresh the page after submitting the token.
+
+### Uninstall
+
+You can uninstall the dashboard and openfga by running the following command:
+```
+./setup-nodeport-mode.sh --uninstall
+```
 
 ## Meeting
 

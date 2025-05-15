@@ -77,13 +77,11 @@ echo "Step 1: Installing OpenFGA using Helm..."
   echo ""
 
   # Get NodePort for dashboard web
-  WEB_NODEPORT=$(kubectl get svc -n karmada-system karmada-dashboard-web-nodeport -o jsonpath='{.spec.ports[0].nodePort}')
-  API_NODEPORT=$(kubectl get svc -n karmada-system karmada-dashboard-api-nodeport -o jsonpath='{.spec.ports[0].nodePort}')
+  WEB_NODEPORT=$(kubectl get svc -n karmada-system karmada-dashboard-web -o jsonpath='{.spec.ports[0].nodePort}')
 
   echo ""
   echo "=== DCN Dashboard Setup Complete ==="
   echo "Dashboard Web UI is available at: http://<node-ip>:${WEB_NODEPORT}"
-  echo "Dashboard API is available at: http://<node-ip>:${API_NODEPORT}"
   echo "Default credentials: admin / admin123"
   echo ""
   echo "NOTE: Replace <node-ip> with your Kubernetes node's external IP address."
