@@ -153,7 +153,7 @@ export default function ContinuousDeliveryProjectPage() {
             title: 'Source Repositories',
             dataIndex: ['spec', 'sourceRepos'],
             key: 'sourceRepos',
-            render: (repos: string[]) => <TagList tags={repos.map(e => ({
+            render: (repos: string[]) => <TagList tags={repos?.map(e => ({
                 key: e,
                 value: e,
             })) || []} />,
