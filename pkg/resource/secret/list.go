@@ -19,7 +19,6 @@ package secret
 import (
 	"context"
 	"fmt"
-	"log"
 
 	v1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -90,7 +89,6 @@ type SecretList struct {
 // GetSecretList returns all secrets in the given namespace.
 func GetSecretList(client kubernetes.Interface, namespace *common.NamespaceQuery,
 	dsQuery *dataselect.DataSelectQuery) (*SecretList, error) {
-	log.Printf("Getting list of secrets in %s namespace\n", namespace)
 
 	// Handle nil client to prevent panic
 	if client == nil {

@@ -55,6 +55,11 @@ Change to the dashboard directory:
 cd dashboard
 ```
 
+First create secret based on your mgmt cluster config:
+```
+kubectl create secret generic kubeconfig-mgmt-cluster --from-file=kubeconfig=$HOME/.kube/config -n karmada-system
+```
+
 Create the secret based on your Karmada config, the Karmada Dashboard will use this config to talk to the Karmada API server.
 ```
 kubectl create secret generic kubeconfig-karmada-apiserver --from-file=kubeconfig=$HOME/.kube/karmada-apiserver.config -n karmada-system

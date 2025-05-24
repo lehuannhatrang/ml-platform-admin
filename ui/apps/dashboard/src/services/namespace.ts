@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+import { getClusterApiPath } from '@/utils/cluster';
 import {
   DataSelectQuery,
   IResponse,
@@ -32,7 +33,7 @@ export interface Namespace {
 }
 
 export async function GetNamespaces(query: DataSelectQuery, cluster?: ClusterOption) {
-  const apiPath = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/namespace` : '/aggregated/namespace'; 
+  const apiPath = getClusterApiPath(cluster?.label || '', 'namespace'); 
   const resp = await karmadaClient.get<
     IResponse<{
       errors: string[];
@@ -63,7 +64,7 @@ export async function CreateClusterNamespace(params: {
   cluster: string;
 }) {
   const resp = await karmadaClient.post<IResponse<string>>(
-    `/member/${params.cluster}/namespace`,
+    getClusterApiPath(params.cluster, 'namespace'),
     params,
   );
   return resp.data;
@@ -74,7 +75,7 @@ export async function DeleteNamespace(params: {
   cluster: string;
 }) {
   const resp = await karmadaClient.delete<IResponse<string>>(
-    `/member/${params.cluster}/namespace/${params.name}`
+    getClusterApiPath(params.cluster, 'namespace') + `/${params.name}`
   );
   return resp.data;
 }

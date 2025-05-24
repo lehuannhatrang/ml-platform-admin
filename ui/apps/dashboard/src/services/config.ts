@@ -23,6 +23,7 @@ import {
   ObjectMeta,
   TypeMeta,
 } from '@/services/base.ts';
+import { getClusterApiPath } from '@/utils/cluster';
 
 export interface Config {
   objectMeta: ObjectMeta;
@@ -35,7 +36,7 @@ export async function GetConfigMaps(params: {
   cluster?: ClusterOption;
 }) {
   const { namespace, keyword, cluster } = params;
-  const base_url = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/configmap` : `/aggregated/configmap`;
+  const base_url = getClusterApiPath(cluster?.label || '', 'configmap');
   const url = namespace ? `${base_url}/${namespace}` : base_url;
   const requestData = {} as DataSelectQuery;
   if (keyword) {
@@ -66,7 +67,7 @@ export async function GetSecrets(params: {
   cluster?: ClusterOption;
 }) {
   const { namespace, keyword, cluster } = params;
-  const base_url = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/secret` : `/aggregated/secret`;
+  const base_url = getClusterApiPath(cluster?.label || '', 'secret');
   const url = namespace ? `${base_url}/${namespace}` : base_url;
   
   const requestData = {} as DataSelectQuery;

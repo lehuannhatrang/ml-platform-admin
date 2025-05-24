@@ -24,6 +24,7 @@ import {
   Selector,
   TypeMeta,
 } from '@/services/base.ts';
+import { getClusterApiPath } from '@/utils/cluster';
 
 export enum Protocol {
   TCP = 'TCP',
@@ -82,7 +83,7 @@ export async function GetServices(params: {
   keyword?: string;
 }) {
   const { namespace, keyword, cluster } = params;
-  const base_url = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/service` : `/aggregated/service`;
+  const base_url = getClusterApiPath(cluster?.label || '', 'service');
   const url = namespace ? `${base_url}/${namespace}` : base_url;
 
   const requestData = {} as DataSelectQuery;
@@ -118,7 +119,7 @@ export async function GetIngress(params: {
   keyword?: string;
 }) {
   const { namespace, keyword, cluster } = params;
-  const base_url = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/ingress` : `/aggregated/ingress`;
+  const base_url = getClusterApiPath(cluster?.label || '', 'ingress');
   const url = namespace ? `${base_url}/${namespace}` : base_url;
 
   const requestData = {} as DataSelectQuery;

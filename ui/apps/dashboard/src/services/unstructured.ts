@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+import { getClusterApiPath } from '@/utils/cluster';
 import { IResponse, karmadaClient } from './base';
 
 function generateUrlForUnstructuredParams(params: UnstructuredParams) {
@@ -27,7 +28,7 @@ function generateUrlForUnstructuredParams(params: UnstructuredParams) {
 
 function generateUrlForMemberUnstructuredParams(params: MemberUnstructuredParams) {
   const { kind, name, namespace='default', cluster } = params;
-  return !!name ? `/member/${cluster}/_raw/${kind}/${namespace}/${name}` : `/member/${cluster}/_raw/${kind}/${namespace}`;
+  return !!name ? getClusterApiPath(cluster, '_raw') + `/${kind}/${namespace}/${name}` : getClusterApiPath(cluster, '_raw') + `/${kind}/${namespace}`;
 }
 
 export async function DeleteResource(params: UnstructuredParams) {

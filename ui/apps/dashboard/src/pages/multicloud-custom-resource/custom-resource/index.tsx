@@ -66,10 +66,10 @@ const CustomResourcePage: React.FC = () => {
     crd: string;
   }>({ open: false, cluster: '', group: '', crd: '' });
 
-  const handleRowClick = (record: CustomResourceDefinition) => {
+  const handleRowClick = (record: CustomResourceDefinition, cluster: string) => {
     setSelectedResource({
       open: true,
-      cluster: record.metadata.labels?.cluster || '',
+      cluster,
       group: record.spec.group,
       crd: record.metadata.name,
     });
@@ -84,9 +84,9 @@ const CustomResourcePage: React.FC = () => {
       columns={expandColumns}
       dataSource={record.crds}
       pagination={false}
-      onRow={(record) => {
+      onRow={(crdRecord) => {
         return {
-          onClick: () => handleRowClick(record),
+          onClick: () => handleRowClick(crdRecord, record.cluster),
         };
       }}
     />

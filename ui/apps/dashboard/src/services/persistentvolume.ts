@@ -17,6 +17,7 @@ limitations under the License.
 import { ClusterOption } from '@/hooks/use-cluster';
 import { IResponse, ObjectMeta, TypeMeta, karmadaClient } from './base';
 import { AxiosResponse } from 'axios';
+import { getClusterApiPath } from '@/utils/cluster';
 
 export interface PersistentVolumeSpec {
   capacity: {
@@ -65,18 +66,13 @@ export const GetPersistentVolumes = async (
   params: GetPersistentVolumesParams
 ): Promise<AxiosResponse<IResponse<PersistentVolumeList>>> => {
   const { namespace, cluster } = params;
-  
-  if (cluster.value === 'ALL') {
-    if (namespace) {
-      return karmadaClient.get(`/aggregated/persistentvolume/${namespace}`);
-    }
-    return karmadaClient.get('/aggregated/persistentvolume');
-  }
+
+  const baseUrl = getClusterApiPath(cluster?.label || '', 'persistentvolume');
   
   if (namespace) {
-    return karmadaClient.get(`/member/${cluster.label}/persistentvolume/${namespace}`);
+    return karmadaClient.get(`${baseUrl}/${namespace}`);
   }
-  return karmadaClient.get(`/member/${cluster.label}/persistentvolume`);
+  return karmadaClient.get(baseUrl);
 };
 
 export const GetPersistentVolumeDetail = async (
@@ -84,5 +80,5 @@ export const GetPersistentVolumeDetail = async (
   namespace: string,
   name: string
 ): Promise<AxiosResponse<IResponse<PersistentVolume>>> => {
-  return karmadaClient.get(`/member/${clusterName}/persistentvolume/${namespace}/${name}`);
+  return karmadaClient.get(`${getClusterApiPath(clusterName, 'persistentvolume')}/${namespace}/${name}`);
 };

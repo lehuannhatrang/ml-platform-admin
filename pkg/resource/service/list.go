@@ -18,7 +18,6 @@ package service
 
 import (
 	"fmt"
-	"log"
 
 	v1 "k8s.io/api/core/v1"
 	client "k8s.io/client-go/kubernetes"
@@ -71,8 +70,6 @@ func GetServiceList(client client.Interface, nsQuery *common.NamespaceQuery,
 	if client == nil {
 		return nil, fmt.Errorf("kubernetes client is nil")
 	}
-
-	log.Print("Getting list of all services in the cluster")
 
 	channels := &common.ResourceChannels{
 		ServiceList: common.GetServiceListChannel(client, nsQuery, 1),

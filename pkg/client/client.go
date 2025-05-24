@@ -135,7 +135,25 @@ func karmadaClientFromRequest(request *http.Request) (karmadaclientset.Interface
 	return karmadaclientset.NewForConfig(config)
 }
 
+// GetDynamicClient returns a dynamic client for the management cluster.
+func GetDynamicClient() (dynamic.Interface, error) {
+	// Create the REST config for the management cluster
+	restConfig, _, err := GetKubeConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get REST config: %v", err)
+	}
+
+	// Create a dynamic client using the REST config
+	dynamicClient, err := dynamic.NewForConfig(restConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create dynamic client: %v", err)
+	}
+
+	return dynamicClient, nil
+}
+
 // GetDynamicClientForMember returns a dynamic client for a member cluster.
+//
 // If clusterName is provided, it will configure the client to use the Karmada proxy to access the member cluster.
 // If clusterName is empty, it will return a regular dynamic client for the member cluster.
 func GetDynamicClientForMember(ctx *gin.Context, clusterName string) (dynamic.Interface, error) {

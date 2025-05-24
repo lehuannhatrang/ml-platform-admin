@@ -25,6 +25,7 @@ import {
 } from './base';
 import { ClusterOption } from '@/hooks/use-cluster';
 import { PodDetail } from './workload';
+import { getClusterApiPath } from '@/utils/cluster';
 
 export interface Node {
   objectMeta: ObjectMeta;
@@ -51,7 +52,7 @@ export interface NodeEvent {
 
 
 export async function GetNodes(query: DataSelectQuery, cluster?: ClusterOption) {
-  const apiPath = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/node` : '/aggregated/node';
+  const apiPath = getClusterApiPath(cluster?.label || '', 'node');
   const resp = await karmadaClient.get<
     IResponse<{
       errors: string[];
@@ -72,7 +73,7 @@ export async function GetNodeDetail(params: {
   clusterName: string;
 }) {
   const { name, clusterName } = params;
-  const url = `/member/${clusterName}/node/${name}`;
+  const url = getClusterApiPath(clusterName, `node/${name}`);
   const resp = await karmadaClient.get<
     IResponse<
       {
@@ -88,7 +89,7 @@ export async function GetNodeEvents(params: {
   clusterName: string;
 }) {
   const { name, clusterName } = params;
-  const url = `/member/${clusterName}/node/${name}/event`;
+  const url = getClusterApiPath(clusterName, `node/${name}/event`);
   const resp = await karmadaClient.get<
     IResponse<{
       errors: string[];
@@ -106,7 +107,7 @@ export async function GetNodePods(params: {
   clusterName: string;
 }) {
   const { name, clusterName } = params;
-  const url = `/member/${clusterName}/node/${name}/pod`;
+  const url = getClusterApiPath(clusterName, `node/${name}/pod`);
   const resp = await karmadaClient.get<
     IResponse<{
       items: PodDetail[];

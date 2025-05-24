@@ -16,6 +16,7 @@ limitations under the License.
 
 import { ClusterOption } from '@/hooks/use-cluster';
 import { IResponse, karmadaClient } from '@/services/base.ts';
+import { getClusterApiPath } from '@/utils/cluster';
 
 export interface OverviewInfo {
   karmadaInfo: KarmadaInfo;
@@ -85,7 +86,7 @@ export interface ClusterResourceStatus {
 }
 
 export async function GetOverview(cluster: ClusterOption) {
-  const url = cluster.value === 'ALL' ? '/overview' : `/member/${cluster.label}/overview`;
+  const url = getClusterApiPath(cluster.label, 'overview', false);
   const resp = await karmadaClient.get<IResponse<OverviewInfo>>(url);
   return resp.data;
 }

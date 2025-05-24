@@ -58,6 +58,7 @@ import PersistentVolumePage from '@/pages/multicloud-storage-manage/persistent-v
 import FederationNamespacesPage from '@/pages/federation-resources/namespaces';
 import FederationServicesPage from '@/pages/federation-resources/services';
 import FederationWorkloadsPage from '@/pages/federation-resources/workloads';
+import PackageManagePage from '@/pages/package-manage';
 
 export interface IRouteObjectHandle {
   icon?: ReactNode;
@@ -374,6 +375,15 @@ export function getRoutes() {
               },
             },
           ],
+        },
+        {
+          path: '/package-management',
+          element: <PackageManagePage />,
+          handle: {
+            sidebarKey: 'PACKAGE-MANAGEMENT',
+            sidebarName: 'Package Management',
+            icon: <Icons.package {...IconStyles} />,
+          },
         },
         {
           path: '/basic-config',

@@ -294,6 +294,11 @@ func InClusterClientForMemberCluster(clusterName string) kubeclient.Interface {
 		return nil
 	}
 
+	// If requesting the management cluster, return the direct client
+	if clusterName == "mgmt-cluster" {
+		return InClusterClient()
+	}
+
 	// Check permissions if we have a cluster name and a current user
 	if clusterName != "" {
 		// Get current username for permission check

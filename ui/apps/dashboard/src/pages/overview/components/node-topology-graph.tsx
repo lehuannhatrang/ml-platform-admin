@@ -164,10 +164,26 @@ const NodeTopologyGraphContent: React.FC<NodeTopologyGraphProps> = ({ selectedCl
     const newNodes: FlowNode[] = [];
     const newEdges: Edge[] = [];
     
+    // Process all clusters first
+    const uniqueClusters = [...new Set(
+      nodesData.items.map((node: any) => 
+        node.objectMeta.annotations?.['cluster.x-k8s.io/cluster-name'] || node.objectMeta.labels?.cluster || 'unknown'
+      )
+    )];
+    
     // Determine if we're showing a specific cluster or all clusters
     const isSpecificCluster = selectedCluster?.value && selectedCluster.value !== 'ALL';
     const selectedClusterName = selectedCluster?.value;
-    const rootLabel = isSpecificCluster ? selectedCluster.label : 'mgmt-cluster';
+    
+    // Check if mgmt-cluster exists in the unique clusters
+    const mgmtClusterExists = uniqueClusters.includes('mgmt-cluster');
+    
+    // Check if we have multiple clusters or just mgmt-cluster
+    const hasMultipleClusters = uniqueClusters.length > 1;
+    const onlyMgmtCluster = mgmtClusterExists && uniqueClusters.length === 1;
+    
+    // Set root label based on available clusters
+    const rootLabel = mgmtClusterExists ? 'mgmt-cluster' : (isSpecificCluster ? selectedCluster.label : 'Karmada');
     
     // Add root node
     newNodes.push({
@@ -194,19 +210,17 @@ const NodeTopologyGraphContent: React.FC<NodeTopologyGraphProps> = ({ selectedCl
     const nodeVerticalSpacing = 80; // Vertical space between individual nodes
     const xSpacingBetweenLevels = 300; // Horizontal spacing between hierarchy levels
     
-    // Process all clusters first
-    const uniqueClusters = [...new Set(
-      nodesData.items.map((node: any) => 
-        node.objectMeta.annotations?.['cluster.x-k8s.io/cluster-name'] || 'unknown'
-      )
-    )];
+    // Cluster sizes analysis
     
     // Analyze clusters to determine needed space
     const clusterSizes: Record<string, {master: number, worker: number}> = {};
     
     // Count the number of master and worker nodes in each cluster
     nodesData.items.forEach((node: any) => {
-      const clusterName = node.objectMeta.annotations?.['cluster.x-k8s.io/cluster-name'] || 'unknown';
+      // For consistency, determine cluster name the same way everywhere
+      const clusterName = node.objectMeta.annotations?.['cluster.x-k8s.io/cluster-name'] || 
+                         node.objectMeta.labels?.cluster || 
+                         (node.objectMeta.name.includes('mgmt-') ? 'mgmt-cluster' : 'unknown');
       const nodeRole = Object.keys(node.objectMeta.labels || {}).find(key => key === 'node-role.kubernetes.io/control-plane') ? 'Master' : 'Worker';
       
       if (!clusterSizes[clusterName]) {
@@ -219,88 +233,139 @@ const NodeTopologyGraphContent: React.FC<NodeTopologyGraphProps> = ({ selectedCl
         clusterSizes[clusterName].worker += 1;
       }
     });
-    
-    // Filter clusters based on the selected cluster
-    
-    // Filter clusters based on selection
-    const clustersToShow = isSpecificCluster 
-      ? uniqueClusters.filter(cluster => cluster !== selectedClusterName)
-      : uniqueClusters;
-    
-    // Add cluster nodes
-    clustersToShow.forEach((clusterName: string, index: number) => {
-      const clusterId = `cluster-${clusterName}`;
-      clusterNodes[clusterName] = [];
+    // Filter clusters to exclude the root cluster and empty clusters
+    const clustersToShow = uniqueClusters.filter(cluster => {
+      // Skip the root cluster (mgmt-cluster)
+      if (mgmtClusterExists && cluster === 'mgmt-cluster') {
+        return false;
+      }
       
-      // Calculate how much vertical space this cluster will need
-      const clusterSize = clusterSizes[clusterName] || {master: 0, worker: 0};
-      const totalNodesInCluster = clusterSize.master + clusterSize.worker;
+      // Skip the selected cluster in specific cluster mode
+      if (isSpecificCluster && cluster === selectedClusterName && cluster !== 'mgmt-cluster') {
+        return false;
+      }
       
-      // Calculate cluster center position - position it at vertical center of its nodes
-      const clusterCenterY = yOffset + (index * ySpacingBetweenClusters) + 
-                             ((Math.max(clusterSize.master, clusterSize.worker) * nodeVerticalSpacing) / 2);
+      // Skip 'unknown' cluster in single mgmt-cluster mode
+      if (onlyMgmtCluster && cluster === 'unknown') {
+        return false;
+      }
       
-      // Create cluster node
-      newNodes.push({
-        id: clusterId,
-        type: 'custom',
-        data: { 
-          label: `${clusterName} (${totalNodesInCluster} nodes)`,
-          nodeType: 'cluster',
-          style: {
-            background: '#e6f7ff',
-            border: '1px solid #1890ff',
-            borderRadius: '6px',
-            padding: '10px',
-            width: 150,
-          }
-        },
-        // Position clusters to the right of the root node, spreading them vertically
-        position: { x: 250 + xSpacingBetweenLevels, y: clusterCenterY },
-      });
+      // Skip clusters with 0 nodes
+      const clusterSize = clusterSizes[cluster] || {master: 0, worker: 0};
+      if (clusterSize.master === 0 && clusterSize.worker === 0) {
+        return false;
+      }
       
-      // Create edge from root to cluster
-      newEdges.push({
-        id: `edge-root-${clusterId}`,
-        source: 'root',
-        sourceHandle: 'root-source',
-        target: clusterId,
-        targetHandle: `${clusterId}-target`,
-        type: 'smoothstep',
-        markerEnd: { type: MarkerType.ArrowClosed },
-        style: { stroke: '#1890ff' },
-      });
+      return true;
     });
+    
+    // Skip creating cluster nodes in single mgmt-cluster mode
+    if (!(onlyMgmtCluster)) {
+      // Add cluster nodes
+      clustersToShow.forEach((clusterName: string, index: number) => {
+        // Skip 'unknown' cluster in single mgmt-cluster mode
+        if (onlyMgmtCluster && clusterName === 'unknown') {
+          return;
+        }
+        
+        const clusterId = `cluster-${clusterName}`;
+        clusterNodes[clusterName] = [];
+        
+        // Calculate how much vertical space this cluster will need
+        const clusterSize = clusterSizes[clusterName] || {master: 0, worker: 0};
+        const totalNodesInCluster = clusterSize.master + clusterSize.worker;
+        
+        // Calculate cluster center position - position it at vertical center of its nodes
+        const clusterCenterY = yOffset + (index * ySpacingBetweenClusters) + 
+                               ((Math.max(clusterSize.master, clusterSize.worker) * nodeVerticalSpacing) / 2);
+        
+        // Create cluster node
+        newNodes.push({
+          id: clusterId,
+          type: 'custom',
+          data: { 
+            label: `${clusterName} (${totalNodesInCluster} nodes)`,
+            nodeType: 'cluster',
+            style: {
+              background: '#e6f7ff',
+              border: '1px solid #1890ff',
+              borderRadius: '6px',
+              padding: '10px',
+              width: 150,
+            }
+          },
+          // Position clusters to the right of the root node, spreading them vertically
+          position: { x: 250 + xSpacingBetweenLevels, y: clusterCenterY },
+        });
+        
+        // Create edge from root to cluster
+        newEdges.push({
+          id: `edge-root-${clusterId}`,
+          source: 'root',
+          sourceHandle: 'root-source',
+          target: clusterId,
+          targetHandle: `${clusterId}-target`,
+          type: 'smoothstep',
+          markerEnd: { type: MarkerType.ArrowClosed },
+          style: { stroke: '#1890ff' },
+        });
+      });
+    }
     
     // Now process all nodes
     nodesData.items.forEach((node) => {
-      const clusterName = node.objectMeta.annotations?.['cluster.x-k8s.io/cluster-name'] || 'unknown';
+      // For consistency, determine cluster name the same way everywhere
+      let clusterName = node.objectMeta.annotations?.['cluster.x-k8s.io/cluster-name'] || 
+                       node.objectMeta.labels?.cluster || 
+                       (node.objectMeta.name.includes('mgmt-') ? 'mgmt-cluster' : 'unknown');
+      
+      // If we're in single mgmt-cluster mode, ensure all nodes are associated with mgmt-cluster
+      if (onlyMgmtCluster) {
+        clusterName = 'mgmt-cluster';
+      }
+      
       const clusterId = `cluster-${clusterName}`;
       const nodeId = `node-${node.objectMeta.name}-${clusterName}`;
       
       const nodeRole = Object.keys(node.objectMeta.labels || {}).find(key => key === 'node-role.kubernetes.io/control-plane') ? 'Master' : 'Worker';
       const nodeStatus = node.status.conditions.find((c: any) => c.type === 'Ready') ? 'Ready' : 'Not Ready';
       
-      // Determine if this node belongs to the selected cluster
+      // Skip mgmt-cluster nodes if there are multiple clusters
+      if (hasMultipleClusters && clusterName === 'mgmt-cluster' && !onlyMgmtCluster) {
+        return; // Skip processing this node
+      }
       
-      // If this is the currently selected cluster in specific cluster mode, 
-      // we connect nodes directly to root instead of to a cluster node
-      const isSelectedClusterNode = isSpecificCluster && clusterName === selectedClusterName;
+      // If we're in single mgmt-cluster mode, ALL nodes connect directly to root
+      // Otherwise, only mgmt-cluster nodes (or selected cluster in specific mode) connect to root
+      const isRootClusterNode = onlyMgmtCluster || 
+                             (mgmtClusterExists && clusterName === 'mgmt-cluster') || 
+                             (isSpecificCluster && clusterName === selectedClusterName && !mgmtClusterExists);
       
       // Store the node id in the cluster's node list if it's not the selected cluster
-      if (!isSelectedClusterNode) {
+      if (!isRootClusterNode) {
         clusterNodes[clusterName] = clusterNodes[clusterName] || [];
         clusterNodes[clusterName].push(nodeId);
       }
       
       // Calculate position based on cluster
-      const clusterIndex = isSelectedClusterNode ? 0 : clustersToShow.indexOf(clusterName);
+      const clusterIndex = isRootClusterNode ? 0 : clustersToShow.indexOf(clusterName);
       
       // Get count of nodes of this type (Master/Worker) in this cluster for positioning
-      const sameRoleNodesInCluster = nodesData.items.filter((n: any) => 
-        (n.objectMeta.annotations?.['cluster.x-k8s.io/cluster-name'] === clusterName) &&
-        (Object.keys(n.objectMeta.labels || {}).find(key => key === 'node-role.kubernetes.io/control-plane') ? 'Master' : 'Worker') === nodeRole
-      );
+      const sameRoleNodesInCluster = nodesData.items.filter((n: any) => {
+        // Get the node's cluster name consistently
+        let nodeClusterName = n.objectMeta.annotations?.['cluster.x-k8s.io/cluster-name'] || 
+                            n.objectMeta.labels?.cluster || 
+                            (n.objectMeta.name.includes('mgmt-') ? 'mgmt-cluster' : 'unknown');
+        
+        // In single mgmt-cluster mode, all nodes are part of mgmt-cluster
+        if (onlyMgmtCluster) {
+          nodeClusterName = 'mgmt-cluster';
+        }
+        
+        // Check if this node matches our current cluster and role
+        return nodeClusterName === clusterName && 
+               (Object.keys(n.objectMeta.labels || {}).find(key => key === 'node-role.kubernetes.io/control-plane') ? 'Master' : 'Worker') === nodeRole;
+      });
       
       // Position index within role group
       const indexInRoleGroup = sameRoleNodesInCluster.findIndex((n: any) => n.objectMeta.name === node.objectMeta.name);
@@ -324,7 +389,7 @@ const NodeTopologyGraphContent: React.FC<NodeTopologyGraphProps> = ({ selectedCl
       // For selected cluster nodes, position them right of the root
       // For other nodes, position them right of their cluster nodes
       const position = {
-        x: isSelectedClusterNode 
+        x: isRootClusterNode 
           ? 250 + xSpacingBetweenLevels // Position selected cluster nodes directly after root
           : 250 + (xSpacingBetweenLevels * 2), // Position other nodes after their cluster
         y: nodeY
@@ -352,7 +417,7 @@ const NodeTopologyGraphContent: React.FC<NodeTopologyGraphProps> = ({ selectedCl
       
       // Create edge - connect to root if this is the selected cluster node
       // Otherwise connect to respective cluster node
-      if (isSelectedClusterNode) {
+      if (isRootClusterNode) {
         newEdges.push({
           id: `edge-root-${nodeId}`,
           source: 'root',

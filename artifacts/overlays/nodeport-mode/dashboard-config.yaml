@@ -106,6 +106,9 @@ menu_configs:
       - path: project
         enable: true
         sidebar_key: PROJECT
+  - path: /package-management
+    enable: true
+    sidebar_key: PACKAGE-MANAGEMENT
   - path: /basic-config
     enable: true
     sidebar_key: BASIC-CONFIG

@@ -19,11 +19,10 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/karmada-io/karmada/pkg/apis/cluster/v1alpha1"
+	clusterv1alpha1 "github.com/karmada-io/karmada/pkg/apis/cluster/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,10 +32,10 @@ import (
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
 	v1 "github.com/karmada-io/dashboard/cmd/api/app/types/api/v1"
 	"github.com/karmada-io/dashboard/cmd/api/app/types/common"
-	"github.com/karmada-io/dashboard/pkg/auth"
 	"github.com/karmada-io/dashboard/pkg/auth/fga"
 	"github.com/karmada-io/dashboard/pkg/client"
 	"github.com/karmada-io/dashboard/pkg/resource/cluster"
+	utilauth "github.com/karmada-io/dashboard/pkg/util/utilauth"
 )
 
 func handleGetClusterList(c *gin.Context) {
@@ -44,7 +43,7 @@ func handleGetClusterList(c *gin.Context) {
 	dataSelect := common.ParseDataSelectPathParameter(c)
 
 	// Get the authenticated username
-	username := getAuthenticatedUser(c)
+	username := utilauth.GetAuthenticatedUser(c)
 
 	// Call GetClusterList with the username to filter by permissions
 	result, err := cluster.GetClusterList(karmadaClient, dataSelect, username)
@@ -84,7 +83,7 @@ func handlePostCluster(c *gin.Context) {
 	clusterRequest.MemberClusterEndpoint = memberClusterEndpoint
 	karmadaClient := client.InClusterKarmadaClient()
 
-	if clusterRequest.SyncMode == v1alpha1.Pull {
+	if clusterRequest.SyncMode == clusterv1alpha1.Pull {
 		memberClusterClient, err := client.KubeClientSetFromKubeConfig(clusterRequest.MemberClusterKubeConfig)
 		if err != nil {
 			klog.ErrorS(err, "Generate kubeclient from memberClusterKubeconfig failed")
@@ -112,7 +111,7 @@ func handlePostCluster(c *gin.Context) {
 			klog.Infof("accessClusterInPullMode success")
 			common.Success(c, "ok")
 		}
-	} else if clusterRequest.SyncMode == v1alpha1.Push {
+	} else if clusterRequest.SyncMode == clusterv1alpha1.Push {
 		memberClusterRestConfig, err := client.LoadeRestConfigFromKubeConfig(clusterRequest.MemberClusterKubeConfig)
 		if err != nil {
 			klog.ErrorS(err, "Generate rest config from memberClusterKubeconfig failed")
@@ -238,7 +237,7 @@ func handleGetClusterUsers(c *gin.Context) {
 	clusterName := c.Param("name")
 
 	// Get the authenticated user to ensure they have permission
-	username := getAuthenticatedUser(c)
+	username := utilauth.GetAuthenticatedUser(c)
 	if username == "" {
 		common.FailWithStatus(c, fmt.Errorf("unauthorized"), 401)
 		return
@@ -275,7 +274,7 @@ func handleUpdateClusterUsers(c *gin.Context) {
 	clusterName := c.Param("name")
 
 	// Get the authenticated user to ensure they have permission
-	username := getAuthenticatedUser(c)
+	username := utilauth.GetAuthenticatedUser(c)
 	if username == "" {
 		common.FailWithStatus(c, fmt.Errorf("unauthorized"), 401)
 		return
@@ -441,42 +440,7 @@ func parseEndpointFromKubeconfig(kubeconfigContents string) (string, error) {
 	return restConfig.Host, nil
 }
 
-// getAuthenticatedUser retrieves the username of the currently authenticated user
-func getAuthenticatedUser(c *gin.Context) string {
-	// First check if user info is already in the context (may have been set by middleware)
-	user, exists := c.Get("user")
-	if exists {
-		if userObj, ok := user.(*v1.User); ok {
-			// Set the username for use in non-context functions
-			client.SetCurrentUser(userObj.Name)
-			return userObj.Name
-		}
-	}
-
-	// If not in context, extract from Authorization header
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
-		return ""
-	}
-
-	// The header format should be "Bearer <token>"
-	const prefix = "Bearer "
-	if len(authHeader) <= len(prefix) || !strings.HasPrefix(authHeader, prefix) {
-		return ""
-	}
-
-	tokenString := authHeader[len(prefix):]
-
-	// Validate the token
-	claims, err := auth.ValidateToken(tokenString)
-	if err != nil {
-		return ""
-	}
-
-	// Store the username for use in non-context functions
-	client.SetCurrentUser(claims.Username)
-	return claims.Username
-}
+// Note: getAuthenticatedUser function has been moved to pkg/util/auth/user.go
 
 func init() {
 	r := router.V1()

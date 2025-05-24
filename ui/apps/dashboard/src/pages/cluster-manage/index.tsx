@@ -18,6 +18,7 @@ import i18nInstance from '@/utils/i18n';
 import Panel from '@/components/panel';
 import { useQuery } from '@tanstack/react-query';
 import { GetClusters } from '@/services';
+import { GetRepository } from '@/services/package';
 import {
   Cluster,
   ClusterDetail,
@@ -35,18 +36,17 @@ import {
   Input,
   message,
   Popconfirm,
+  Flex,
 } from 'antd';
 import { Icons } from '@/components/icons';
 import NewClusterModal from './new-cluster-modal';
 import ClusterUsersModal from './cluster-users-modal';
+import AddPackage from '@/components/package-form/add-package';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCluster } from '@/hooks';
 
 function getPercentColor(v: number): string {
-  // 0~60 #52C41A
-  // 60~80 #FAAD14
-  // > 80 #F5222D
   if (v <= 60) {
     return '#52C41A';
   } else if (v <= 80) {
@@ -81,6 +81,19 @@ const ClusterManagePage = () => {
   }>({
     open: false,
     clusterName: '',
+  });
+
+  // State for the package creation modal
+  const [packageModalVisible, setPackageModalVisible] = useState(false);
+  
+  // Query for the mgmt repository
+  const { data: mgmtRepository } = useQuery({
+    queryKey: ['GetMgmtRepository'],
+    queryFn: async () => {
+      const { data } = await GetRepository('mgmt');
+      return data;
+    },
+    enabled: packageModalVisible, // Only fetch when modal is visible
   });
 
   const navigate = useNavigate();
@@ -233,6 +246,7 @@ const ClusterManagePage = () => {
                   clusterName: r.objectMeta.name,
                 });
               }}
+              disabled={r.objectMeta.name === 'mgmt-cluster'}
             >
               Users
             </Button>
@@ -247,11 +261,13 @@ const ClusterManagePage = () => {
                   clusterDetail: ret.data,
                 });
               }}
+              disabled={r.objectMeta.name === 'mgmt-cluster'}
             >
               {i18nInstance.t('95b351c86267f3aedf89520959bce689', '编辑')}
             </Button>
             <Popconfirm
               placement="topRight"
+              
               title={i18nInstance.t('30ee910e8ea18311b1b2efbea94333b8', {
                 name: r.objectMeta.name,
               })}
@@ -282,7 +298,7 @@ const ClusterManagePage = () => {
                 '取消',
               )}
             >
-              <Button size={'small'} type="link" danger>
+              <Button size={'small'} type="link" danger disabled={r.objectMeta.name === 'mgmt-cluster'}>
                 {i18nInstance.t('2f4aaddde33c9b93c36fd2503f3d122b', '删除')}
               </Button>
             </Popconfirm>
@@ -302,19 +318,31 @@ const ClusterManagePage = () => {
           )}
           className={'w-[400px]'}
         />
-        <Button
-          type={'primary'}
-          icon={<Icons.add width={16} height={16} />}
-          className="flex flex-row items-center"
-          onClick={() => {
-            setModalData({
-              mode: 'create',
-              open: true,
-            });
-          }}
-        >
-          {i18nInstance.t('4cd980b26c5c76cdd4a5c5e44064d6da', '新增集群')}
-        </Button>
+        <Flex gap={8}>
+          <Button
+            type={'dashed'}
+            icon={<Icons.build width={16} height={16} />}
+            className="flex flex-row items-center"
+            onClick={() => {
+              setPackageModalVisible(true);
+            }}
+          >
+            Create new
+          </Button>
+          <Button
+            type={'primary'}
+            icon={<Icons.add width={16} height={16} />}
+            className="flex flex-row items-center"
+            onClick={() => {
+              setModalData({
+                mode: 'create',
+                open: true,
+              });
+            }}
+          >
+            Add existing
+          </Button>
+        </Flex>
       </div>
       <Table
         rowKey={(r: Cluster) => r.objectMeta.name || ''}
@@ -377,7 +405,6 @@ const ClusterManagePage = () => {
         clusterDetail={clusterModalData.clusterDetail}
       />
 
-      {/* Add the Cluster Users Modal */}
       <ClusterUsersModal
         clusterName={usersModalData.clusterName}
         open={usersModalData.open}
@@ -393,6 +420,23 @@ const ClusterManagePage = () => {
         }}
       />
 
+      {mgmtRepository && (
+        <AddPackage
+          title="Create new cluster"
+          isOpen={packageModalVisible}
+          groupName="Deployment"
+          repository={mgmtRepository}
+          isModal={true}
+          size="large"
+          onClose={() => setPackageModalVisible(false)}
+          onSuccess={() => {
+            setPackageModalVisible(false);
+            message.success('Package created successfully');
+          }}
+          isCreateCluster={true}
+        />
+      )}
+      
       {messageContextHolder}
     </Panel>
   );

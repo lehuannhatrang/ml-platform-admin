@@ -26,6 +26,7 @@ var (
 	router *gin.Engine
 	v1     *gin.RouterGroup
 	member *gin.RouterGroup
+	mgmt   *gin.RouterGroup
 )
 
 func init() {
@@ -36,8 +37,14 @@ func init() {
 	router = gin.Default()
 	_ = router.SetTrustedProxies(nil)
 	v1 = router.Group("/api/v1")
+	
+	// Member cluster routes with middleware to ensure cluster exists
 	member = v1.Group("/member/:clustername")
 	member.Use(EnsureMemberClusterMiddleware())
+	
+	// Management cluster routes with admin middleware
+	mgmt = v1.Group("/mgmt-cluster")
+	mgmt.Use(EnsureMgmtAdminMiddleware())
 
 	router.GET("/livez", func(c *gin.Context) {
 		c.String(200, "livez")
@@ -60,4 +67,9 @@ func Router() *gin.Engine {
 // MemberV1 returns the router group for /api/v1/member/:clustername which for resources in specific member cluster.
 func MemberV1() *gin.RouterGroup {
 	return member
+}
+
+// Mgmt returns the router group for /api/v1/mgmt-cluster which for resources in management cluster.
+func Mgmt() *gin.RouterGroup {
+	return mgmt
 }

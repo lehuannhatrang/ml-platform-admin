@@ -76,7 +76,7 @@ const useCluster = (props: { clusterFilter?: DataSelectQuery, allowSelectAll?: b
             ...(allowSelectAll && clusterData.clusters.length > 1 ? [DEFAULT_CLUSTER_OPTION] : []),
             ...clusterData.clusters.map((item) => ({
                 label: item.objectMeta.name,
-                value: item.objectMeta.uid,
+                value: item.objectMeta?.uid || item.objectMeta.name,
             })),
         ];
     }, [clusterData, allowSelectAll]);

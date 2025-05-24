@@ -59,7 +59,9 @@ import {
   SquareArrowOutUpRight,
   Puzzle,
   Sailboat,
-  Earth
+  Earth,
+  Hammer,
+  Package
 } from 'lucide-react';
 
 export type Icon = LucideIcon;
@@ -91,6 +93,8 @@ export const Icons = {
   storage: Database,
   newTab: SquareArrowOutUpRight,
   federation: Earth,
+  build: Hammer,
+  package: Package,
   gitHub: ({ ...props }: LucideProps) => (
     <svg
       aria-hidden="true"

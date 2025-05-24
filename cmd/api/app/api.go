@@ -27,6 +27,8 @@ import (
 	cliflag "k8s.io/component-base/cli/flag"
 	"k8s.io/klog/v2"
 
+	packagemgmt "github.com/karmada-io/dashboard/cmd/api/app/routes/mgmt/package"
+
 	"github.com/karmada-io/dashboard/cmd/api/app/options"
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated"               // Importing route packages forces route registration
@@ -43,6 +45,7 @@ import (
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/job"                      // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/karmadaconfig"
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/member"             // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/mgmt"               // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/namespace"          // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/overridepolicy"     // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/overview"           // Importing route packages forces route registration
@@ -54,11 +57,11 @@ import (
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/statefulset"        // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/unstructured"       // Importing route packages forces route registration
 	"github.com/karmada-io/dashboard/pkg/auth"
+	"github.com/karmada-io/dashboard/pkg/auth/fga"
 	"github.com/karmada-io/dashboard/pkg/client"
 	"github.com/karmada-io/dashboard/pkg/config"
 	"github.com/karmada-io/dashboard/pkg/environment"
 	"github.com/karmada-io/dashboard/pkg/etcd"
-	"github.com/karmada-io/dashboard/pkg/auth/fga"
 )
 
 // NewAPICommand creates a *cobra.Command object with default parameters
@@ -127,11 +130,31 @@ func run(ctx context.Context, opts *options.Options) error {
 	// Initialize etcd client for user management
 	initEtcdClient(ctx, opts)
 
+	// Initialize Porch API options
+	if err := initPorchAPI(opts); err != nil {
+		klog.ErrorS(err, "Failed to initialize Porch API")
+		return err
+	}
+
 	ensureAPIServerConnectionOrDie()
 	serve(opts)
 	config.InitDashboardConfig(client.InClusterClient(), ctx.Done())
 	<-ctx.Done()
 	os.Exit(0)
+	return nil
+}
+
+func initPorchAPI(opts *options.Options) error {
+	// Initialize package management for Porch API
+	packagemgmt.Initialize(opts)
+
+	// Log whether Porch API is configured
+	if opts.PorchAPIURL == "" {
+		klog.InfoS("Porch API URL is not configured. Porch API calls will not work")
+	} else {
+		klog.InfoS("Porch API initialized", "apiURL", opts.PorchAPIURL)
+	}
+
 	return nil
 }
 

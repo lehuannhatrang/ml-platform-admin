@@ -1,3 +1,4 @@
+import { getClusterApiPath } from "@/utils/cluster";
 import { ClusterOption } from "../hooks/use-cluster";
 import { convertDataSelectQuery, DataSelectQuery, IResponse, karmadaClient, ObjectMeta } from "./base";
 
@@ -35,7 +36,7 @@ export async function GetApiVersions(params: {
   cluster?: ClusterOption;
 }) {
   const { cluster } = params;
-  const url = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/customresource/apiVersion` : '/aggregated/customresource/apiVersion';
+  const url = getClusterApiPath(cluster?.label || '', 'customresource/apiVersion');
   const resp = await karmadaClient.get<
     IResponse<{
       errors: string[];
@@ -57,7 +58,7 @@ export async function GetCustomResourceDefinitions(params: {
     if (keyword) {
       requestData.filterBy = ['name', keyword];
     }
-    const url = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/customresource/definition` : '/aggregated/customresource/definition';
+    const url = getClusterApiPath(cluster?.label || '', 'customresource/definition');
     const resp = await karmadaClient.get<
       IResponse<{
         errors: string[];
@@ -99,7 +100,7 @@ export async function GetCustomResourceDefinitionByName(params: {
   crdName: string;
 }) {
     const { cluster, crdName } = params;
-    const url = `/member/${cluster}/customresource/definition/${crdName}`;
+    const url = getClusterApiPath(cluster, 'customresource/definition') + `/${crdName}`;
     const resp = await karmadaClient.get<
       IResponse<{
         errors: string[];
@@ -115,7 +116,7 @@ export async function UpdateCustomResourceDefinition(params: {
   crdData: any;
 }) {
     const { cluster, crdName, crdData } = params;
-    const url = `/member/${cluster}/customresource/definition/${crdName}`;
+    const url = getClusterApiPath(cluster, 'customresource/definition') + `/${crdName}`;
     const resp = await karmadaClient.put<
       IResponse<{
         errors: string[];
@@ -130,7 +131,7 @@ export async function CreateCustomResourceDefinition(params: {
   crdData: any;
 }) {
     const { cluster, crdData } = params;
-    const url = `/member/${cluster}/customresource/definition`;
+    const url = getClusterApiPath(cluster, 'customresource/definition');
     const resp = await karmadaClient.post<
       IResponse<{
         errors: string[];
@@ -144,7 +145,7 @@ export async function GetCustomResourceDefinitionByGroup(params: {
   cluster?: ClusterOption;
 }) {
     const { cluster } = params;
-    const url = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/customresource/definition` : '/aggregated/customresource/definition';
+    const url = getClusterApiPath(cluster?.label || '', 'customresource/definition');
     const resp = await karmadaClient.get<
       IResponse<{
         errors: string[];
@@ -175,7 +176,7 @@ export async function GetCustomResources(params: {
   crd: string;
 }) {
   const { cluster, group, crd } = params;
-  const url = `/member/${cluster}/customresource/resource`;
+  const url = getClusterApiPath(cluster, 'customresource/resource');
   const resp = await karmadaClient.get<
     IResponse<{
       errors: string[];

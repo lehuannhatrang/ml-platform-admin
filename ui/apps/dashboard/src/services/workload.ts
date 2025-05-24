@@ -25,6 +25,7 @@ import {
 } from '@/services/base.ts';
 import { ObjectMeta, TypeMeta } from '@/services/base';
 import { ClusterOption } from '@/hooks/use-cluster';
+import { getClusterApiPath } from '@/utils/cluster';
 
 export enum ResourceConditionType {
   Initialized = 'Initialized',
@@ -105,7 +106,7 @@ export async function GetWorkloads(params: {
   if (params.keyword) {
     requestData.filterBy = ['name', params.keyword];
   }
-  const base_url = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/${kind}` : `/aggregated/${kind}`;
+  const base_url = getClusterApiPath(cluster?.label || '', kind);
   const url = namespace ? `${base_url}/${namespace}` : base_url;
   const resp = await karmadaClient.get<
     IResponse<{
@@ -191,7 +192,7 @@ export async function GetWorkloadDetail(params: {
 }) {
   // /deployment/:namespace/:deployment
   const { kind, name, namespace, cluster } = params;
-  const url = `/member/${cluster}/${kind}/${namespace}/${name}`;
+  const url = getClusterApiPath(cluster, `${kind}/${namespace}/${name}`);
   const resp = await karmadaClient.get<
     IResponse<
       {
@@ -217,7 +218,7 @@ export async function GetContainerLogs(params: {
   page: number;
 }) {
   const { namespace, name, container, cluster, page } = params;
-  const url = `/member/${cluster}/pod/${namespace}/${name}/logs`;
+  const url = getClusterApiPath(cluster, `pod/${namespace}/${name}/logs`);
   const resp = await karmadaClient.get<
     IResponse<
       {
@@ -257,7 +258,7 @@ export async function GetWorkloadEvents(params: {
   cluster: string;
 }) {
   const { kind, name, namespace, cluster } = params;
-  const url = `/member/${cluster}/${kind}/${namespace}/${name}/event`;
+  const url = getClusterApiPath(cluster, `${kind}/${namespace}/${name}/event`);
   const resp = await karmadaClient.get<
     IResponse<{
       errors: string[];

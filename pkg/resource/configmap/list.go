@@ -18,7 +18,6 @@ package configmap
 
 import (
 	"fmt"
-	"log"
 
 	v1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -54,8 +53,7 @@ func GetConfigMapList(client kubernetes.Interface, nsQuery *common.NamespaceQuer
 	if client == nil {
 		return nil, fmt.Errorf("kubernetes client is nil")
 	}
-	
-	log.Printf("Getting list config maps in the namespace %s", nsQuery.ToRequestParam())
+
 	channels := &common.ResourceChannels{
 		ConfigMapList: common.GetConfigMapListChannel(client, nsQuery, 1),
 	}

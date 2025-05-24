@@ -25,7 +25,7 @@ spec:
       containers:
         - command:
             - karmada-dashboard-api
-            - --karmada-kubeconfig=/etc/kubeconfig
+            - --karmada-kubeconfig=/etc/kubeconfig-karmada-apiserver
             - --karmada-context=karmada-apiserver
             - --kubeconfig=/etc/kubeconfig
             - --context=karmada
@@ -33,8 +33,10 @@ spec:
             - --bind-address=0.0.0.0
             - --etcd-host=karmada-dashboard-etcd.karmada-system
             - --etcd-port=2379
+            - --porch-api=https://api.porch-system.svc.cluster.local:4443
+            - --skip-porch-tls-verify=true
           name: karmada-dashboard-api
-          image: lehuannhatrang/dcn-dashboard-api:v0.25
+          image: lehuannhatrang/dcn-dashboard-api:v0.26
           imagePullPolicy: IfNotPresent
           env:
             - name: GIN_MODE
@@ -82,15 +84,21 @@ spec:
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           volumeMounts:
-            - name: kubeconfig
+            - name: kubeconfig-karmada-apiserver
+              subPath: kubeconfig
+              mountPath: /etc/kubeconfig-karmada-apiserver
+            - name: kubeconfig-mgmt-cluster
               subPath: kubeconfig
               mountPath: /etc/kubeconfig
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
       volumes:
-        - name: kubeconfig
+        - name: kubeconfig-karmada-apiserver
           secret:
             secretName: kubeconfig-karmada-apiserver
+        - name: kubeconfig-mgmt-cluster
+          secret:
+            secretName: kubeconfig-mgmt-cluster
 ---
 apiVersion: v1
 kind: Service
