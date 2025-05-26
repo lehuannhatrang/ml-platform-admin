@@ -318,6 +318,8 @@ const AddPackage: React.FC<AddPackageProps> = ({
               <Form.Item
                 name="sourceRepository"
                 label="Source Repository"
+                required={true}
+                rules={[{ required: true, message: 'Please select a source repository' }]}
               >
                 <Select 
                   placeholder="Select source repository"
@@ -339,6 +341,8 @@ const AddPackage: React.FC<AddPackageProps> = ({
               <Form.Item
                 name="sourcePackage"
                 label="Source Package"
+                required={true}
+                rules={[{ required: true, message: 'Please select a source package' }]}
               >
                 <Select 
                   placeholder="Select source package"

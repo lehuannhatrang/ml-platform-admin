@@ -1,6 +1,6 @@
 import { Card, Flex } from 'antd';
-
 import { CardProps } from 'antd/lib/card';
+import { useTheme } from '@/contexts/theme-context';
 
 type InfoCardProps = {
   label: string;
@@ -8,13 +8,16 @@ type InfoCardProps = {
 } & CardProps;
 
 function InfoCard({ label, value, ...props }: InfoCardProps) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  
   return (
     <Card {...props}>
       <Flex>
         <p
           style={{
             fontSize: '14px',
-            color: '#666',
+            color: isDark ? 'rgba(255, 255, 255, 0.65)' : '#666',
           }}
         >
           {label}
@@ -26,6 +29,7 @@ function InfoCard({ label, value, ...props }: InfoCardProps) {
           style={{
             fontSize: '24px',
             fontWeight: 'bold',
+            color: isDark ? 'rgba(255, 255, 255, 0.95)' : 'inherit',
           }}
         >
           {value || '-'}

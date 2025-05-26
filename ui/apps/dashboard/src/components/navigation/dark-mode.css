@@ -1,0 +1,56 @@
+/*
+Copyright 2024 The Karmada Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+/* Dark mode overrides for navigation component */
+.dark .navbar .header {
+  background: rgba(42, 42, 46, 0.94) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(20px) !important;
+}
+
+.dark .navbar .header .left .brand .text {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Button styling in dark mode */
+.dark .navbar .header .right button {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.dark .navbar .header .right button:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Dropdown styling */
+.dark .navbar .header .right .ant-dropdown-trigger {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Logo adjustment for dark mode */
+.dark .navbar .header .left .brand .logoWrap img {
+  filter: brightness(1.2) !important;
+}
+
+/* Center content styling */
+.dark .navbar .header .center {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Placeholder styling */
+.dark .navbar .placeholder {
+  background-color: var(--background-color) !important;
+}

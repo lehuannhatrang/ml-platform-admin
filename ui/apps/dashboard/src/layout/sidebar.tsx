@@ -62,7 +62,7 @@ const Sidebar: FC<SidebarProps> = ({ collapsed }) => {
     return filterMenuItems(menuItems, menuInfo);
   }, [data, menuItems]);
   return (
-    <div className={cn('w-full', 'h-full', 'overflow-y-auto')}>
+    <div className={cn('w-full', 'h-full', 'overflow-y-auto', 'overflow-x-hidden')}>
       <Menu
         onClick={onClick}
         style={{ width: collapsed ? '80px' : getSidebarWidth() }}

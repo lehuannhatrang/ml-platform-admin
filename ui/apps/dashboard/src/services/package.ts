@@ -146,9 +146,44 @@ export async function GetPackageRevs() {
   return resp.data;
 }
 
+export interface PackageResource {
+  apiVersion: string;
+  kind: string;
+  metadata: ObjectMeta;
+  spec?: any;
+  [key: string]: any;
+}
+
+export interface PackageRevisionResources {
+  apiVersion: string;
+  kind: string;
+  metadata: ObjectMeta;
+  spec?: {
+    packageName: string;
+    repository: string;
+    revision: string;
+    workspaceName?: string;
+    resources: {
+      [key: string]: string;
+    };
+  }
+  status: {
+    renderStatus: {
+      result: any
+      error: string
+    }
+  };
+}
+
+// Fetch package revision resources
+export async function GetPackageRevisionResources(name: string) {
+  const resp = await karmadaClient.get<PackageRevisionResources>(`/mgmt-cluster/porch/packagerevisionresources/${name}`);
+  return resp.data;
+}
+
 export async function GetPackageRev(name: string) {
-  const resp = await karmadaClient.get<IResponse<PackageRev>>(
-    `/mgmt-cluster/package/packagerevision/${name}`
+  const resp = await karmadaClient.get<PackageRev>(
+    `/mgmt-cluster/porch/packagerevision/${name}`
   );
   return resp.data;
 }

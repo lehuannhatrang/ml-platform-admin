@@ -41,6 +41,7 @@ import NewDashboardModal from './new-dashboard-modal';
 import { DeleteMonitoringDashboard } from '@/services/monitoring-config';
 import { useCluster } from '@/hooks';
 import { DEFAULT_CLUSTER_OPTION } from '@/hooks/use-cluster';
+import { useTheme } from '@/contexts/theme-context';
 
 const Overview = () => {
   const { clusterOptions, selectedCluster, setSelectedCluster } = useCluster({})
@@ -113,6 +114,9 @@ const Overview = () => {
       message.error(error?.message || 'Failed to delete dashboard');
     }
   };
+
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
 
   return (
     <Spin spinning={isLoading}>
@@ -221,7 +225,6 @@ const Overview = () => {
                       <Row>
                         {totalCPU && allocatedCPU && (
                           <GaugeChart
-
                             data={{
                               target: allocatedCPU,
                               total: totalCPU,
@@ -237,9 +240,10 @@ const Overview = () => {
                               height: 300,
                               style: {
                                 textContent: (target: number, total: number) =>
-                                  total ? `${(Number((target / total).toFixed(4)) * 100).toFixed(2)}%` : '-'
+                                  total ? `${(Number((target / total).toFixed(4)) * 100).toFixed(2)}%` : '-',
                               },
                             }}
+                            
                           />
                         )}
                       </Row>
@@ -348,7 +352,7 @@ const Overview = () => {
                     </Popconfirm>
                   </Flex>
                   <iframe
-                    src={`${selectedDashboard.url}${selectedDashboard.url.includes('?') ? '&' : '?'}theme=light&kiosk`}
+                    src={`${selectedDashboard.url}${selectedDashboard.url.includes('?') ? '&' : '?'}theme=${isDark ? 'dark' : 'light'}&kiosk`}
                     width="100%"
                     height="auto"
                     style={{ fontSize: '16px', overflow: 'hidden', minHeight: '1800px' }}

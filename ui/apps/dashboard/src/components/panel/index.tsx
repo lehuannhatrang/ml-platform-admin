@@ -24,10 +24,13 @@ import { useMatches } from 'react-router-dom';
 import useCluster from '@/hooks/use-cluster';
 import { KubernetesOutlined } from '@ant-design/icons';
 import { getClusterColorByValue } from '@/utils/cluster';
+import { useTheme } from '@/contexts/theme-context';
+import { cn } from '@/utils/cn.ts';
 
 interface IPanelProps {
   children: ReactNode;
   showSelectCluster?: boolean;
+  whiteBackground?: boolean;
 }
 
 interface MenuItem {
@@ -39,7 +42,7 @@ interface MenuItem {
 }
 
 const Panel: FC<IPanelProps> = (props) => {
-  const { children, showSelectCluster = true } = props;
+  const { children, showSelectCluster = true, whiteBackground = true } = props;
   const matches = useMatches();
   const { clusterOptions, isClusterDataLoading, selectedCluster, setSelectedCluster } = useCluster({});
   const breadcrumbs = useMemo(() => {
@@ -74,8 +77,13 @@ const Panel: FC<IPanelProps> = (props) => {
       setSelectedCluster(selectedOption);
     }
   };
+  const { theme } = useTheme();
+  
   return (
-    <div className="w-full h-full px-[30px] py-[20px] box-border bg-[#FAFBFC]">
+    <div className={cn(
+      "w-full h-full px-[30px] py-[20px] box-border",
+      theme === 'light' ? "bg-[#FAFBFC]" : "bg-[#141414]"
+    )}>
       <Flex justify='space-between' align='center' className='mb-4'>
         <Flex align='center' gap={8}>
           {showSelectCluster ? <>
@@ -104,7 +112,10 @@ const Panel: FC<IPanelProps> = (props) => {
         </Flex>
         <Breadcrumb className="mb-4" items={breadcrumbs} />
       </Flex>
-      <div className="w-full h-full bg-white box-border p-[12px] overflow-x-hidden overflow-y-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
+      <div className={cn(
+        "w-full h-full box-border p-[12px] overflow-x-hidden overflow-y-auto",
+        whiteBackground ? (theme === 'light' ? 'bg-white' : 'bg-[#1f1f1f]') : ''
+      )} style={{ maxHeight: 'calc(100vh - 120px)' }}>
         {children}
       </div>
     </div>

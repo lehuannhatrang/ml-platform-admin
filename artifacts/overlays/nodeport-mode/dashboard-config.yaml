@@ -2,6 +2,7 @@ docker_registries: []
 chart_registries: []
 path_prefix: ''
 metrics_dashboards: []
+ai_agent_chat_webhook: ''
 # Add OpenFGA configuration
 authorization:
   type: "openfga"
@@ -109,6 +110,10 @@ menu_configs:
   - path: /package-management
     enable: true
     sidebar_key: PACKAGE-MANAGEMENT
+    children:
+      - path: repositories/:repositoryName
+        enable: true
+        sidebar_key: REPOSITORY
   - path: /basic-config
     enable: true
     sidebar_key: BASIC-CONFIG

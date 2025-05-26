@@ -59,6 +59,8 @@ import FederationNamespacesPage from '@/pages/federation-resources/namespaces';
 import FederationServicesPage from '@/pages/federation-resources/services';
 import FederationWorkloadsPage from '@/pages/federation-resources/workloads';
 import PackageManagePage from '@/pages/package-manage';
+import RepositoryDetailsPage from '@/pages/package-manage/repository-details';
+import PackageDetailsPage from '@/pages/package-manage/package-details';
 
 export interface IRouteObjectHandle {
   icon?: ReactNode;
@@ -384,6 +386,14 @@ export function getRoutes() {
             sidebarName: 'Package Management',
             icon: <Icons.package {...IconStyles} />,
           },
+        },
+        {
+          path: '/package-management/repositories/:repositoryName',
+          element: <RepositoryDetailsPage />,
+        },
+        {
+          path: '/package-management/packages/:packageName',
+          element: <PackageDetailsPage />,
         },
         {
           path: '/basic-config',

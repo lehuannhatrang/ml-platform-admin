@@ -14,18 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { FC, CSSProperties } from 'react';
+import { FC, CSSProperties, useMemo } from 'react';
 import styles from './index.module.less';
-import DCNLogo from '@/assets/dcn_logo.png';
-import {
-  setLang,
-  getLangIcon,
-  getLang,
-  supportedLangConfig,
-  getLangTitle,
-} from '@/utils/i18n';
-import { Button, Dropdown, Popconfirm } from 'antd';
+import DCNLogo from '@/assets/dcn_logo_removebg.png';
+import { Button, Popconfirm } from 'antd';
 import { LogoutOutlined } from '@ant-design/icons';
+import ThemeToggle from '@/components/theme-toggle';
+import { useTheme } from '@/contexts/theme-context';
+import { cn } from '@/utils/cn.ts';
 
 export interface IUserInfo {
   id: number;
@@ -48,22 +44,40 @@ const Navigation: FC<INavigationProps> = (props) => {
     userInfo,
   } = props;
   
+  const { theme } = useTheme();
+  
+  const themedHeaderStyle = useMemo(() => ({
+    ...headerStyle,
+    // Dark mode styling applied directly
+    background: theme === 'dark' ? 'rgba(42, 42, 46, 0.94)' : undefined,
+    boxShadow: theme === 'dark' ? '0 2px 4px rgba(0, 0, 0, 0.3)' : undefined,
+    color: theme === 'dark' ? 'rgba(255, 255, 255, 0.85)' : undefined,
+    backdropFilter: 'blur(20px)'
+  }), [headerStyle, theme]);
+  
   const handleLogout = () => {
     localStorage.removeItem('token');
     window.location.href = '/login';
   };
 
 
+  // Style for text in dark mode
+  const textStyle = theme === 'dark' ? { color: 'rgba(255, 255, 255, 0.85)' } : {};
+  
   return (
     <>
-      <div className={styles.navbar}>
-        <div className={styles.header} style={headerStyle}>
+      <div className={cn(styles.navbar)}>
+        <div className={cn(styles.header)} style={themedHeaderStyle}>
           <div className={styles.left}>
             <div className={styles.brand}>
               <div className={styles.logoWrap}>
-                <img className={styles.logo} src={DCNLogo} />
+                <img 
+                  className={styles.logo} 
+                  src={DCNLogo} 
+                  style={theme === 'dark' ? { filter: 'brightness(1.2)' } : {}} 
+                />
               </div>
-              <div className={styles.text}>{brandText}</div>
+              <div className={styles.text} style={textStyle}>{brandText}</div>
             </div>
           </div>
           <div className={styles.center}>
@@ -72,38 +86,33 @@ const Navigation: FC<INavigationProps> = (props) => {
           <div className={styles.right}>
             {/* extra components */}
             <div className={styles.extra}>
-              <Dropdown
-                menu={{
-                  onClick: async (v) => {
-                    await setLang(v.key);
-                    window.location.reload();
-                  },
-                  selectedKeys: [getLang()],
-                  items: Object.keys(supportedLangConfig).map((lang) => {
-                    return {
-                      key: lang,
-                      label: getLangTitle(lang),
-                    };
-                  }),
-                }}
-                placement="bottomLeft"
-                arrow
-              >
-                <div>{getLangIcon(getLang())}</div>
-              </Dropdown>
             </div>
             {/* user info */}
             {userInfo && (
               <div className={styles.userWrap}>
                 <div className={styles.user}>
-                  <img src={userInfo?.avatar} className={styles.avatar} />
+                  <img 
+                    src={userInfo?.avatar} 
+                    className={styles.avatar} 
+                    style={theme === 'dark' ? { border: '1px solid rgba(255, 255, 255, 0.2)' } : {}}
+                  />
                 </div>
               </div>
             )}
+            {/* theme toggle button */}
+            <div className="ml-2">
+              <ThemeToggle />
+            </div>
             {/* logout button */}
             <div className="ml-2">
-              <Popconfirm title="Are you sure to logout?" onConfirm={handleLogout}>
-                <Button type="text" icon={<LogoutOutlined /> } />
+              <Popconfirm 
+                title="Are you sure to logout?" 
+                onConfirm={handleLogout}
+              >
+                <Button 
+                  type="text" 
+                  icon={<LogoutOutlined style={theme === 'dark' ? { color: 'rgba(255, 255, 255, 0.85)' } : {}} />} 
+                />
               </Popconfirm>
             </div>
           </div>

@@ -19,6 +19,7 @@ import { FC } from 'react';
 import { Button, Upload } from 'antd';
 import { Icons } from '@/components/icons';
 import Editor, { EditorProps } from '@monaco-editor/react';
+import { useTheme } from '@/contexts/theme-context';
 
 export type TextareaWithUploadProps = EditorProps & {
   readBlob?: typeof tryReadBlob;
@@ -66,13 +67,19 @@ const TextareaWithUpload: FC<TextareaWithUploadProps> = (props) => {
   const triggerChange = (changedValue: string) => {
     onChange?.(changedValue);
   };
+  // Get the current theme from the context
+  const { theme } = useTheme();
+  
+  // Map the global theme to Monaco editor theme
+  const editorTheme = theme === 'dark' ? 'vs-dark' : 'vs';
+  console.log({editorTheme})
   return (
     <div className="relative">
       <Editor
         className='shadow-md pt-[8px]'
         defaultLanguage="yaml"
         value={_value}
-        theme='vs'
+        theme={editorTheme}
         onChange={(v) => {
           triggerChange(v || '');
         }}

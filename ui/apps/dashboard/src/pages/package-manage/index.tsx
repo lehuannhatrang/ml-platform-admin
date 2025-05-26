@@ -60,6 +60,7 @@ interface RepositoryGroup {
 const PackageManagePage = () => {
   const [messageApi, messageContextHolder] = message.useMessage();
   const [repositoryModalVisible, setRepositoryModalVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [editingRepository, setEditingRepository] = useState<Repository | null>(null);
   const [form] = Form.useForm();
 
@@ -177,7 +178,7 @@ const PackageManagePage = () => {
       title: 'Name',
       key: 'name',
       width: 250,
-      render: (_, r) => r.metadata.name,
+      render: (_, r) => <Typography.Link href={`/package-management/repositories/${r.metadata.name}`}>{r.metadata.name}</Typography.Link>,
     },
     {
       title: 'Type',
@@ -403,57 +404,68 @@ const PackageManagePage = () => {
     return (
       <Card
         title={<Title level={4}>{group.title}</Title>}
-        className="mb-4 shadow-md"
-        actions={[<Button type="link">View details</Button>]}
+        className="mb-4 shadow-lg"
+        actions={[<Button type="link" onClick={() => setActiveTab('repository')}>View details</Button>]}
       >
-        <div className="mb-4">
-          <Flex justify='space-between'>
-              <Statistic title="Repositories" value={group.repositories.length} />
-              <Statistic 
-                title="Published" 
-                value={group.published}
-                prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
-              />
-              <Statistic 
-                title="Drafts" 
-                value={group.drafts}
-                prefix={<InfoCircleOutlined style={{ color: '#1890ff' }} />}
-              />
-          </Flex>
-        </div>
+        <div className="min-h-[325px]">
+          <div className="mb-4">
+            <Flex justify='space-between'>
+                <Statistic title="Repositories" value={group.repositories.length} />
+                <Statistic 
+                  title="Published" 
+                  value={group.published}
+                  prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
+                />
+                <Statistic 
+                  title="Drafts" 
+                  value={group.drafts}
+                  prefix={<InfoCircleOutlined style={{ color: '#1890ff' }} />}
+                />
+            </Flex>
+          </div>
 
-        <Typography.Text strong>
-          Repositories
-        </Typography.Text>
-        
-        <List
-          size="small"
-          dataSource={group.repositories.slice(0, 5)} // Show only first 5
-          renderItem={(repo: Repository) => (
-            <List.Item>
-              <Space>
-                {repo.spec.type === 'git' && <Tag color="blue">Git</Tag>}
-                {repo.spec.type === 'oci' && <Tag color="green">OCI</Tag>}
-                <Text>{repo.metadata?.name}</Text>
-              </Space>
-              <div>
-                <Typography.Link href={repo.spec?.git?.repo || repo.spec?.oci?.registry} target='_blank'>
-                  {repo.spec?.git?.repo || repo.spec?.oci?.registry}
-                </Typography.Link>
-              </div>
-            </List.Item>
+          <Typography.Text strong>
+            Repositories
+          </Typography.Text>
+          
+          <List
+            size="small"
+            dataSource={group.repositories.slice(0, 5)} // Show only first 5
+            renderItem={(repo: Repository) => (
+              <List.Item>
+                <Space>
+                  {repo.spec.type === 'git' && <Tag color="blue">Git</Tag>}
+                  {repo.spec.type === 'oci' && <Tag color="green">OCI</Tag>}
+                  <Typography.Link href={`/package-management/repositories/${repo.metadata?.name}`}>
+                    {repo.metadata?.name}
+                  </Typography.Link>
+                </Space>
+                <div>
+                  <Typography.Link href={repo.spec?.git?.repo || repo.spec?.oci?.registry} target='_blank'>
+                    {repo.spec?.git?.repo || repo.spec?.oci?.registry}
+                  </Typography.Link>
+                </div>
+              </List.Item>
+            )}
+          />
+          {group.repositories.length > 5 && (
+            <Flex justify='center'>
+              <Typography.Text type="secondary">
+                {`+ ${group.repositories.length - 5} more`}
+              </Typography.Text>
+            </Flex>
           )}
-        />
+        </div>
       </Card>
     );
   };
 
   return (
     <Spin spinning={isLoading}>
-        <Panel showSelectCluster={false}>
+        <Panel showSelectCluster={false} whiteBackground={false}>
         {messageContextHolder}
         
-        <Tabs defaultActiveKey="dashboard">
+        <Tabs defaultActiveKey="dashboard" activeKey={activeTab} onChange={setActiveTab}>
             <TabPane tab="Dashboard" key="dashboard">
             <div className="p-4">
                 <Row gutter={[16, 16]}>

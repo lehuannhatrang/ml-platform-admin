@@ -15,12 +15,14 @@ limitations under the License.
 */
 
 import './App.css';
+import './styles/theme.css';
 import Router from './routes';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
-import { ConfigProvider, App as AntdApp } from 'antd';
+import { App as AntdApp, ConfigProvider } from 'antd';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AuthProvider from '@/components/auth';
 import { getAntdLocale } from '@/utils/i18n.tsx';
+import { ThemeProvider } from '@/contexts/theme-context';
 
 const queryClient = new QueryClient();
 
@@ -55,27 +57,29 @@ const AppHelmet = () => (
 
 function App() {
   return (
-    <ConfigProvider
-      locale={getAntdLocale()}
-      theme={{
-        components: {
-          Layout: {
-            siderBg: '#ffffff',
+    <ThemeProvider>
+      <ConfigProvider 
+        locale={getAntdLocale()}
+        theme={{
+          components: {
+            Layout: {
+              siderBg: '#ffffff',
+            },
           },
-        },
       }}
-    >
-      <AntdApp>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <HelmetProvider>
-              <AppHelmet />
-              <Router />
-            </HelmetProvider>
-          </AuthProvider>
-        </QueryClientProvider>
-      </AntdApp>
-    </ConfigProvider>
+      >
+        <AntdApp>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <HelmetProvider>
+                <AppHelmet />
+                <Router />
+              </HelmetProvider>
+            </AuthProvider>
+          </QueryClientProvider>
+        </AntdApp>
+      </ConfigProvider>
+    </ThemeProvider>
   );
 }
 

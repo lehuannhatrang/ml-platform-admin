@@ -181,7 +181,6 @@ const NewClusterModal: FC<NewClusterModalProps> = (props) => {
             <TextareaWithUpload
               height="400px"
               defaultLanguage="yaml"
-              theme='vs'
               options={{
                 minimap: {
                   enabled: false,

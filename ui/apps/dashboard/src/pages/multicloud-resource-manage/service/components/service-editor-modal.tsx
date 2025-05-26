@@ -172,9 +172,7 @@ const ServiceEditorModal: FC<NewWorkloadEditorModalProps> = (props) => {
         height="520px"
         defaultLanguage="yaml"
         value={content}
-        theme="vs"
         options={{
-          theme: 'vs',
           lineNumbers: 'on',
           fontSize: 15,
           readOnly: mode === 'detail',

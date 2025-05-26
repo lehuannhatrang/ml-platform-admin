@@ -16,6 +16,7 @@ import {
   Handle
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { useTheme } from '@/contexts/theme-context';
 
 // Define Resource type based on what's available in the application status
 interface Resource {
@@ -52,6 +53,8 @@ interface InputNodeProps {
 
 const InputNode = ({ data }: InputNodeProps) => {
   const { resource } = data;
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const syncColor = getSyncStatusColor(resource.status || '');
   const healthColor = getHealthStatusColor(resource.health?.status || '');
   const nodeId = resource.uid || `${resource.kind}-${resource.name}-${resource.namespace}`;
@@ -69,7 +72,8 @@ const InputNode = ({ data }: InputNodeProps) => {
         borderRadius: '4px',
         padding: '8px',
         width: '200px',
-        backgroundColor: '#e6f7ff',
+        backgroundColor: isDark ? '#141d2b' : '#e6f7ff',
+        color: isDark ? 'rgba(255, 255, 255, 0.85)' : 'inherit',
         boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
       }}
     >
@@ -96,6 +100,8 @@ const InputNode = ({ data }: InputNodeProps) => {
 
 const ResourceNode = ({ data }: ResourceNodeProps) => {
   const { resource } = data;
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const syncColor = getSyncStatusColor(resource.status || '');
   const healthColor = getHealthStatusColor(resource.health?.status || '');
   const nodeId = resource.uid || `${resource.kind}-${resource.name}-${resource.namespace}`;
@@ -131,7 +137,8 @@ const ResourceNode = ({ data }: ResourceNodeProps) => {
         borderRadius: '4px',
         padding: '8px',
         width: '200px',
-        backgroundColor: 'white',
+        backgroundColor: isDark ? '#1f1f1f' : 'white',
+        color: isDark ? 'rgba(255, 255, 255, 0.85)' : 'inherit',
         boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
       }}
     >
@@ -177,6 +184,9 @@ export const ApplicationResourceGraph: React.FC<ApplicationResourceGraphProps> =
   application, 
   loading = false 
 }) => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
   const {
     data: applicationDetail,
     isLoading: resourcesLoading,
@@ -355,12 +365,12 @@ export const ApplicationResourceGraph: React.FC<ApplicationResourceGraphProps> =
           nodeTypes={nodeTypes}
           defaultEdgeOptions={{
             type: ConnectionLineType.SmoothStep,
-            style: { strokeWidth: 3, stroke: '#333' },
+            style: { strokeWidth: 3, stroke: isDark ? 'rgba(255, 255, 255, 0.6)' : '#333' },
             markerEnd: {
               type: MarkerType.ArrowClosed,
               width: 15,
               height: 15,
-              color: '#333'
+              color: isDark ? 'rgba(255, 255, 255, 0.6)' : '#333'
             }
           }}
           connectionLineType={ConnectionLineType.SmoothStep}
@@ -372,7 +382,7 @@ export const ApplicationResourceGraph: React.FC<ApplicationResourceGraphProps> =
           minZoom={0.5}
           maxZoom={2}
           className="react-flow-container"
-          style={{ background: '#f5f5f5', width: '100%', height: '100%' }}
+          style={{ background: isDark ? '#141414' : '#f5f5f5', width: '100%', height: '100%' }}
         >
           <Background />
           <Controls />

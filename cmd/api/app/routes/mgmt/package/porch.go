@@ -41,7 +41,7 @@ var (
 	porchOptions *options.Options
 
 	// tokenCache stores service account tokens with their expiration time
-	tokenCache     = make(map[string]cachedToken)
+	tokenCache      = make(map[string]cachedToken)
 	tokenCacheMutex sync.RWMutex
 )
 
@@ -157,7 +157,8 @@ func proxyToPorch(c *gin.Context, path string) {
 	}
 
 	// Get service account token for the porch-server service account
-	token, err := getServiceAccountToken(c.Request.Context(), "porch-server", "porch-system")
+	// token, err := getServiceAccountToken(c.Request.Context(), "porch-server", "porch-system")
+	token, err := getServiceAccountToken(c.Request.Context(), "karmada-dashboard", "karmada-system")
 
 	if err != nil {
 		klog.ErrorS(err, "Failed to get service account token")
@@ -296,6 +297,18 @@ func ptr(i int64) *int64 {
 	return &i
 }
 
+// HandlePorchGetPackageRevisionResources handles GET requests for package revision resources
+func HandlePorchGetPackageRevisionResources(c *gin.Context) {
+	name := c.Param("name")
+	if name == "" {
+		klog.Error("Package revision name is required")
+		common.Fail(c, errors.NewBadRequest("package revision name is required"))
+		return
+	}
+
+	proxyToPorch(c, fmt.Sprintf("/apis/porch.kpt.dev/v1alpha1/namespaces/default/packagerevisionresources/%s", name))
+}
+
 // RegisterPorchRoutes registers all routes for Porch API
 func RegisterPorchRoutes() {
 	porchRouter := router.Mgmt()
@@ -313,6 +326,9 @@ func RegisterPorchRoutes() {
 		porchRouter.POST("/porch/packagerevision", HandlePorchCreatePackageRevision)
 		porchRouter.PUT("/porch/packagerevision/:name", HandlePorchUpdatePackageRevision)
 		porchRouter.DELETE("/porch/packagerevision/:name", HandlePorchDeletePackageRevision)
+
+		// PackageRevisionResources routes
+		porchRouter.GET("/porch/packagerevisionresources/:name", HandlePorchGetPackageRevisionResources)
 	}
 	klog.InfoS("Registered package management routes for Porch API")
 }

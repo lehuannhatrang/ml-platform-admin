@@ -195,9 +195,7 @@ const PersistentVolumeEditorModal: FC<PersistentVolumeEditorModalProps> = (props
         height="540px"
         defaultLanguage="yaml"
         value={content}
-        theme="vs"
         options={{
-          theme: 'vs',
           lineNumbers: 'on',
           fontSize: 15,
           minimap: {

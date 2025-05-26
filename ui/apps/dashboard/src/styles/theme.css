@@ -1,0 +1,225 @@
+/*
+Copyright 2024 The Karmada Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+:root {
+  --background-color: #ffffff;
+  --text-color: rgba(0, 0, 0, 0.88);
+  --text-secondary-color: rgba(0, 0, 0, 0.65);
+  --text-disabled-color: rgba(0, 0, 0, 0.25);
+  --border-color: #d9d9d9;
+  --divider-color: rgba(0, 0, 0, 0.06);
+  --component-background: #ffffff;
+  --highlight-color: #1677ff;
+  --hover-bg-color: rgba(0, 0, 0, 0.04);
+  --sidebar-bg-color: #ffffff;
+  --card-bg-color: #ffffff;
+  --table-header-bg-color: #fafafa;
+  --code-bg-color: #f5f5f5;
+  --code-text-color: #333333;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+.dark {
+  --background-color: #141414;
+  --text-color: rgba(255, 255, 255, 0.85);
+  --text-secondary-color: rgba(255, 255, 255, 0.65);
+  --text-disabled-color: rgba(255, 255, 255, 0.3);
+  --border-color: #424242;
+  --divider-color: rgba(255, 255, 255, 0.08);
+  --component-background: #1f1f1f;
+  --highlight-color: #1677ff;
+  --hover-bg-color: rgba(255, 255, 255, 0.08);
+  --sidebar-bg-color: #333333;
+  --card-bg-color: #282c34;
+  --card-footer-bg-color: #323842;
+  --table-header-bg-color: #1d1d1d;
+  --code-bg-color: #2a2a2a;
+  --code-text-color: #e6e6e6;
+  --shadow-color: rgba(0, 0, 0, 0.6);
+  --link-color: #4d9eff;
+  --button-text-color: rgba(255, 255, 255, 0.95);
+  --scrollbar-background: #1f1f1f;
+  --scrollbar-thumb: #444444;
+  --scrollbar-thumb-hover: #555555;
+}
+
+/* Base styles that apply theme variables */
+body {
+  background-color: var(--background-color);
+  color: var(--text-color);
+  transition: all 0.2s;
+}
+
+.dark .ant-layout {
+  background-color: var(--background-color);
+}
+
+.dark .ant-layout-sider {
+  background-color: var(--sidebar-bg-color);
+  border-right: 1px solid var(--border-color);
+}
+
+.dark .ant-card {
+  background-color: var(--card-bg-color);
+  border-color: var(--border-color);
+}
+
+.dark .ant-card-actions {
+  background-color: var(--card-footer-bg-color) !important;
+  border-top-color: var(--border-color) !important;
+}
+
+.dark .ant-table {
+  background-color: var(--component-background);
+  color: var(--text-color);
+}
+
+.dark .ant-table-thead > tr > th {
+  background-color: var(--table-header-bg-color);
+  color: var(--text-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dark .ant-table-tbody > tr > td {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dark .ant-table-tbody > tr.ant-table-row:hover > td {
+  background-color: var(--hover-bg-color);
+}
+
+.dark pre, .dark code {
+  background-color: var(--code-bg-color);
+  color: var(--code-text-color);
+}
+
+.dark .ant-modal-content,
+.dark .ant-drawer-content {
+  background-color: var(--component-background);
+  color: var(--text-color);
+}
+
+.dark .ant-divider {
+  border-color: var(--divider-color);
+}
+
+.dark .ant-input,
+.dark .ant-select-selector,
+.dark .ant-input-number,
+.dark .ant-picker {
+  background-color: var(--component-background);
+  border-color: var(--border-color);
+  color: var(--text-color);
+}
+
+.dark .ant-btn-default {
+  background-color: transparent;
+  color: var(--button-text-color);
+}
+
+.dark .ant-btn-link {
+  color: var(--link-color);
+}
+
+.dark .ant-btn-link:hover {
+  color: #7eb5ff;
+}
+
+.dark .ant-menu {
+  background-color: var(--sidebar-bg-color);
+  color: var(--text-color);
+  border-right: none;
+}
+
+.dark .ant-menu-item {
+  color: var(--text-color);
+}
+
+.dark .ant-menu-item-selected {
+  background-color: var(--hover-bg-color);
+}
+
+.dark .ant-tabs-nav {
+  color: var(--text-color);
+}
+
+.dark .ant-tabs-tab {
+  color: var(--text-secondary-color);
+}
+
+.dark .ant-tabs-tab-active {
+  color: rgba(255, 255, 255, 0.95) !important;
+  font-weight: 600 !important;
+}
+
+/* ReactFlow dark theme styling */
+.dark .react-flow__edge path {
+  stroke: rgba(255, 255, 255, 0.6) !important;
+}
+
+.dark .react-flow__edge-path {
+  stroke: rgba(255, 255, 255, 0.6) !important;
+}
+
+.dark .react-flow__edge-text {
+  fill: rgba(255, 255, 255, 0.85) !important;
+}
+
+.dark .react-flow__edge-marker path {
+  fill: rgba(255, 255, 255, 0.6) !important;
+}
+
+.dark .react-flow__controls button {
+  background-color: #1f1f1f !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  border-color: #424242 !important;
+}
+
+/* Ensure links are visible in dark mode */
+.dark a {
+  color: var(--link-color);
+}
+
+.dark a:hover {
+  color: #7eb5ff;
+}
+
+/* Custom scrollbar styling for dark theme */
+.dark ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  background-color: var(--scrollbar-background);
+}
+
+.dark ::-webkit-scrollbar-track {
+  background-color: var(--scrollbar-background);
+  border-radius: 10px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 10px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+/* Firefox scrollbar */
+.dark * {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-background);
+  scrollbar-width: thin;
+}
