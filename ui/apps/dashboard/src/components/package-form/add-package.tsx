@@ -17,7 +17,7 @@ import {
   Row,
   Col,
 } from 'antd';
-import { Repository, PackageRevisionLifecycle, CreatePackageRev, GetPackageRevs, GetRepositories } from '@/services/package';
+import { Repository, PackageRevisionLifecycle, CreatePackageRev, GetPackageRevs, GetRepositories, getRepositoryGroup, RepositoryContentType } from '@/services/package';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
 const { Option } = Select;
@@ -140,17 +140,18 @@ const AddPackage: React.FC<AddPackageProps> = ({
     const organizationalBlueprints: Repository[] = [];
     
     allRepositories.forEach(repo => {
+      const group = getRepositoryGroup(repo)
       // Determine group based on the criteria from package-manage page
       // Deployment group: repo.spec?.deployment is true
-      if (repo.spec?.deployment === true) {
+      if (group === RepositoryContentType.DEPLOYMENT) {
         deployments.push(repo);
       }
       // External blueprints: repo.metadata?.labels?.['kpt.dev/repository-content'] is "external-blueprints"
-      else if (repo.metadata?.labels?.['kpt.dev/repository-content'] === 'external-blueprints') {
+      else if (group === RepositoryContentType.EXTERNAL_BLUEPRINT) {
         externalBlueprints.push(repo);
       }
       // Team Blueprints: repo.metadata?.annotations?.['nephio.org/staging'] is "true"
-      else if (repo.metadata?.annotations?.['nephio.org/staging'] === 'true') {
+      else if (group === RepositoryContentType.TEAM_BLUEPRINT) {
         teamBlueprints.push(repo);
       }
       // Default to organizational blueprints

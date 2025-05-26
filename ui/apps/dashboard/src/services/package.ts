@@ -23,13 +23,29 @@ import {
   karmadaClient,
 } from './base';
 
+export enum RepositoryContentType {
+  DEPLOYMENT = 'deployments',
+  TEAM_BLUEPRINT = 'teamBlueprints',
+  EXTERNAL_BLUEPRINT = 'externalBlueprints',
+  ORGANIZATION_BLUEPRINT = 'organizationalBlueprints',
+}
+
 // Repository resource interfaces
 export interface Repository {
-    metadata: ObjectMeta;
-    typeMeta: TypeMeta;
-    spec: RepositorySpec;
-    status?: RepositoryStatus;
+  metadata: ObjectMeta;
+  typeMeta: TypeMeta;
+  spec: RepositorySpec;
+  status?: RepositoryStatus;
 }
+
+export type RepositoryGroupType = RepositoryContentType;
+
+export const REPOSITORY_GROUPS = [
+  { value: RepositoryContentType.DEPLOYMENT, label: 'Deployment' },
+  { value: RepositoryContentType.TEAM_BLUEPRINT, label: 'Team Blueprint' },
+  { value: RepositoryContentType.EXTERNAL_BLUEPRINT, label: 'External Blueprint' },
+  { value: RepositoryContentType.ORGANIZATION_BLUEPRINT, label: 'Organizational Blueprint' },
+];
 
 export interface RepositorySpec {
   description?: string;
@@ -107,14 +123,14 @@ export async function GetRepositories(query: DataSelectQuery) {
 
 export async function GetRepository(name: string) {
   const resp = await karmadaClient.get<IResponse<Repository>>(
-    `/mgmt-cluster/package/repository/${name}`
+    `/mgmt-cluster/package/repository/default/${name}`
   );
   return resp.data;
 }
 
 export async function CreateRepository(repository: any) {
   const resp = await karmadaClient.post<IResponse<Repository>>(
-    '/mgmt-cluster/package/repository',
+    '/mgmt-cluster/package/repository/default',
     repository
   );
   return resp.data;
@@ -122,7 +138,7 @@ export async function CreateRepository(repository: any) {
 
 export async function UpdateRepository(name: string, repository: any) {
   const resp = await karmadaClient.put<IResponse<Repository>>(
-    `/mgmt-cluster/package/repository/${name}`,
+    `/mgmt-cluster/package/repository/default/${name}`,
     repository
   );
   return resp.data;
@@ -133,7 +149,7 @@ export async function DeleteRepository(name: string) {
     IResponse<{
       message: string;
     }>
-  >(`/mgmt-cluster/package/repository/${name}`);
+  >(`/mgmt-cluster/package/repository/default/${name}`);
   return resp.data;
 }
 
@@ -212,3 +228,19 @@ export async function DeletePackageRev(name: string) {
   >(`/mgmt-cluster/package/packagerev/${name}`);
   return resp.data;
 }
+
+export function getRepositoryGroup(repo: Repository) {
+  let group: `${RepositoryGroupType}` = 'organizationalBlueprints';
+
+  if (repo.spec?.deployment === true) {
+    group = 'deployments';
+  }
+  else if (repo.metadata?.labels?.['kpt.dev/repository-content'] === 'external-blueprints') {
+    group = 'externalBlueprints';
+  }
+  else if (repo.metadata?.annotations?.['nephio.org/staging'] === 'true') {
+    group = 'teamBlueprints';
+  }
+
+  return group;
+} 

@@ -59,6 +59,7 @@ export async function GetConfigMaps(params: {
 export interface Secret {
   objectMeta: ObjectMeta;
   typeMeta: TypeMeta;
+  type?: string;
 }
 
 export async function GetSecrets(params: {

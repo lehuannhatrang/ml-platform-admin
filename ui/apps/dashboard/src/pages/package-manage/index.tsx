@@ -16,41 +16,36 @@ limitations under the License.
 
 import Panel from '@/components/panel';
 import { useQuery } from '@tanstack/react-query';
-import { Repository, PackageRev, GetRepositories, GetPackageRevs, CreateRepository, UpdateRepository, DeleteRepository, PackageRevisionLifecycle } from '@/services/package';
+import { Repository, PackageRev, GetRepositories, GetPackageRevs, CreateRepository, UpdateRepository, DeleteRepository, PackageRevisionLifecycle, RepositoryContentType, getRepositoryGroup } from '@/services/package';
 import {
-  Table,
-  TableColumnProps,
-  Space,
-  Button,
-  message,
-  Popconfirm,
-  Flex,
-  Tag,
-  Tabs,
-  Modal,
-  Form,
-  Select,
-  Input as AntInput,
   Card,
+  Tabs,
+  Button,
+  Table,
   Typography,
+  Flex,
+  Space,
+  Tag,
+  message,
+  Spin,
+  Form,
+  List,
   Row,
   Col,
-  List,
   Statistic,
-  Spin
+  Popconfirm,
 } from 'antd';
+import type { ColumnType } from 'antd/es/table';
 import { Icons } from '@/components/icons';
 import { useMemo, useState } from 'react';
 import { CheckCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import RepositoryFormModal, { RepositoryFormData } from './components/repository-form-modal';
 
 const { TabPane } = Tabs;
 const { Title, Text } = Typography;
 
-// Repository group types
-type RepositoryGroupType = 'deployments' | 'teamBlueprints' | 'externalBlueprints' | 'organizationalBlueprints';
-
 interface RepositoryGroup {
-  type: RepositoryGroupType;
+  type: `${RepositoryContentType}`;
   title: string;
   repositories: Repository[];
   published: number;
@@ -101,42 +96,60 @@ const PackageManagePage = () => {
 
   const handleEditRepository = (repository: Repository) => {
     setEditingRepository(repository);
-    form.setFieldsValue({
-      name: repository.metadata.name,
-      description: repository.spec.description || '',
-      type: repository.spec.type,
-      git_repo: repository.spec.git?.repo || '',
-      git_branch: repository.spec.git?.branch || '',
-      oci_registry: repository.spec.oci?.registry || '',
-    });
     setRepositoryModalVisible(true);
   };
 
-  const handleRepositoryFormSubmit = async () => {
+  const handleRepositoryFormSubmit = async (values: RepositoryFormData) => {
     try {
-      const values = await form.validateFields();
       const repositoryData: any = {
         apiVersion: 'config.porch.kpt.dev/v1alpha1',
         kind: 'Repository',
         metadata: {
+          annotations: {},
+          labels: {},
           name: values.name,
         },
         spec: {
           description: values.description,
           type: values.type,
+          deployment: false,
         }
       };
+
+      if(values.repository_group === RepositoryContentType.DEPLOYMENT ) {
+        repositoryData.spec['deployment'] = true
+      }
+      if(values.repository_group === RepositoryContentType.TEAM_BLUEPRINT ) {
+        repositoryData.metadata['annotations']['nephio.org/staging'] = "true"
+      }
+      if(values.repository_group === RepositoryContentType.ORGANIZATION_BLUEPRINT ) {
+        repositoryData.metadata['labels']['kpt.dev/repository-content'] = "organization-blueprints"
+      }
+      if(values.repository_group === RepositoryContentType.EXTERNAL_BLUEPRINT ) {
+        repositoryData.metadata['labels']['kpt.dev/repository-content'] = "external-blueprints"
+      }
 
       // Add git or oci specific fields based on type
       if (values.type === 'git') {
         repositoryData.spec.git = {
           repo: values.git_repo,
           branch: values.git_branch || 'main',
+          directory: values.git_directory || '/',
         };
       } else if (values.type === 'oci') {
         repositoryData.spec.oci = {
           registry: values.oci_registry,
         };
+      }
+      
+      // Add authentication if specified
+      if (values.auth_type === 'github_token' && values.secret_name) {
+        // Add secretRef to the git configuration
+        if (values.type === 'git') {
+          repositoryData.spec.git.secretRef = {
+            name: values.secret_name
+          };
+        }
       }
 
       let response;
@@ -157,7 +170,7 @@ const PackageManagePage = () => {
       setRepositoryModalVisible(false);
       refetch();
     } catch (error) {
-      console.error('Form validation failed:', error);
+      console.error('Form submission failed:', error);
       messageApi.error('Failed to save repository');
     }
   };
@@ -173,19 +186,19 @@ const PackageManagePage = () => {
     }
   };
 
-  const columns: TableColumnProps<Repository>[] = [
+  const columns: ColumnType<Repository>[] = [
     {
       title: 'Name',
       key: 'name',
       width: 250,
-      render: (_, r) => <Typography.Link href={`/package-management/repositories/${r.metadata.name}`}>{r.metadata.name}</Typography.Link>,
+      render: (_: any, r: Repository) => <Typography.Link href={`/package-management/repositories/${r.metadata.name}`}>{r.metadata.name}</Typography.Link>,
     },
     {
       title: 'Type',
       dataIndex: ['spec', 'type'],
       key: 'type',
       width: 100,
-      render: (type) => {
+      render: (type: string) => {
         if (type === 'git') {
           return <Tag color="blue">Git</Tag>;
         } else if (type === 'oci') {
@@ -198,7 +211,7 @@ const PackageManagePage = () => {
     {
       title: 'Repository',
       key: 'repository',
-      render: (_, r) => {
+      render: (_: any, r: Repository) => {
         if (r.spec.git?.repo || r.spec.oci?.registry) {
           return <Typography.Link href={r.spec.git?.repo || r.spec.oci?.registry} target='_blank'>
             {r.spec.git?.repo || r.spec.oci?.registry}
@@ -212,20 +225,32 @@ const PackageManagePage = () => {
         dataIndex: ['spec', 'git', 'branch'],
         key: 'branch',
         width: 250,
-        render: (branch) => <Tag color="orange">{branch}</Tag>,
+        render: (branch: string | undefined) => {
+          if (branch) {
+            return <Tag color="orange">{branch}</Tag>;
+          } else {
+            return <Tag>-</Tag>;
+          }
+        },
     },
     {
         title: 'Path',
         dataIndex: ['spec', 'git', 'directory'],
         key: 'path',
         width: 250,
-        render: (path) => <Tag>{path}</Tag>,
+        render: (path: string | undefined) => {
+          if (path) {
+            return <Tag>{path}</Tag>;
+          } else {
+            return <Tag>-</Tag>;
+          }
+        },
     },
     {
       title: 'Actions',
       key: 'actions',
       width: 200,
-      render: (_, r) => {
+      render: (_: any, r: Repository) => {
         return (
           <Space.Compact>
             <Button
@@ -286,7 +311,7 @@ const PackageManagePage = () => {
     });
     
     // Create repository groups
-    const groups: Record<RepositoryGroupType, RepositoryGroup> = {
+    const groups: Record<RepositoryContentType, RepositoryGroup> = {
       deployments: {
         type: 'deployments',
         title: 'Deployments',
@@ -319,36 +344,17 @@ const PackageManagePage = () => {
     
     // Group repositories based on the specified criteria
     repositories.forEach((repo: Repository) => {
-      // Determine group based on the specified criteria
-        let group: RepositoryGroupType = 'organizationalBlueprints'; // Default group
-        
-        // Deployment group: repo.spec?.deployment is true
-        if (repo.spec?.deployment === true) {
-        group = 'deployments';
-        }
-        // External blueprints: repo.metadata?.labels?.['kpt.dev/repository-content'] is "external-blueprints"
-        else if (repo.metadata?.labels?.['kpt.dev/repository-content'] === 'external-blueprints') {
-        group = 'externalBlueprints';
-        }
-        // Team Blueprints: repo.metadata?.annotations?.['nephio.org/staging'] is "true"
-        else if (repo.metadata?.annotations?.['nephio.org/staging'] === 'true') {
-        group = 'teamBlueprints';
-        }
-        
-        // Add repository with its stats to the appropriate group
+        const group = getRepositoryGroup(repo);
         const repoWithStats = {
           ...repo,
           __stats: repoStats[repo.metadata?.name || ''] || { published: 0, drafts: 0 }
         };
         groups[group].repositories.push(repoWithStats);
         
-        // Get package revs for this repository
         const repoPackageRevs = packageRevsByRepo[repo.metadata?.name || ''] || [];
         
-        // Use PackageRevisionLifecycle to determine published and draft status
         const publishedRevs = repoPackageRevs.filter(rev => rev.metadata.labels?.['kpt.dev/latest-revision'] === 'true' && rev.spec?.lifecycle === PackageRevisionLifecycle.PUBLISHED);
         const draftRevs = repoPackageRevs.filter(rev => rev.spec?.lifecycle === PackageRevisionLifecycle.DRAFT);
-        // Update counts based on the package revisions lifecycle
         groups[group].published += publishedRevs.length;
         groups[group].drafts += draftRevs.length;
     });
@@ -357,12 +363,12 @@ const PackageManagePage = () => {
   }, [repoData, packageRevData]);
   
   // Generate columns for each group table
-  const getColumnsForGroup = (groupType: RepositoryGroupType) => {
+  const getColumnsForGroup = (groupType: `${RepositoryContentType}`) => {
     // Create a copy of the base columns
     const groupColumns = [...columns];
     
     // Get the title based on group type
-    const titleMap: Record<RepositoryGroupType, string> = {
+    const titleMap: Record<`${RepositoryContentType}`, string> = {
       'deployments': 'Deployments',
       'teamBlueprints': 'Team Blueprints',
       'externalBlueprints': 'External Blueprints',
@@ -523,94 +529,12 @@ const PackageManagePage = () => {
             </TabPane>
         </Tabs>
 
-        <Modal
-            title={editingRepository ? 'Edit Repository' : 'Add Repository'}
-            open={repositoryModalVisible}
-            onOk={handleRepositoryFormSubmit}
-            onCancel={() => setRepositoryModalVisible(false)}
-            width={600}
-        >
-            <Form
-            form={form}
-            layout="vertical"
-            name="repositoryForm"
-            initialValues={{
-                type: 'git',
-            }}
-            >
-            <Form.Item
-                name="name"
-                label="Repository Name"
-                rules={[{ required: true, message: 'Please enter repository name' }]}
-            >
-                <AntInput disabled={!!editingRepository} />
-            </Form.Item>
-            
-            <Form.Item
-                name="description"
-                label="Description"
-            >
-                <AntInput.TextArea rows={2} />
-            </Form.Item>
-            
-            <Form.Item
-                name="type"
-                label="Repository Type"
-                rules={[{ required: true, message: 'Please select repository type' }]}
-            >
-                <Select>
-                <Select.Option value="git">Git</Select.Option>
-                <Select.Option value="oci">OCI</Select.Option>
-                </Select>
-            </Form.Item>
-            
-            <Form.Item
-                noStyle
-                shouldUpdate={(prevValues, currentValues) =>
-                prevValues.type !== currentValues.type
-                }
-            >
-                {({ getFieldValue }) => {
-                const type = getFieldValue('type');
-                
-                if (type === 'git') {
-                    return (
-                    <>
-                        <Form.Item
-                        name="git_repo"
-                        label="Git Repository URL"
-                        rules={[{ required: true, message: 'Please enter Git repository URL' }]}
-                        >
-                        <AntInput placeholder="https://github.com/example/repo.git" />
-                        </Form.Item>
-                        
-                        <Form.Item
-                        name="git_branch"
-                        label="Branch"
-                        >
-                        <AntInput placeholder="main" />
-                        </Form.Item>
-                    </>
-                    );
-                }
-                
-                if (type === 'oci') {
-                    return (
-                    <Form.Item
-                        name="oci_registry"
-                        label="OCI Registry"
-                        rules={[{ required: true, message: 'Please enter OCI registry' }]}
-                    >
-                        <AntInput placeholder="gcr.io/example/repo" />
-                    </Form.Item>
-                    );
-                }
-                
-                return null;
-                }}
-            </Form.Item>
-            </Form>
-        </Modal>
+        <RepositoryFormModal
+          visible={repositoryModalVisible}
+          editingRepository={editingRepository}
+          onCancel={() => setRepositoryModalVisible(false)}
+          onSubmit={handleRepositoryFormSubmit}
+        />
         </Panel>
     </Spin>
   );
