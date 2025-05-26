@@ -105,6 +105,8 @@ func HandleListRepositories(c *gin.Context) {
 
 // HandleGetRepository handles GET requests to get a specific Repository by name
 func HandleGetRepository(c *gin.Context) {
+	// Get namespace parameter from URL
+	namespace := c.Param("namespace")
 	// Get name parameter from URL
 	name := c.Param("name")
 	if name == "" {
@@ -123,12 +125,12 @@ func HandleGetRepository(c *gin.Context) {
 	// Get the GVR for Repository resource
 	gvr := getRepositoryGVR()
 
-	klog.InfoS("Getting Repository resource in management cluster", "name", name)
+	klog.InfoS("Getting Repository resource in management cluster", "name", name, "namespace", namespace)
 
 	// Get Repository resource in the default namespace
-	resource, err := dynamicClient.Resource(gvr).Namespace("default").Get(context.TODO(), name, metav1.GetOptions{})
+	resource, err := dynamicClient.Resource(gvr).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
-		klog.ErrorS(err, "Failed to get Repository resource", "name", name, "namespace", "default")
+		klog.ErrorS(err, "Failed to get Repository resource", "name", name, "namespace", namespace)
 		common.Fail(c, errors.NewInternal(fmt.Sprintf("Failed to get Repository resource: %v", err)))
 		return
 	}
@@ -144,6 +146,7 @@ func HandleGetRepository(c *gin.Context) {
 
 // HandleCreateRepository handles POST requests to create a new Repository resource
 func HandleCreateRepository(c *gin.Context) {
+	namespace := c.Param("namespace")
 	// Parse request body
 	var requestBody map[string]interface{}
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
@@ -178,7 +181,7 @@ func HandleCreateRepository(c *gin.Context) {
 	klog.InfoS("Creating Repository resource in management cluster", "name", obj.GetName())
 
 	// Create Repository resource
-	createdObj, err := dynamicClient.Resource(gvr).Create(context.TODO(), obj, metav1.CreateOptions{})
+	createdObj, err := dynamicClient.Resource(gvr).Namespace(namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
 	if err != nil {
 		klog.ErrorS(err, "Failed to create Repository resource")
 		common.Fail(c, errors.NewInternal(fmt.Sprintf("Failed to create Repository resource: %v", err)))
@@ -196,7 +199,8 @@ func HandleCreateRepository(c *gin.Context) {
 
 // HandleUpdateRepository handles PUT requests to update an existing Repository resource
 func HandleUpdateRepository(c *gin.Context) {
-	// Get name parameter from URL
+	// Get namespace parameter from URL
+	namespace := c.Param("namespace")
 	name := c.Param("name")
 	if name == "" {
 		klog.Error("Repository name is required")
@@ -209,6 +213,24 @@ func HandleUpdateRepository(c *gin.Context) {
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
 		klog.ErrorS(err, "Failed to parse request body")
 		common.Fail(c, errors.NewBadRequest(fmt.Sprintf("Failed to parse request body: %v", err)))
+		return
+	}
+
+	dynamicClient, err := createDynamicClient()
+	if err != nil {
+		klog.ErrorS(err, "Failed to create dynamic client")
+		common.Fail(c, errors.NewInternal(fmt.Sprintf("Failed to create dynamic client: %v", err)))
+		return
+	}
+
+	// Get the GVR for Repository resource
+	gvr := getRepositoryGVR()
+
+	// First get the existing repository to get its resourceVersion
+	existingObj, err := dynamicClient.Resource(gvr).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	if err != nil {
+		klog.ErrorS(err, "Failed to get existing Repository for update", "name", name, "namespace", namespace)
+		common.Fail(c, errors.NewInternal(fmt.Sprintf("Failed to get existing Repository for update: %v", err)))
 		return
 	}
 
@@ -225,35 +247,33 @@ func HandleUpdateRepository(c *gin.Context) {
 		obj.SetKind(RepositoryKind)
 	}
 
-	// Ensure the name in the URL matches the name in the object
-	if obj.GetName() != name {
-		klog.Error("Repository name in URL does not match name in request body")
-		common.Fail(c, errors.NewBadRequest("repository name in URL does not match name in request body"))
-		return
+	// Ensure resourceVersion is set for the update
+	metadata, ok := obj.Object["metadata"].(map[string]interface{})
+	if !ok {
+		metadata = make(map[string]interface{})
+		obj.Object["metadata"] = metadata
 	}
 
-	dynamicClient, err := createDynamicClient()
-	if err != nil {
-		klog.ErrorS(err, "Failed to create dynamic client")
-		common.Fail(c, errors.NewInternal(fmt.Sprintf("Failed to create dynamic client: %v", err)))
-		return
+	// Get the resourceVersion from the existing object
+	existingMeta, ok := existingObj.Object["metadata"].(map[string]interface{})
+	if ok {
+		if resourceVersion, exists := existingMeta["resourceVersion"]; exists {
+			metadata["resourceVersion"] = resourceVersion
+		}
 	}
 
-	// Get the GVR for Repository resource
-	gvr := getRepositoryGVR()
-
-	klog.InfoS("Updating Repository resource in management cluster", "name", name)
+	klog.InfoS("Updating Repository resource in management cluster", "name", name, "namespace", namespace)
 
 	// Update Repository resource
-	updatedObj, err := dynamicClient.Resource(gvr).Update(context.TODO(), obj, metav1.UpdateOptions{})
+	updatedObj, err := dynamicClient.Resource(gvr).Namespace(namespace).Update(context.TODO(), obj, metav1.UpdateOptions{})
 	if err != nil {
-		klog.ErrorS(err, "Failed to update Repository resource", "name", name)
+		klog.ErrorS(err, "Failed to update Repository resource", "name", name, "namespace", namespace)
 		common.Fail(c, errors.NewInternal(fmt.Sprintf("Failed to update Repository resource: %v", err)))
 		return
 	}
 
 	// Clean up metadata
-	metadata := updatedObj.Object["metadata"].(map[string]interface{})
+	metadata = updatedObj.Object["metadata"].(map[string]interface{})
 
 	// Remove managedFields to reduce payload size
 	delete(metadata, "managedFields")
@@ -263,6 +283,8 @@ func HandleUpdateRepository(c *gin.Context) {
 
 // HandleDeleteRepository handles DELETE requests to delete a Repository resource
 func HandleDeleteRepository(c *gin.Context) {
+	// Get namespace parameter from URL
+	namespace := c.Param("namespace")
 	// Get name parameter from URL
 	name := c.Param("name")
 	if name == "" {
@@ -281,12 +303,10 @@ func HandleDeleteRepository(c *gin.Context) {
 	// Get the GVR for Repository resource
 	gvr := getRepositoryGVR()
 
-	klog.InfoS("Deleting Repository resource in management cluster", "name", name)
-
 	// Delete Repository resource
-	err = dynamicClient.Resource(gvr).Delete(context.TODO(), name, metav1.DeleteOptions{})
+	err = dynamicClient.Resource(gvr).Namespace(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 	if err != nil {
-		klog.ErrorS(err, "Failed to delete Repository resource", "name", name)
+		klog.ErrorS(err, "Failed to delete Repository resource", "name", name, "namespace", namespace)
 		common.Fail(c, errors.NewInternal(fmt.Sprintf("Failed to delete Repository resource: %v", err)))
 		return
 	}
@@ -307,8 +327,6 @@ func HandleListPackageRevs(c *gin.Context) {
 
 	// Get the GVR for PackageRev resource
 	gvr := getPackageRevGVR()
-
-	klog.InfoS("Listing PackageRev resources in management cluster")
 
 	// List PackageRev resources
 	resourceList, err := dynamicClient.Resource(gvr).List(context.TODO(), metav1.ListOptions{})
@@ -352,8 +370,6 @@ func HandleGetPackageRev(c *gin.Context) {
 
 	// Get the GVR for PackageRev resource
 	gvr := getPackageRevGVR()
-
-	klog.InfoS("Getting PackageRev resource in management cluster", "name", name)
 
 	// Get PackageRev resource
 	resource, err := dynamicClient.Resource(gvr).Get(context.TODO(), name, metav1.GetOptions{})
@@ -404,8 +420,6 @@ func HandleCreatePackageRev(c *gin.Context) {
 
 	// Get the GVR for PackageRev resource
 	gvr := getPackageRevGVR()
-
-	klog.InfoS("Creating PackageRev resource in management cluster", "name", obj.GetName())
 
 	// Create PackageRev resource
 	createdObj, err := dynamicClient.Resource(gvr).Create(context.TODO(), obj, metav1.CreateOptions{})
@@ -472,8 +486,6 @@ func HandleUpdatePackageRev(c *gin.Context) {
 	// Get the GVR for PackageRev resource
 	gvr := getPackageRevGVR()
 
-	klog.InfoS("Updating PackageRev resource in management cluster", "name", name)
-
 	// Update PackageRev resource
 	updatedObj, err := dynamicClient.Resource(gvr).Update(context.TODO(), obj, metav1.UpdateOptions{})
 	if err != nil {
@@ -511,8 +523,6 @@ func HandleDeletePackageRev(c *gin.Context) {
 	// Get the GVR for PackageRev resource
 	gvr := getPackageRevGVR()
 
-	klog.InfoS("Deleting PackageRev resource in management cluster", "name", name)
-
 	// Delete PackageRev resource
 	err = dynamicClient.Resource(gvr).Delete(context.TODO(), name, metav1.DeleteOptions{})
 	if err != nil {
@@ -532,10 +542,10 @@ func init() {
 	{
 		// Register Repository routes
 		mgmtRouter.GET("/package/repository", HandleListRepositories)
-		mgmtRouter.GET("/package/repository/:name", HandleGetRepository)
-		mgmtRouter.POST("/package/repository", HandleCreateRepository)
-		mgmtRouter.PUT("/package/repository/:name", HandleUpdateRepository)
-		mgmtRouter.DELETE("/package/repository/:name", HandleDeleteRepository)
+		mgmtRouter.GET("/package/repository/:namespace/:name", HandleGetRepository)
+		mgmtRouter.POST("/package/repository/:namespace", HandleCreateRepository)
+		mgmtRouter.PUT("/package/repository/:namespace/:name", HandleUpdateRepository)
+		mgmtRouter.DELETE("/package/repository/:namespace/:name", HandleDeleteRepository)
 
 		// Register PackageRev routes
 		mgmtRouter.GET("/package/packagerev", HandleListPackageRevs)
@@ -544,5 +554,4 @@ func init() {
 		mgmtRouter.PUT("/package/packagerev/:name", HandleUpdatePackageRev)
 		mgmtRouter.DELETE("/package/packagerev/:name", HandleDeletePackageRev)
 	}
-	klog.InfoS("Registered package management routes for Repository and PackageRev resources")
 }

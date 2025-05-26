@@ -232,7 +232,6 @@ func HandleGetMgmtResource(c *gin.Context) {
 		common.Fail(c, errors.NewInternal(fmt.Sprintf("Failed to create client: %v", err)))
 		return
 	}
-	
 
 	gvr := getGroupVersionResource(kind)
 	var result *unstructured.Unstructured
@@ -272,12 +271,11 @@ func HandleDeleteMgmtResource(c *gin.Context) {
 		common.Fail(c, errors.NewInternal(fmt.Sprintf("Failed to create client: %v", err)))
 		return
 	}
-	
 
 	gvr := getGroupVersionResource(kind)
-	
+
 	deleteOptions := metav1.DeleteOptions{}
-	
+
 	// Determine if the resource is cluster-scoped or namespaced
 	if isClusterScopedResource(kind) {
 		err = dynamicClient.Resource(gvr).Delete(context.TODO(), name, deleteOptions)
@@ -320,13 +318,12 @@ func HandlePutMgmtResource(c *gin.Context) {
 		common.Fail(c, errors.NewInternal(fmt.Sprintf("Failed to create client: %v", err)))
 		return
 	}
-	
 
 	gvr := getGroupVersionResource(kind)
 	obj := &unstructured.Unstructured{Object: requestBody}
-	
+
 	var result *unstructured.Unstructured
-	
+
 	// Determine if the resource is cluster-scoped or namespaced
 	if isClusterScopedResource(kind) {
 		result, err = dynamicClient.Resource(gvr).Update(context.TODO(), obj, metav1.UpdateOptions{})
@@ -368,13 +365,12 @@ func HandleCreateMgmtResource(c *gin.Context) {
 		common.Fail(c, errors.NewInternal(fmt.Sprintf("Failed to create client: %v", err)))
 		return
 	}
-	
 
 	gvr := getGroupVersionResource(kind)
 	obj := &unstructured.Unstructured{Object: requestBody}
-	
+
 	var result *unstructured.Unstructured
-	
+
 	// Determine if the resource is cluster-scoped or namespaced
 	if isClusterScopedResource(kind) {
 		result, err = dynamicClient.Resource(gvr).Create(context.TODO(), obj, metav1.CreateOptions{})
@@ -399,11 +395,11 @@ func HandleCreateMgmtResource(c *gin.Context) {
 func init() {
 	mgmtRouter := router.Mgmt()
 	{
-		mgmtRouter.GET("/resource/:kind/:namespace/:name", HandleGetMgmtResource)
-		mgmtRouter.DELETE("/resource/:kind/:namespace/:name", HandleDeleteMgmtResource)
-		mgmtRouter.PUT("/resource/:kind/:namespace/:name", HandlePutMgmtResource)
-		mgmtRouter.POST("/resource/:kind/:namespace", HandleCreateMgmtResource)
-		mgmtRouter.POST("/resource/:kind", HandleCreateMgmtResource) // For cluster-scoped resources
+		mgmtRouter.GET("/_raw/:kind/:namespace/:name", HandleGetMgmtResource)
+		mgmtRouter.DELETE("/_raw/:kind/:namespace/:name", HandleDeleteMgmtResource)
+		mgmtRouter.PUT("/_raw/:kind/:namespace/:name", HandlePutMgmtResource)
+		mgmtRouter.POST("/_raw/:kind/:namespace", HandleCreateMgmtResource)
+		mgmtRouter.POST("/_raw/:kind", HandleCreateMgmtResource) // For cluster-scoped resources
 	}
 	klog.InfoS("Registered management cluster unstructured resource routes")
 }
