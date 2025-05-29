@@ -163,37 +163,60 @@ install_all() {
   fi
   echo ""
   
-  # Step 1: Install OpenFGA using Helm
-  echo "Step 1: Installing OpenFGA using Helm..."
+  # Step 1: Check and Install OpenFGA using Helm
+  echo "Step 1: Checking if OpenFGA is already installed..."
+  
+  # Check if OpenFGA is already installed
+  openfga_check=$(kubectl get deployment openfga -n karmada-system 2>&1)
+  if [[ ! $openfga_check == *"not found"* ]] && [[ ! $openfga_check == *"NotFound"* ]]; then
+    echo "OpenFGA is already installed in the karmada-system namespace. Skipping installation."
+  else
+    echo "OpenFGA is not installed. Proceeding with installation..."
+    
+    # Add OpenFGA Helm repository if not already added
+    if ! helm repo list | grep -q "openfga"; then
+      echo "Adding OpenFGA Helm repository..."
+      helm repo add openfga https://openfga.github.io/helm-charts
+      helm repo update
+    fi
 
-  # Add OpenFGA Helm repository if not already added
-  if ! helm repo list | grep -q "openfga"; then
-    echo "Adding OpenFGA Helm repository..."
-    helm repo add openfga https://openfga.github.io/helm-charts
-    helm repo update
+    # Install OpenFGA with Helm
+    echo "Installing OpenFGA with PostgreSQL..."
+    helm install --namespace karmada-system openfga openfga/openfga \
+      --set datastore.engine=postgres \
+      --set datastore.uri="postgres://postgres:password@openfga-postgresql.karmada-system.svc.cluster.local:5432/postgres?sslmode=disable" \
+      --set postgresql.enabled=true \
+      --set postgresql.auth.postgresPassword=password \
+      --set postgresql.auth.database=postgres
+    echo "OpenFGA installed via Helm."
   fi
-
-  # Install OpenFGA with Helm
-  echo "Installing OpenFGA with PostgreSQL..."
-  helm install --namespace karmada-system openfga openfga/openfga \
-    --set datastore.engine=postgres \
-    --set datastore.uri="postgres://postgres:password@openfga-postgresql.karmada-system.svc.cluster.local:5432/postgres?sslmode=disable" \
-    --set postgresql.enabled=true \
-    --set postgresql.auth.postgresPassword=password \
-    --set postgresql.auth.database=postgres
-  echo "OpenFGA installed via Helm."
   echo ""
 
-  # Step 2: Apply the OpenFGA service configuration
-  echo "Step 2: Applying OpenFGA service configuration..."
-  kubectl apply -k artifacts/openfga
-  echo "OpenFGA service configuration applied."
+  # Check for OpenFGA installation status for later steps
+  OPENFGA_INSTALLED=false
+  openfga_check=$(kubectl get deployment openfga -n karmada-system 2>&1)
+  if [[ ! $openfga_check == *"not found"* ]] && [[ ! $openfga_check == *"NotFound"* ]]; then
+    OPENFGA_INSTALLED=true
+  fi
+  
+  # Step 2: Apply the OpenFGA service configuration if OpenFGA was just installed
+  if [ "$OPENFGA_INSTALLED" = true ]; then
+    echo "Step 2: OpenFGA service configuration already exists. Skipping."
+  else
+    echo "Step 2: Applying OpenFGA service configuration..."
+    kubectl apply -k artifacts/openfga
+    echo "OpenFGA service configuration applied."
+  fi
   echo ""
 
-  # Step 3: Wait for OpenFGA to be ready
-  echo "Step 3: Waiting for OpenFGA deployment to become ready..."
-  kubectl -n karmada-system wait --for=condition=available --timeout=300s deployment/openfga
-  echo "OpenFGA deployment is ready."
+  # Step 3: Wait for OpenFGA to be ready (only if we just installed it)
+  if [ "$OPENFGA_INSTALLED" = true ]; then
+    echo "Step 3: OpenFGA is already running. Skipping wait."
+  else
+    echo "Step 3: Waiting for OpenFGA deployment to become ready..."
+    kubectl -n karmada-system wait --for=condition=available --timeout=300s deployment/openfga
+    echo "OpenFGA deployment is ready."
+  fi
   echo ""
 
   # Step 4: Verify OpenFGA installation
