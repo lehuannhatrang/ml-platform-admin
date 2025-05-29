@@ -119,6 +119,28 @@ install_all() {
   fi
   echo ""
   
+  # Check if Helm is installed
+  echo "Checking if Helm is installed..."
+  if ! command -v helm &> /dev/null; then
+    echo "Helm is not installed on this system."
+    read -p "Do you want to install Helm now? [y/n]: " install_helm
+    
+    if [ "$install_helm" == "y" ] || [ "$install_helm" == "Y" ]; then
+      echo "Installing Helm..."
+      curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+      chmod 700 get_helm.sh
+      ./get_helm.sh
+      rm get_helm.sh
+      echo "Helm installation completed."
+    else
+      echo "Helm installation skipped. This script requires Helm to continue. Exiting..."
+      exit 1
+    fi
+  else
+    echo "Helm is already installed."
+  fi
+  echo ""
+  
   # Create secrets for dashboard if they don't exist
   echo "Checking and creating required secrets for dashboard..."
   
