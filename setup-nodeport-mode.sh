@@ -237,6 +237,9 @@ install_all() {
   echo "Dashboard deployments are ready."
   echo ""
 
+  # Get NodePort for dashboard web
+  WEB_NODEPORT=$(kubectl get svc -n karmada-system karmada-dashboard-web -o jsonpath='{.spec.ports[0].nodePort}')
+
   # Step 7: Switch to karmada-apiserver context
   echo "Step 7: Switching to karmada-apiserver context..."
   kubectl config use-context karmada-apiserver
@@ -254,9 +257,6 @@ install_all() {
   JWT_TOKEN=$(kubectl -n karmada-system get secret/karmada-dashboard-secret -o go-template="{{.data.token | base64decode}}")
   echo "JWT token retrieved."
   echo ""
-
-  # Get NodePort for dashboard web
-  WEB_NODEPORT=$(kubectl get svc -n karmada-system karmada-dashboard-web -o jsonpath='{.spec.ports[0].nodePort}')
 
   echo ""
   echo "=== DCN Dashboard Setup Complete ==="
