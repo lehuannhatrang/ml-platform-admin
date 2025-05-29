@@ -25,6 +25,58 @@ install_all() {
   # Set the working directory to the script's directory
   cd "$(dirname "$0")"
   
+  # Check if Karmada is installed
+  echo "Checking if Karmada is installed..."
+  karmada_check=$(kubectl get deployments.apps -n karmada-system 2>&1)
+  if [[ $karmada_check == *"No resources found"* ]] || [[ $karmada_check == *"not found"* ]]; then
+    echo "Karmada is not installed on this cluster."
+    read -p "Do you want to install Karmada now? [y/n]: " install_karmada
+    
+    if [ "$install_karmada" == "y" ] || [ "$install_karmada" == "Y" ]; then
+      echo "Installing Karmada..."
+      
+      # Install Karmada kubectl
+      echo "Installing Karmada kubectl..."
+      curl -s https://raw.githubusercontent.com/karmada-io/karmada/master/hack/install-cli.sh | sudo bash -s kubectl-karmada
+      
+      # Install karmadactl
+      echo "Installing karmadactl..."
+      curl -s https://raw.githubusercontent.com/karmada-io/karmada/master/hack/install-cli.sh | sudo bash
+      
+      # Initialize Karmada
+      echo "Initializing Karmada (this may take up to 5 minutes)..."
+      kubectl karmada init
+      
+      # Wait for Karmada components to be ready
+      echo "Waiting for Karmada components to be ready..."
+      timeout=300  # 5 minutes
+      elapsed=0
+      while [ $elapsed -lt $timeout ]; do
+        karmada_check=$(kubectl get deployments.apps -n karmada-system 2>&1)
+        if [[ ! $karmada_check == *"No resources found"* ]] && [[ ! $karmada_check == *"not found"* ]]; then
+          # Found deployments, break the loop
+          break
+        fi
+        echo "Waiting for Karmada deployments... ($elapsed seconds elapsed)"
+        sleep 10
+        elapsed=$((elapsed + 10))
+      done
+      
+      if [ $elapsed -ge $timeout ]; then
+        echo "Timeout waiting for Karmada to be ready. Please check the Karmada installation manually and re-run this script."
+        exit 1
+      fi
+      
+      echo "Karmada installation completed successfully."
+    else
+      echo "Karmada installation skipped. Exiting..."
+      exit 0
+    fi
+  else
+    echo "Karmada is already installed on this cluster."
+  fi
+  echo ""
+  
   # Step 1: Install OpenFGA using Helm
 echo "Step 1: Installing OpenFGA using Helm..."
 
