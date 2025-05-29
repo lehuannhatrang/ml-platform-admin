@@ -36,7 +36,7 @@ spec:
             - --porch-api=https://api.porch-system.svc.cluster.local:443
             - --skip-porch-tls-verify=true
           name: karmada-dashboard-api
-          image: lehuannhatrang/dcn-dashboard-api:v0.30
+          image: lehuannhatrang/dcn-dashboard-api:v0.31
           imagePullPolicy: IfNotPresent
           env:
             - name: GIN_MODE
