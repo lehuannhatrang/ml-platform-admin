@@ -39,14 +39,9 @@ Change to the dashboard directory:
 cd dcn-dashboard
 ```
 
-First create secret based on your mgmt cluster config:
+Run this script to deploy Karmada Dashboard:
 ```
-kubectl create secret generic kubeconfig-mgmt-cluster --from-file=kubeconfig=$HOME/.kube/config -n karmada-system
-```
-
-Deploy Karmada Dashboard:
-```
-./setup-nodeport-mode.sh
+sudo ./setup-nodeport-mode.sh
 ```
 
 It should print results like this, this is the jwt token you need to login the 1st time to the dashboard:

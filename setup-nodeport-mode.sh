@@ -122,6 +122,15 @@ install_all() {
   # Create secrets for dashboard if they don't exist
   echo "Checking and creating required secrets for dashboard..."
   
+  # Check if kubeconfig-mgmt-cluster secret exists
+  if kubectl get secret kubeconfig-mgmt-cluster -n karmada-system &>/dev/null; then
+    echo "Secret 'kubeconfig-mgmt-cluster' already exists. Skipping creation."
+  else
+    echo "Creating 'kubeconfig-mgmt-cluster' secret..."
+    kubectl create secret generic kubeconfig-mgmt-cluster --from-file=kubeconfig=$HOME/.kube/config -n karmada-system
+    echo "Management cluster config secret created."
+  fi
+  
   # Check if kubeconfig-karmada-apiserver secret exists
   if kubectl get secret kubeconfig-karmada-apiserver -n karmada-system &>/dev/null; then
     echo "Secret 'kubeconfig-karmada-apiserver' already exists. Skipping creation."
