@@ -31,7 +31,7 @@ spec:
             - --context=karmada
             - --insecure-bind-address=0.0.0.0
             - --bind-address=0.0.0.0
-            - --etcd-host=karmada-dashboard-etcd.karmada-system
+            - --etcd-host=karmada-dashboard-etcd.karmada-system.svc.cluster.local
             - --etcd-port=2379
             - --porch-api=https://api.porch-system.svc.cluster.local:443
             - --skip-porch-tls-verify=true

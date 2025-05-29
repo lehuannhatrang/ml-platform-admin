@@ -121,7 +121,7 @@ const Overview = () => {
   return (
     <Spin spinning={isLoading}>
       <Panel showSelectCluster={false}>
-        {clusterOptions.length > 1 ? (
+        {clusterOptions.length > 0 ? (
           <>
             <Card
               title="Information"
