@@ -193,8 +193,15 @@ install_all() {
   echo "Step 1: Checking if OpenFGA is already installed..."
   
   # Check if OpenFGA is already installed
+  set +e  # Don't exit on error
   openfga_check=$(kubectl get deployment openfga -n karmada-system 2>&1)
-  if [[ ! $openfga_check == *"not found"* ]] && [[ ! $openfga_check == *"NotFound"* ]]; then
+  check_exit_code=$?
+  set -e  # Re-enable exit on error
+  
+  echo "Debug: OpenFGA check result: $check_exit_code"
+  echo "Debug: OpenFGA check output: $openfga_check"
+  
+  if [ $check_exit_code -eq 0 ]; then
     echo "OpenFGA is already installed in the karmada-system namespace. Skipping installation."
   else
     echo "OpenFGA is not installed. Proceeding with installation..."
@@ -220,8 +227,12 @@ install_all() {
 
   # Check for OpenFGA installation status for later steps
   OPENFGA_INSTALLED=false
+  set +e  # Don't exit on error
   openfga_check=$(kubectl get deployment openfga -n karmada-system 2>&1)
-  if [[ ! $openfga_check == *"not found"* ]] && [[ ! $openfga_check == *"NotFound"* ]]; then
+  check_exit_code=$?
+  set -e  # Re-enable exit on error
+  
+  if [ $check_exit_code -eq 0 ]; then
     OPENFGA_INSTALLED=true
   fi
   
