@@ -98,7 +98,7 @@ spec:
             secretName: kubeconfig-karmada-apiserver
         - name: kubeconfig-mgmt-cluster
           secret:
-            secretName: kubeconfig-mgmt-cluster
+            secretName: kubeconfig
 ---
 apiVersion: v1
 kind: Service
