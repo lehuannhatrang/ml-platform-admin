@@ -99,12 +99,22 @@ install_all() {
         mkdir -p "$HOME/.kube"
         cp /etc/karmada/karmada-apiserver.config "$HOME/.kube/karmada-apiserver.config"
         echo "karmada-apiserver.config has been created in $HOME/.kube directory."
+        
+        # Update KUBECONFIG to include both configs
+        echo "Updating KUBECONFIG environment variable..."
+        export KUBECONFIG="$HOME/.kube/config:$HOME/.kube/karmada-apiserver.config"
+        echo "KUBECONFIG updated to include both regular Kubernetes config and Karmada API server config."
       else
         echo "WARNING: Could not find karmada-apiserver.config in /etc/karmada. Please manually create this file."
         echo "The dashboard may not function properly without this configuration."
       fi
     else
       echo "karmada-apiserver.config already exists in $HOME/.kube directory."
+      
+      # Update KUBECONFIG to include both configs
+      echo "Updating KUBECONFIG environment variable..."
+      export KUBECONFIG="$HOME/.kube/config:$HOME/.kube/karmada-apiserver.config"
+      echo "KUBECONFIG updated to include both regular Kubernetes config and Karmada API server config."
     fi
   fi
   echo ""
