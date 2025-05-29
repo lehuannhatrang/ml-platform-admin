@@ -68,17 +68,62 @@ install_all() {
       fi
       
       echo "Karmada installation completed successfully."
+      
+      # Check if karmada-apiserver.config exists
+      echo "Checking for karmada-apiserver.config..."
+      if [ ! -f "$HOME/.kube/karmada-apiserver.config" ]; then
+        echo "karmada-apiserver.config not found in $HOME/.kube directory. Creating it..."
+        if [ -f "/etc/karmada/karmada-apiserver.config" ]; then
+          mkdir -p "$HOME/.kube"
+          cp /etc/karmada/karmada-apiserver.config "$HOME/.kube/karmada-apiserver.config"
+          echo "karmada-apiserver.config has been created in $HOME/.kube directory."
+        else
+          echo "WARNING: Could not find karmada-apiserver.config in /etc/karmada. Please manually create this file."
+          echo "The dashboard may not function properly without this configuration."
+        fi
+      else
+        echo "karmada-apiserver.config already exists in $HOME/.kube directory."
+      fi
     else
       echo "Karmada installation skipped. Exiting..."
       exit 0
     fi
   else
     echo "Karmada is already installed on this cluster."
+    
+    # Check if karmada-apiserver.config exists
+    echo "Checking for karmada-apiserver.config..."
+    if [ ! -f "$HOME/.kube/karmada-apiserver.config" ]; then
+      echo "karmada-apiserver.config not found in $HOME/.kube directory. Creating it..."
+      if [ -f "/etc/karmada/karmada-apiserver.config" ]; then
+        mkdir -p "$HOME/.kube"
+        cp /etc/karmada/karmada-apiserver.config "$HOME/.kube/karmada-apiserver.config"
+        echo "karmada-apiserver.config has been created in $HOME/.kube directory."
+      else
+        echo "WARNING: Could not find karmada-apiserver.config in /etc/karmada. Please manually create this file."
+        echo "The dashboard may not function properly without this configuration."
+      fi
+    else
+      echo "karmada-apiserver.config already exists in $HOME/.kube directory."
+    fi
+  fi
+  echo ""
+  
+  # Create secrets for dashboard if they don't exist
+  echo "Checking and creating required secrets for dashboard..."
+  
+  # Check if kubeconfig-karmada-apiserver secret exists
+  if kubectl get secret kubeconfig-karmada-apiserver -n karmada-system &>/dev/null; then
+    echo "Secret 'kubeconfig-karmada-apiserver' already exists. Skipping creation."
+  else
+    echo "Creating 'kubeconfig-karmada-apiserver' secret..."
+    kubectl create secret generic kubeconfig-karmada-apiserver --from-file=kubeconfig=$HOME/.kube/karmada-apiserver.config -n karmada-system
+    echo "Karmada API server config secret created."
   fi
   echo ""
   
   # Step 1: Install OpenFGA using Helm
-echo "Step 1: Installing OpenFGA using Helm..."
+  echo "Step 1: Installing OpenFGA using Helm..."
 
   # Add OpenFGA Helm repository if not already added
   if ! helm repo list | grep -q "openfga"; then

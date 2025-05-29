@@ -15,44 +15,36 @@ If you don't already have the Karmada, you can launch one by following this [tut
 
 ---
 ### Install Karmada-dashboard
-In the following steps, we are going to install Karmada Dashboard on the `host cluster` where running the Karmada
-control plane components. We assume that Karmada was installed in namespace `karmada-system` and Karmada config is 
-located at `$HOME/.kube/karmada.config`, if this differs from your environment, please modify the following commands 
+In the following steps, we are going to install Karmada Dashboard on the `mgmt-cluster` where running the Karmada
+control plane components. We assume that Karmada was installed in namespace `karmada-system` and mgmt-cluster config is 
+located at `$HOME/.kube/config`, if this differs from your environment, please modify the following commands 
 accordingly. 
 
-1. Switch user-context of your Karmada config to `karmada-host`.
+1. Switch user-context of your mgmt-cluster config to `mgmt-cluster`.
 
 ```bash
-export KUBECONFIG="$HOME/.kube/karmada.config"
-kubectl config use-context karmada-host
+export KUBECONFIG="$HOME/.kube/config"
+kubectl config use-context kubernetes
 ```
 
-Now, you should be able to see Karmada control plane components by following command:
-```
-kubectl get deployments.apps -n karmada-system
-```
+Find your karmada-apiserver.config file, it should be in the same directory as your mgmt-cluster config. For example: `$HOME/.kube/karmada-apiserver.config`
 
-If everything works fine, you will get similar messages as following:
-```
-NAME                                  READY   UP-TO-DATE   AVAILABLE   AGE
-karmada-aggregated-apiserver          2/2     2            2           3d
-karmada-apiserver                     1/1     1            1           3d
-karmada-controller-manager            1/1     1            1           3d
-karmada-kube-controller-manager       1/1     1            1           3d
-karmada-scheduler                     2/2     2            2           3d
-karmada-webhook                       2/2     2            2           3d
+If there is no karmada-apiserver.config file, you can create it by following command:
+
+```bash
+cp /etc/karmada/karmada-apiserver.config ~/.kube/karmada-apiserver.config
 ```
 
 2. Deploy Karmada Dashboard
 
 Clone this repo to your machine:
 ```
-git clone https://github.com/karmada-io/dashboard.git
+git clone https://github.com/lehuannhatrang/dcn-dashboard
 ```
 
 Change to the dashboard directory:
 ```
-cd dashboard
+cd dcn-dashboard
 ```
 
 First create secret based on your mgmt cluster config:
@@ -60,7 +52,7 @@ First create secret based on your mgmt cluster config:
 kubectl create secret generic kubeconfig-mgmt-cluster --from-file=kubeconfig=$HOME/.kube/config -n karmada-system
 ```
 
-Create the secret based on your Karmada config, the Karmada Dashboard will use this config to talk to the Karmada API server.
+Create the secret based on your Karmada config, the Karmada Dashboard will use this config to communicate to the Karmada API server.
 ```
 kubectl create secret generic kubeconfig-karmada-apiserver --from-file=kubeconfig=$HOME/.kube/karmada-apiserver.config -n karmada-system
 ```
