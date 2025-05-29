@@ -27,14 +27,6 @@ export KUBECONFIG="$HOME/.kube/config"
 kubectl config use-context kubernetes
 ```
 
-Find your karmada-apiserver.config file, it should be in the same directory as your mgmt-cluster config. For example: `$HOME/.kube/karmada-apiserver.config`
-
-If there is no karmada-apiserver.config file, you can create it by following command:
-
-```bash
-cp /etc/karmada/karmada-apiserver.config ~/.kube/karmada-apiserver.config
-```
-
 2. Deploy Karmada Dashboard
 
 Clone this repo to your machine:
@@ -50,11 +42,6 @@ cd dcn-dashboard
 First create secret based on your mgmt cluster config:
 ```
 kubectl create secret generic kubeconfig-mgmt-cluster --from-file=kubeconfig=$HOME/.kube/config -n karmada-system
-```
-
-Create the secret based on your Karmada config, the Karmada Dashboard will use this config to communicate to the Karmada API server.
-```
-kubectl create secret generic kubeconfig-karmada-apiserver --from-file=kubeconfig=$HOME/.kube/karmada-apiserver.config -n karmada-system
 ```
 
 Deploy Karmada Dashboard:
