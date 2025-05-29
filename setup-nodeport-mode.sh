@@ -43,9 +43,28 @@ install_all() {
       echo "Installing karmadactl..."
       curl -s https://raw.githubusercontent.com/karmada-io/karmada/master/hack/install-cli.sh | sudo bash
       
+      # Ask for Karmada output path
+      echo "Please enter the Karmada output path (default: /etc/karmada): "
+      read -p "> " karmada_path
+      
+      # Set the default path if not provided
+      if [ -z "$karmada_path" ]; then
+        karmada_path="/etc/karmada"
+        echo "Using default path: $karmada_path"
+      else
+        echo "Using custom path: $karmada_path"
+      fi
+      
       # Initialize Karmada
       echo "Initializing Karmada (this may take up to 5 minutes)..."
-      kubectl karmada init
+      if [ "$karmada_path" = "/etc/karmada" ]; then
+        kubectl karmada init
+      else
+        kubectl karmada init --karmada-data "$karmada_path"
+      fi
+      
+      # Export the karmada_path variable for later use
+      export KARMADA_DATA_PATH="$karmada_path"
       
       # Wait for Karmada components to be ready
       echo "Waiting for Karmada components to be ready..."
@@ -73,10 +92,17 @@ install_all() {
       echo "Checking for karmada-apiserver.config..."
       if [ ! -f "$HOME/.kube/karmada-apiserver.config" ]; then
         echo "karmada-apiserver.config not found in $HOME/.kube directory. Creating it..."
-        if [ -f "/etc/karmada/karmada-apiserver.config" ]; then
+        
+        # If KARMADA_DATA_PATH was set during installation, use that path
+        if [ ! -z "${KARMADA_DATA_PATH}" ] && [ -f "${KARMADA_DATA_PATH}/karmada-apiserver.config" ]; then
+          mkdir -p "$HOME/.kube"
+          cp "${KARMADA_DATA_PATH}/karmada-apiserver.config" "$HOME/.kube/karmada-apiserver.config"
+          echo "karmada-apiserver.config has been copied from ${KARMADA_DATA_PATH} to $HOME/.kube directory."
+        # Fallback to standard location
+        elif [ -f "/etc/karmada/karmada-apiserver.config" ]; then
           mkdir -p "$HOME/.kube"
           cp /etc/karmada/karmada-apiserver.config "$HOME/.kube/karmada-apiserver.config"
-          echo "karmada-apiserver.config has been created in $HOME/.kube directory."
+          echo "karmada-apiserver.config has been copied from /etc/karmada to $HOME/.kube directory."
         else
           echo "WARNING: Could not find karmada-apiserver.config in /etc/karmada. Please manually create this file."
           echo "The dashboard may not function properly without this configuration."
