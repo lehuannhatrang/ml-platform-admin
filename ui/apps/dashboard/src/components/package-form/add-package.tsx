@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Form,
   Input,
@@ -17,25 +17,39 @@ import {
   Row,
   Col,
 } from 'antd';
-import { Repository, PackageRevisionLifecycle, CreatePackageRev, GetPackageRevs, GetRepositories, getRepositoryGroup, RepositoryContentType } from '@/services/package';
+import { Repository, GetRepositories, getRepositoryGroup, RepositoryContentType, RepositoryContentDetails } from '@/services/package';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { CreatePackageRev, getCloneTask, getInitTask, GetPackageRevs, PackageRev, PackageRevisionLifecycle } from '@/services/package-revision';
 
 const { Option } = Select;
 const { Title, Text } = Typography;
 const { Step } = Steps;
 
-// Package Types
-export enum PackageType {
-  GIT = 'git',
-  OCI = 'oci',
-}
-
 // Creation Method Types
 export enum CreationMethod {
   FROM_SCRATCH = 'fromScratch',
+  CLONE_DEPLOYMENT = 'cloneDeployment',
   CLONE_TEAM_BLUEPRINT = 'cloneTeamBlueprint',
   CLONE_ORGANIZATIONAL_BLUEPRINT = 'cloneOrganizationalBlueprint',
   CLONE_EXTERNAL_BLUEPRINT = 'cloneExternalBlueprint',
+  CLONE_FUNCTION = 'cloneFunction',
+}
+
+export const creationMethodMap: Record<RepositoryContentType, CreationMethod> = {
+  [RepositoryContentType.DEPLOYMENT]: CreationMethod.CLONE_DEPLOYMENT,
+  [RepositoryContentType.TEAM_BLUEPRINT]: CreationMethod.CLONE_TEAM_BLUEPRINT,
+  [RepositoryContentType.EXTERNAL_BLUEPRINT]: CreationMethod.CLONE_EXTERNAL_BLUEPRINT,
+  [RepositoryContentType.ORGANIZATION_BLUEPRINT]: CreationMethod.CLONE_ORGANIZATIONAL_BLUEPRINT,
+  [RepositoryContentType.FUNCTION]: CreationMethod.CLONE_FUNCTION,
+}
+
+export const creationMethodLabelMap: Record<CreationMethod, string> = {
+  [CreationMethod.FROM_SCRATCH]: 'Create a new package from scratch',
+  [CreationMethod.CLONE_DEPLOYMENT]: 'Clone a Deployment',
+  [CreationMethod.CLONE_TEAM_BLUEPRINT]: 'Clone a Team Blueprint',
+  [CreationMethod.CLONE_ORGANIZATIONAL_BLUEPRINT]: 'Clone an Organizational Blueprint',
+  [CreationMethod.CLONE_EXTERNAL_BLUEPRINT]: 'Clone an External Blueprint',
+  [CreationMethod.CLONE_FUNCTION]: 'Clone a Function',
 }
 
 export interface PackageFormValues {
@@ -47,7 +61,6 @@ export interface PackageFormValues {
   site?: string;
   
   // Source details
-  packageType: PackageType;
   repository: string;
   directory?: string;
   revision?: string;
@@ -104,11 +117,12 @@ const AddPackage: React.FC<AddPackageProps> = ({
   const [addNamespaceResource, setAddNamespaceResource] = useState(false);
   const [validateResources, setValidateResources] = useState(true);
   const [sourceRepository, setSourceRepository] = useState('');
+  const repoContentGroup = useMemo(() => getRepositoryGroup(repository), [repository]);
   
   
   // Fetch package revisions for cloning options
   const { data: packageRevisions, isLoading: packagesLoading } = useQuery({
-    queryKey: ['GetPackageRevisions'],
+    queryKey: ['GetAllPackageRevs'],
     queryFn: async () => {
       const data = await GetPackageRevs();
       return data.items || [];
@@ -189,16 +203,16 @@ const AddPackage: React.FC<AddPackageProps> = ({
     if (!packageRevisions || !sourceRepository) return [];
     
     const selectedRepo = sourceRepository;
-    const packages = new Set<string>();
+    const packages = new Set<{value: string, label: string}>();
     
     packageRevisions
-      .filter(rev => rev.spec.repository === selectedRepo)
+      .filter(rev => rev.spec.repository === selectedRepo && !!rev.metadata?.labels?.['kpt.dev/latest-revision'])
       .forEach(rev => {
         if (rev.spec.packageName) {
-          packages.add(rev.spec.packageName);
+          packages.add({value: rev.metadata.name, label: rev.spec.packageName});
         }
       });
-    
+
     return Array.from(packages);
   }, [packageRevisions, sourceRepository]);
 
@@ -224,26 +238,26 @@ const AddPackage: React.FC<AddPackageProps> = ({
   // Create package mutation using the actual API
   const createPackageMutation = useMutation({
     mutationFn: async (values: PackageFormValues) => {
+      const baseTask = values.sourcePackage
+      ? getCloneTask(values.sourcePackage)
+      : getInitTask(values?.description || '', values?.keywords || [], values?.site || '');
+
+      const tasks = [baseTask];
       // Prepare the package revision data
-      const packageData = {
+      const packageData: PackageRev = {
         apiVersion: 'porch.kpt.dev/v1alpha1',
         kind: 'PackageRevision',
         metadata: {
-          name: values.name,
-          annotations: {
-            'kpt.dev/repository': values.repository,
-            'kpt.dev/package-path': values.packageType === PackageType.GIT ? values.directory : values.packagePath,
-          },
+          name: '',
         },
         spec: {
           packageName: values.name,
-          revision: values.revision || 'main',
+          workspaceName: 'v1',
           repository: values.repository,
           lifecycle: values.lifecycle,
-          tasks: [],
+          tasks,
         },
       };
-      
       const { data } = await CreatePackageRev(packageData);
       return data;
     },
@@ -259,19 +273,27 @@ const AddPackage: React.FC<AddPackageProps> = ({
     },
   });
 
-  const handleFinish = (values: PackageFormValues) => {
-    // Transform values if needed
-    const packageData = {
-      ...values,
-      repository: repository.metadata.name,
-      creationMethod,
-      useSameNamespace,
-      addNamespaceResource: useSameNamespace && addNamespaceResource,
-      validateResources,
-    };
-    
-    // Submit the form
-    createPackageMutation.mutate(packageData);
+  const handleFinish = async () => {
+    try {
+      // First validate to ensure required fields are filled
+      await form.validateFields();
+      
+      // Then get all form values including those with defaults
+      const submitData = form.getFieldsValue(true);
+      const packageData = {
+        ...submitData,
+        repository: repository.metadata.name,
+        creationMethod,
+        useSameNamespace,
+        addNamespaceResource: useSameNamespace && addNamespaceResource,
+        validateResources,
+      };
+      
+      // Submit the form
+      createPackageMutation.mutate(packageData);
+    } catch (error) {
+      console.error('Form validation failed:', error);
+    }
   };
 
   const nextStep = () => {
@@ -283,6 +305,11 @@ const AddPackage: React.FC<AddPackageProps> = ({
   const prevStep = () => {
     setCurrentStep(currentStep - 1);
   };
+
+  const cloneToContentType = useMemo(() => 
+    Object.values(RepositoryContentType)
+    .filter((contentType) => RepositoryContentDetails[contentType].cloneTo.find((cloneTo) => cloneTo.content === repoContentGroup))
+  , [repoContentGroup]);
 
   const steps = [
     {
@@ -299,17 +326,16 @@ const AddPackage: React.FC<AddPackageProps> = ({
               value={creationMethod}
             >
               <div className="mb-2">
-                <Radio value={CreationMethod.FROM_SCRATCH}>Create a new package from scratch</Radio>
+                <Radio value={CreationMethod.FROM_SCRATCH}>{creationMethodLabelMap[CreationMethod.FROM_SCRATCH]}</Radio>
               </div>
-              <div className="mb-2">
-                <Radio value={CreationMethod.CLONE_TEAM_BLUEPRINT}>Clone a Team Blueprint</Radio>
-              </div>
-              <div className="mb-2">
-                <Radio value={CreationMethod.CLONE_ORGANIZATIONAL_BLUEPRINT}>Clone an Organizational Blueprint</Radio>
-              </div>
-              <div className="mb-2">
-                <Radio value={CreationMethod.CLONE_EXTERNAL_BLUEPRINT}>Clone an External Blueprint</Radio>
-              </div>
+              {cloneToContentType.map((contentType) => {
+                const creationMethod = creationMethodMap[contentType];
+                return (
+                  <div className="mb-2">
+                    <Radio value={creationMethod}>{creationMethodLabelMap[creationMethod]}</Radio>
+                  </div>
+                )
+              })}
             </Radio.Group>
           </Form.Item>
 
@@ -351,7 +377,7 @@ const AddPackage: React.FC<AddPackageProps> = ({
                   disabled={!form.getFieldValue('sourceRepository') || sourcePackages.length === 0}
                 >
                   {sourcePackages.map(pkg => (
-                    <Option key={pkg} value={pkg}>{pkg}</Option>
+                    <Option key={pkg.value} value={pkg.value}>{pkg.label}</Option>
                   ))}
                 </Select>
               </Form.Item>
@@ -532,7 +558,6 @@ const AddPackage: React.FC<AddPackageProps> = ({
         layout="vertical"
         onFinish={handleFinish}
         initialValues={{
-          packageType: PackageType.GIT,
           lifecycle: PackageRevisionLifecycle.DRAFT,
         }}
       >

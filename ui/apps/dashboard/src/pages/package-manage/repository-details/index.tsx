@@ -32,32 +32,27 @@ import {
     Spin,
     Empty,
     TableColumnProps,
+    Popconfirm,
 } from 'antd';
 import {
     CheckCircleOutlined,
     InfoCircleOutlined,
-    EditOutlined,
     DeleteOutlined,
-    ExportOutlined,
-    DownloadOutlined,
     PlusOutlined,
 } from '@ant-design/icons';
 import {
-    GetPackageRevs,
     GetRepository,
-    PackageRev,
-    PackageRevisionLifecycle,
 } from '@/services/package';
 import Panel from '@/components/panel';
 import AddPackage from '@/components/package-form/add-package';
 import { calculateDuration } from '@/utils/time';
 import dayjs from 'dayjs';
+import { DeletePackageRev, GetPackageRevs, PackageRev, PackageRevisionLifecycle } from '@/services/package-revision';
 
 const { Title, Text } = Typography;
 
 interface PackageData {
     name: string;
-    packagePath: string;
     revision: string;
     lifecycle: PackageRevisionLifecycle;
     workloadIdentity?: string;
@@ -112,20 +107,20 @@ const RepositoryDetailsPage: React.FC = () => {
 
     // Filter package revisions for this repository and only get the latest ones
     const repositoryPackages = React.useMemo(() => {
-        console.log('allPackageRevs', allPackageRevs)
         if (!allPackageRevs || !repositoryName) return [];
 
         // Filter packages that belong to this repository and have the latest-revision label
         const filteredPackages = allPackageRevs.filter(
             (rev) =>
                 rev.spec.repository === repositoryName &&
-                (rev.spec.lifecycle !== PackageRevisionLifecycle.PUBLISHED || (rev.spec.lifecycle === PackageRevisionLifecycle.PUBLISHED && rev.metadata.labels?.['kpt.dev/latest-revision'] === 'true'))
+                (rev.spec.lifecycle !== PackageRevisionLifecycle.PUBLISHED || (rev.spec.lifecycle === PackageRevisionLifecycle.PUBLISHED
+                    && rev.metadata.labels?.['kpt.dev/latest-revision'] === 'true'
+                ))
         );
 
         // Transform to a more convenient format for display
         return filteredPackages.map((rev): PackageData => ({
             name: rev.spec.packageName || '',
-            packagePath: rev.metadata.annotations?.['kpt.dev/package-path'] || '',
             revision: rev.spec.revision || '',
             lifecycle: rev.spec.lifecycle as PackageRevisionLifecycle,
             workloadIdentity: rev.status?.workloadIdentity,
@@ -230,47 +225,19 @@ const RepositoryDetailsPage: React.FC = () => {
             key: 'actions',
             render: (_: any, record: PackageData) => (
                 <Space>
-                    <Tooltip title="Edit Package">
-                        <Button
-                            type="text"
-                            icon={<EditOutlined />}
-                            onClick={() => {
-                                // Handle edit
-                                messageApi.info(`Edit package ${record.name} (not implemented)`);
-                            }}
-                        />
-                    </Tooltip>
-                    <Tooltip title="Delete Package">
+                    <Popconfirm
+                        placement="topRight"
+                        title={`Are you sure you want to delete package revision '${record.raw.metadata.name}'?`}
+                        onConfirm={() => DeletePackageRev(record.raw.metadata.name)}
+                        okText="Confirm"
+                        cancelText="Cancel"
+                    >
                         <Button
                             type="text"
                             danger
                             icon={<DeleteOutlined />}
-                            onClick={() => {
-                                // Handle delete
-                                messageApi.info(`Delete package ${record.name} (not implemented)`);
-                            }}
                         />
-                    </Tooltip>
-                    <Tooltip title="Export Package">
-                        <Button
-                            type="text"
-                            icon={<ExportOutlined />}
-                            onClick={() => {
-                                // Handle export
-                                messageApi.info(`Export package ${record.name} (not implemented)`);
-                            }}
-                        />
-                    </Tooltip>
-                    <Tooltip title="Download Package">
-                        <Button
-                            type="text"
-                            icon={<DownloadOutlined />}
-                            onClick={() => {
-                                // Handle download
-                                messageApi.info(`Download package ${record.name} (not implemented)`);
-                            }}
-                        />
-                    </Tooltip>
+                    </Popconfirm>
                 </Space>
             ),
         },
@@ -340,6 +307,12 @@ const RepositoryDetailsPage: React.FC = () => {
                                     <div>
                                         <Text type="secondary">Branch:</Text>{' '}
                                         <Tag color="orange">{repository.spec.git.branch}</Tag>
+                                    </div>
+                                )}
+                                {repository.spec.git.directory && (
+                                    <div>
+                                        <Text type="secondary">Directory:</Text>{' '}
+                                        <Tag color="orange">{repository.spec.git.directory}</Tag>
                                     </div>
                                 )}
                             </>

@@ -21,12 +21,14 @@ import { cn } from '@/utils/cn.ts';
 import { Login } from '@/services/auth.ts';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/auth';
+import { useTheme } from '@/contexts/theme-context';
 
 const LoginPage = () => {
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
   const { setToken } = useAuth();
   const [loginForm] = Form.useForm();
+  const { theme } = useTheme();
 
   const handleLogin = async (values: { username: string; password: string }) => {
     try {
@@ -64,8 +66,10 @@ const LoginPage = () => {
     }
   };
 
+  const isDarkTheme = theme === 'dark';
+
   return (
-    <div className={'h-screen w-screen  bg-[#FAFBFC]'}>
+    <div className={`h-screen w-screen ${isDarkTheme ? 'bg-[#141414]' : 'bg-[#FAFBFC]'}`}>
       <div className="h-full w-full flex justify-center items-center ">
         <Card
           className={cn('w-1/4', styles['login-card'])}

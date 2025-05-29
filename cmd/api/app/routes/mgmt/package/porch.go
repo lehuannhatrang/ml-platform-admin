@@ -301,12 +301,36 @@ func ptr(i int64) *int64 {
 func HandlePorchGetPackageRevisionResources(c *gin.Context) {
 	name := c.Param("name")
 	if name == "" {
-		klog.Error("Package revision name is required")
-		common.Fail(c, errors.NewBadRequest("package revision name is required"))
+		klog.Error("PackageRevision name is required")
+		common.Fail(c, errors.NewBadRequest("packagerevision name is required"))
 		return
 	}
 
 	proxyToPorch(c, fmt.Sprintf("/apis/porch.kpt.dev/v1alpha1/namespaces/default/packagerevisionresources/%s", name))
+}
+
+// HandlePorchUpdatePackageRevisionResources handles PUT requests to update package revision resources
+func HandlePorchUpdatePackageRevisionResources(c *gin.Context) {
+	name := c.Param("name")
+	if name == "" {
+		klog.Error("PackageRevision name is required")
+		common.Fail(c, errors.NewBadRequest("packagerevision name is required"))
+		return
+	}
+
+	proxyToPorch(c, fmt.Sprintf("/apis/porch.kpt.dev/v1alpha1/namespaces/default/packagerevisionresources/%s", name))
+}
+
+// HandlePorchApprovePackageRevision handles PUT requests to approve a package revision in the Porch server
+func HandlePorchApprovePackageRevision(c *gin.Context) {
+	name := c.Param("name")
+	if name == "" {
+		klog.Error("PackageRevision name is required")
+		common.Fail(c, errors.NewBadRequest("packagerevision name is required"))
+		return
+	}
+
+	proxyToPorch(c, fmt.Sprintf("/apis/porch.kpt.dev/v1alpha1/namespaces/default/packagerevisions/%s/approval", name))
 }
 
 // RegisterPorchRoutes registers all routes for Porch API
@@ -326,9 +350,11 @@ func RegisterPorchRoutes() {
 		porchRouter.POST("/porch/packagerevision", HandlePorchCreatePackageRevision)
 		porchRouter.PUT("/porch/packagerevision/:name", HandlePorchUpdatePackageRevision)
 		porchRouter.DELETE("/porch/packagerevision/:name", HandlePorchDeletePackageRevision)
+		porchRouter.PUT("/porch/packagerevision/:name/approval", HandlePorchApprovePackageRevision)
 
 		// PackageRevisionResources routes
 		porchRouter.GET("/porch/packagerevisionresources/:name", HandlePorchGetPackageRevisionResources)
+		porchRouter.PUT("/porch/packagerevisionresources/:name", HandlePorchUpdatePackageRevisionResources)
 	}
 	klog.InfoS("Registered package management routes for Porch API")
 }

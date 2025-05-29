@@ -17,7 +17,7 @@ limitations under the License.
 import React, { useState } from 'react';
 import { useTheme } from '@/contexts/theme-context';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     Tabs,
     Card,
@@ -32,26 +32,21 @@ import {
     Spin,
     Empty,
     List,
-    Divider,
 } from 'antd';
 import {
     EditOutlined,
     FileOutlined,
-    FolderOutlined,
-    EyeOutlined,
     RollbackOutlined,
     SaveOutlined,
+    CloseOutlined,
+    SettingOutlined,
 } from '@ant-design/icons';
-import {
-    GetPackageRev,
-    GetPackageRevisionResources,
-    PackageRevisionLifecycle,
-} from '@/services/package';
 import Panel from '@/components/panel';
 import { calculateDuration } from '@/utils/time';
 import TextareaWithUpload from '@/components/textarea-with-upload';
+import { GetPackageRev, GetPackageRevisionResources, PackageRevisionLifecycle, UpdatePackageRev, ApprovePackageRev, UpdatePackageRevisionResources, PackageRevisionResources } from '@/services/package-revision';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 
 // Interface for resource items displayed in the UI
@@ -69,9 +64,14 @@ const PackageDetailsPage: React.FC = () => {
     const [editMode, setEditMode] = useState(false);
     const navigate = useNavigate();
     const [selectedResource, setSelectedResource] = useState<ResourceItem | null>(null);
-    const [activeTab, setActiveTab] = useState<string>('overview');
+    const [activeTab, setActiveTab] = useState<string>('resources');
     const { theme } = useTheme();
     const isDark = theme === 'dark';
+    const [lifecycleUpdating, setLifecycleUpdating] = useState(false);
+    const queryClient = useQueryClient();
+    
+    // Track edited content for resources
+    const [editedContent, setEditedContent] = useState<Record<string, string>>({});
 
     // Fetch package revision details
     const {
@@ -112,6 +112,56 @@ const PackageDetailsPage: React.FC = () => {
         enabled: !!packageName,
     });
 
+    // Function to update package lifecycle
+    const updatePackageLifecycle = async (newLifecycle: PackageRevisionLifecycle) => {
+        if (!packageName || !packageRev) return;
+        
+        try {
+            setLifecycleUpdating(true);
+            
+            // For approval, use the specialized approval endpoint
+            if (newLifecycle === PackageRevisionLifecycle.PUBLISHED) {
+                const updatedPackage = {
+                    ...packageRev,
+                    spec: {
+                        ...packageRev.spec,
+                        lifecycle: newLifecycle
+                    }
+                };
+                await ApprovePackageRev(packageName, updatedPackage);
+                messageApi.success('Package has been approved');
+            } else {
+                // For other lifecycle changes (e.g., to PROPOSED), use the regular update
+                const updatedPackage = {
+                    ...packageRev,
+                    spec: {
+                        ...packageRev.spec,
+                        lifecycle: newLifecycle
+                    }
+                };
+                
+                await UpdatePackageRev(packageName, updatedPackage);
+                messageApi.success(`Package lifecycle updated to ${newLifecycle}`);
+            }
+            
+            // Refetch the package data
+            await queryClient.invalidateQueries({ queryKey: ['GetPackageRev', packageName] });
+        } catch (error: any) {
+            messageApi.error(`Failed to update package lifecycle: ${error.message || 'Unknown error'}`);
+        } finally {
+            setLifecycleUpdating(false);
+        }
+    };
+
+    // We don't need to separately track original resources since we can access them via packageResourcesResponse
+    
+    // Reset edited content when edit mode is toggled off
+    React.useEffect(() => {
+        if (!editMode) {
+            setEditedContent({});
+        }
+    }, [editMode]);
+    
     // Extract the actual resources data from the response
     const packageResources = packageResourcesResponse;
     // Transform resources data for display
@@ -121,7 +171,11 @@ const PackageDetailsPage: React.FC = () => {
         }
 
         const items: ResourceItem[] = [];
-        const resources = packageResources.spec.resources;
+        // If we have edited content and are in edit mode, use the edited content
+        // otherwise use the original resources
+        const resources = Object.keys(editedContent).length > 0 && editMode
+            ? {...packageResources.spec.resources, ...editedContent}
+            : packageResources.spec.resources;
 
         // Convert the resources object to an array of items
         Object.entries(resources).forEach(([path, content]) => {
@@ -216,18 +270,112 @@ const PackageDetailsPage: React.FC = () => {
         }
     };
 
+    // Handle content changes
+    const handleContentChange = (path: string, content: string) => {
+        // Only track changes when in edit mode
+        if (editMode) {
+            setEditedContent(prev => ({
+                ...prev,
+                [path]: content
+            }));
+        }
+    };
+    
+    // Handle cancel button click
+    const handleCancel = () => {
+        // Reset edited content
+        setEditedContent({});
+        // Exit edit mode
+        setEditMode(false);
+        
+        // Show success message
+        messageApi.success('Changes discarded');
+    };
+    
+    // Handle save button click
+    const handleSave = async () => {
+        if (!packageName || !packageResources) {
+            messageApi.error('Package data not available');
+            return;
+        }
+        
+        // No changes were made
+        if (Object.keys(editedContent).length === 0) {
+            setEditMode(false);
+            return;
+        }
+        
+        try {
+            // Set loading state
+            const saveLoading = messageApi.loading('Saving changes...');
+            
+            // Create updated resources by merging original with edited content
+            const updatedResources = {
+                ...packageResources.spec?.resources,
+                ...editedContent
+            };
+            
+            // Create the full payload with proper typing
+            const updatedPackageResources: PackageRevisionResources = {
+                apiVersion: packageResources.apiVersion,
+                kind: packageResources.kind,
+                metadata: packageResources.metadata,
+                spec: {
+                    packageName: packageResources.spec?.packageName || '',
+                    repository: packageResources.spec?.repository || '',
+                    revision: packageResources.spec?.revision || '',
+                    workspaceName: packageResources.spec?.workspaceName,
+                    resources: updatedResources
+                },
+                status: packageResources.status
+            };
+            
+            // Send the update request
+            if (packageName) {
+                await UpdatePackageRevisionResources(packageName, updatedPackageResources);
+            } else {
+                throw new Error('Package name is required');
+            }
+            
+            // Clear loading
+            saveLoading();
+            
+            // Show success message
+            messageApi.success('Package resources updated successfully');
+            
+            // Clear edited content
+            setEditedContent({});
+            
+            // Exit edit mode
+            setEditMode(false);
+            
+            // Refetch the package resources to get the latest data
+            if (packageName) {
+                await queryClient.invalidateQueries({ queryKey: ['GetPackageRevisionResources', packageName] as const });
+            }
+        } catch (error: any) {
+            messageApi.error(`Failed to save changes: ${error.message || 'Unknown error'}`);
+        }
+    };
+
     // Helper to render the resource content
     const renderResourceContent = (resource: ResourceItem) => {
+        // Get current content - use edited content if available
+        const currentContent = editMode && editedContent[resource.path] 
+            ? editedContent[resource.path] 
+            : resource.content;
+            
         return (
             <TextareaWithUpload
                 height="700px"
                 hideUploadButton
-                value={resource.content}
+                value={currentContent}
                 onChange={(value) => {
-                    console.log('value', value);
+                    handleContentChange(resource.path, value || '');
                 }}
-                checkContent={(data) => {
-                    console.log('data', data);
+                checkContent={(_data) => {
+                    // Properly handle the data validation
+                    // Use underscore prefix to indicate unused parameter
                     return true;
                 }}
                 options={{
@@ -255,7 +403,6 @@ const PackageDetailsPage: React.FC = () => {
                     <Flex justify="space-between" align="center">
                         <div>
                             <Title level={4}>{packageRev?.spec?.packageName}</Title>
-                            <Text type="secondary">{packageRev?.metadata?.annotations?.['kpt.dev/description'] || 'No description'}</Text>
                         </div>
                         <Space>
                             <Button
@@ -264,19 +411,24 @@ const PackageDetailsPage: React.FC = () => {
                             >
                                 Back to Repository
                             </Button>
-                            {!editMode ? <Button
-                                type="primary"
-                                icon={<EditOutlined />}
-                                onClick={() => setEditMode(true)}
-                            >
-                                Edit Package
-                            </Button> : <Button
-                                type="primary"
-                                icon={<SaveOutlined />}
-                                onClick={() => setEditMode(false)}
-                            >
-                                Save
-                            </Button>}
+                            {packageRev?.spec?.lifecycle === PackageRevisionLifecycle.DRAFT && (
+                                <Button
+                                    type="primary"
+                                    loading={lifecycleUpdating}
+                                    onClick={() => updatePackageLifecycle(PackageRevisionLifecycle.PROPOSED)}
+                                >
+                                    Propose
+                                </Button>
+                            )}
+                            {packageRev?.spec?.lifecycle === PackageRevisionLifecycle.PROPOSED && (
+                                <Button
+                                    type="primary"
+                                    loading={lifecycleUpdating}
+                                    onClick={() => updatePackageLifecycle(PackageRevisionLifecycle.PUBLISHED)}
+                                >
+                                    Approve
+                                </Button>
+                            )}
                         </Space>
                     </Flex>
 
@@ -289,7 +441,7 @@ const PackageDetailsPage: React.FC = () => {
                         </div>
                         <div>
                             <Text type="secondary">Revision:</Text>{' '}
-                            <Tag color="blue">{packageRev?.spec?.revision}</Tag>
+                            <Tag color={theme === 'dark' ? 'yellow' : 'blue'}>{packageRev?.spec?.revision}</Tag>
                         </div>
                         <div>
                             <Text type="secondary">Lifecycle:</Text>{' '}
@@ -304,82 +456,58 @@ const PackageDetailsPage: React.FC = () => {
                             <Text>{calculateDuration(packageRev?.status?.lastModifiedTime || packageRev?.metadata?.creationTimestamp || '') + ' ago'}</Text>
                         </div>
                     </Flex>
+                    {packageRev?.spec?.tasks && packageRev?.spec?.tasks.length > 0 && (
+                        <div className="mt-4">
+                            <Text strong>Tasks: </Text>
+                            {packageRev?.spec?.tasks.map((task: any, index: number) => (
+                                <Tag key={index} color="blue">{task.type}</Tag>
+                            ))}
+                        </div>
+                    )}
                 </Card>
 
                 <Tabs activeKey={activeTab} onChange={setActiveTab} className="mb-4">
-                    <TabPane tab="Overview" key="overview" />
                     <TabPane tab="Resources" key="resources" />
+                    <TabPane tab="Conditions" key="conditions" />
                 </Tabs>
 
-                {activeTab === 'overview' && (
-                    <Card>
-                        <div className="mb-4">
-                            <Title level={5}>Package Information</Title>
-                            <Paragraph>
-                                This package contains {resourceItems.length} resource files.
-                            </Paragraph>
-
-                            {packageRev?.metadata?.annotations?.['kpt.dev/package-path'] && (
-                                <div className="mb-2">
-                                    <Text strong>Package Path: </Text>
-                                    <Tag>{packageRev?.metadata?.annotations?.['kpt.dev/package-path']}</Tag>
-                                </div>
-                            )}
-
-                            {packageRev?.status?.workloadIdentity && (
-                                <div className="mb-2">
-                                    <Text strong>Workload Identity: </Text>
-                                    <Tag>{packageRev?.status?.workloadIdentity}</Tag>
-                                </div>
-                            )}
-
-                            {packageRev?.spec?.tasks && packageRev?.spec?.tasks.length > 0 && (
-                                <div className="mb-2">
-                                    <Text strong>Tasks: </Text>
-                                    {packageRev?.spec?.tasks.map((task: any, index: number) => (
-                                        <Tag key={index} color="blue">{task.type}</Tag>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        <Divider />
-
-                        <div>
-                            <Title level={5}>Resource Files ({resourceItems.length})</Title>
-                            <List
-                                bordered
-                                dataSource={resourceItems}
-                                renderItem={(item) => (
-                                    <List.Item
-                                        actions={[
-                                            <Button
-                                                type="text"
-                                                icon={<EyeOutlined />}
-                                                onClick={() => {
-                                                    setSelectedResource(item);
-                                                    setActiveTab('resources');
-                                                }}
-                                            />
-                                        ]}
-                                    >
-                                        <List.Item.Meta
-                                            avatar={item.type === 'yaml' ? <FileOutlined /> : <FolderOutlined />}
-                                            title={item.name}
-                                            description={item.path}
-                                        />
-                                    </List.Item>
-                                )}
-                            />
-                        </div>
-                    </Card>
-                )}
 
                 {activeTab === 'resources' && (
-                    <Card>
+                    <Card
+                        title={`Resource Files (${resourceItems.length})`}
+                        extra={
+                            !editMode ? (
+                                // Only show Edit button if package is not in PUBLISHED state
+                                packageRev?.spec?.lifecycle !== PackageRevisionLifecycle.PUBLISHED ? (
+                                    <Button
+                                    type="primary"
+                                    icon={<EditOutlined />}
+                                    onClick={() => setEditMode(true)}
+                                >
+                                    Edit Package
+                                </Button>
+                            ) : null
+                        ) : (
+                            <Flex gap={8}>
+                                <Button
+                                    type="default"
+                                    icon={<CloseOutlined />}
+                                    onClick={handleCancel}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="primary"
+                                    icon={<SaveOutlined />}
+                                    onClick={handleSave}
+                                >
+                                    Save
+                                </Button>
+                            </Flex>
+                        )}
+                    >
                         <Flex className="mb-4">
                             <div style={{ width: '20%' }} className="pr-4">
-                                <Title level={5}>Resource Files</Title>
                                 <List
                                     size="large"
                                     bordered
@@ -391,7 +519,7 @@ const PackageDetailsPage: React.FC = () => {
                                             style={{ cursor: 'pointer' }}
                                         >
                                             <Space>
-                                                {item.type === 'yaml' ? <FileOutlined /> : <FolderOutlined />}
+                                                {item.type === 'yaml' ? <FileOutlined /> : <SettingOutlined />}
                                                 <Text ellipsis style={{ maxWidth: 180 }}>{item.name}</Text>
                                             </Space>
                                         </List.Item>
@@ -415,6 +543,46 @@ const PackageDetailsPage: React.FC = () => {
                                 )}
                             </div>
                         </Flex>
+                    </Card>
+                )}
+
+                {activeTab === 'conditions' && (
+                    <Card>
+                        <Title level={5}>Package Revision Conditions</Title>
+                        {packageRev?.status?.conditions && packageRev.status.conditions.length > 0 ? (
+                            <List
+                                bordered
+                                dataSource={packageRev.status.conditions}
+                                renderItem={(condition: any) => (
+                                    <List.Item>
+                                        <List.Item.Meta
+                                            title={
+                                                <Flex align="center" gap={8}>
+                                                    <Text strong>{condition.type}</Text>
+                                                    <Tag color={condition.status === 'True' ? 'success' : 'warning'}>
+                                                        {condition.status}
+                                                    </Tag>
+                                                </Flex>
+                                            }
+                                            description={
+                                                <>
+                                                    <div>
+                                                        <Text strong>Reason: </Text>
+                                                        <Text>{condition.reason}</Text>
+                                                    </div>
+                                                    <div>
+                                                        <Text strong>Message: </Text>
+                                                        <Text>{condition.message}</Text>
+                                                    </div>
+                                                </>
+                                            }
+                                        />
+                                    </List.Item>
+                                )}
+                            />
+                        ) : (
+                            <Empty description="No conditions found for this package revision" />
+                        )}
                     </Card>
                 )}
 

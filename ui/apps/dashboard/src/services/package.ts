@@ -28,6 +28,7 @@ export enum RepositoryContentType {
   TEAM_BLUEPRINT = 'teamBlueprints',
   EXTERNAL_BLUEPRINT = 'externalBlueprints',
   ORGANIZATION_BLUEPRINT = 'organizationalBlueprints',
+  FUNCTION = 'functions',
 }
 
 // Repository resource interfaces
@@ -38,7 +39,10 @@ export interface Repository {
   status?: RepositoryStatus;
 }
 
-export type RepositoryGroupType = RepositoryContentType;
+export enum RepositoryContent {
+  PACKAGE = 'Package',
+  FUNCTION = 'Function',
+}
 
 export const REPOSITORY_GROUPS = [
   { value: RepositoryContentType.DEPLOYMENT, label: 'Deployment' },
@@ -46,6 +50,97 @@ export const REPOSITORY_GROUPS = [
   { value: RepositoryContentType.EXTERNAL_BLUEPRINT, label: 'External Blueprint' },
   { value: RepositoryContentType.ORGANIZATION_BLUEPRINT, label: 'Organizational Blueprint' },
 ];
+
+type ContentCloneToDetail = {
+  content: RepositoryContentType;
+  preferred: boolean;
+  message?: string;
+};
+
+export type ContentDetails = {
+  title: string;
+  repositoryContent: RepositoryContent;
+  contentSummary: RepositoryContentType;
+  contentLink: string;
+  description: string;
+  isDeployment?: boolean;
+  repositoryContentLabelValue?: string;
+  notContent?: RepositoryContentType[];
+  cloneTo: ContentCloneToDetail[];
+};
+
+export const RepositoryContentDetails: Record<RepositoryContentType, ContentDetails> = {
+  [RepositoryContentType.DEPLOYMENT]: {
+    title: 'Deployments',
+    contentSummary: RepositoryContentType.DEPLOYMENT,
+    repositoryContent: RepositoryContent.PACKAGE,
+    contentLink: 'deployments',
+    description:
+      "Deployment Packages are packages ready for deployment to live clusters. If selected, you'll need to specify if the repository is for a development, staging, or production cluster.",
+    isDeployment: true,
+    cloneTo: [],
+  },
+  [RepositoryContentType.TEAM_BLUEPRINT]: {
+    title: 'Team Blueprints',
+    contentSummary: RepositoryContentType.TEAM_BLUEPRINT,
+    repositoryContent: RepositoryContent.PACKAGE,
+    contentLink: 'team-blueprints',
+    description:
+      'Team Blueprints are packages that a team in your organization owns. Deployment Packages can be created from packages in this repository.',
+    notContent: [RepositoryContentType.ORGANIZATION_BLUEPRINT, RepositoryContentType.EXTERNAL_BLUEPRINT],
+    cloneTo: [
+      { content: RepositoryContentType.DEPLOYMENT, preferred: true },
+      { content: RepositoryContentType.TEAM_BLUEPRINT, preferred: true },
+    ],
+  },
+  [RepositoryContentType.ORGANIZATION_BLUEPRINT]: {
+    title: 'Organizational Blueprints',
+    contentSummary: RepositoryContentType.ORGANIZATION_BLUEPRINT,
+    repositoryContent: RepositoryContent.PACKAGE,
+    repositoryContentLabelValue: 'organizational-blueprints',
+    contentLink: 'organizational-blueprints',
+    description:
+      'Organizational Blueprints are packages that your organization owns. An Organizational Blueprint package is expected to be cloned and customized in a Team Blueprint repository before a Deployment Package is created.',
+    cloneTo: [
+      {
+        content: RepositoryContentType.DEPLOYMENT,
+        preferred: false,
+        message:
+          'An Organizational Blueprint package is expected to be cloned and customized in a Team Blueprint repository before a Deployment Package is created.',
+      },
+      { content: RepositoryContentType.TEAM_BLUEPRINT, preferred: true },
+      { content: RepositoryContentType.ORGANIZATION_BLUEPRINT, preferred: true },
+    ],
+  },
+  [RepositoryContentType.EXTERNAL_BLUEPRINT]: {
+    title: 'External Blueprints',
+    contentSummary: RepositoryContentType.EXTERNAL_BLUEPRINT,
+    repositoryContent: RepositoryContent.PACKAGE,
+    repositoryContentLabelValue: 'external-blueprints',
+    contentLink: 'external-blueprints',
+    description:
+      'External Blueprints are packages that your organization does not own. An External Blueprint package is expected to be cloned and customized in an Organization or Team Blueprint repository before a Deployment Package is created.',
+    cloneTo: [
+      {
+        content: RepositoryContentType.DEPLOYMENT,
+        preferred: false,
+        message:
+          'An External Blueprint is expected to be cloned and customized in an Organization or Team Blueprint repository before a Deployment Package is created.',
+      },
+      { content: RepositoryContentType.TEAM_BLUEPRINT, preferred: true },
+      { content: RepositoryContentType.ORGANIZATION_BLUEPRINT, preferred: true },
+      { content: RepositoryContentType.EXTERNAL_BLUEPRINT, preferred: true },
+    ],
+  },
+  [RepositoryContentType.FUNCTION]: {
+    title: 'Functions',
+    contentSummary: RepositoryContentType.FUNCTION,
+    repositoryContent: RepositoryContent.FUNCTION,
+    contentLink: 'functions',
+    description: 'Functions are containerized programs that can perform CRUD operations on KRM resources.',
+    cloneTo: [],
+  },
+};
 
 export interface RepositorySpec {
   description?: string;
@@ -78,34 +173,6 @@ export interface RepositoryStatus {
   reason?: string;
   message?: string;
   [key: string]: any;
-}
-
-// PackageRev resource interfaces
-export interface PackageRev {
-  metadata: ObjectMeta;
-  typeMeta: TypeMeta;
-  spec: PackageRevSpec;
-  status?: PackageRevStatus;
-}
-
-export interface PackageRevSpec {
-  packageName: string;
-  revision: string;
-  repository: string;
-  tasks?: any[];
-  [key: string]: any;
-}
-
-export interface PackageRevStatus {
-  revision: string;
-  workloadIdentity?: string;
-  [key: string]: any;
-}
-
-export enum PackageRevisionLifecycle {
-  DRAFT = 'Draft',
-  PROPOSED = 'Proposed',
-  PUBLISHED = 'Published',
 }
 
 // Repository API methods
@@ -153,94 +220,19 @@ export async function DeleteRepository(name: string) {
   return resp.data;
 }
 
-// PackageRev API methods
-export async function GetPackageRevs() {
-  const resp = await karmadaClient.get<{
-    items: PackageRev[];
-    totalResources: number;
-  }>('/mgmt-cluster/porch/packagerevision');
-  return resp.data;
-}
 
-export interface PackageResource {
-  apiVersion: string;
-  kind: string;
-  metadata: ObjectMeta;
-  spec?: any;
-  [key: string]: any;
-}
-
-export interface PackageRevisionResources {
-  apiVersion: string;
-  kind: string;
-  metadata: ObjectMeta;
-  spec?: {
-    packageName: string;
-    repository: string;
-    revision: string;
-    workspaceName?: string;
-    resources: {
-      [key: string]: string;
-    };
-  }
-  status: {
-    renderStatus: {
-      result: any
-      error: string
-    }
-  };
-}
-
-// Fetch package revision resources
-export async function GetPackageRevisionResources(name: string) {
-  const resp = await karmadaClient.get<PackageRevisionResources>(`/mgmt-cluster/porch/packagerevisionresources/${name}`);
-  return resp.data;
-}
-
-export async function GetPackageRev(name: string) {
-  const resp = await karmadaClient.get<PackageRev>(
-    `/mgmt-cluster/porch/packagerevision/${name}`
-  );
-  return resp.data;
-}
-
-export async function CreatePackageRev(packageRev: any) {
-  const resp = await karmadaClient.post<IResponse<PackageRev>>(
-    '/mgmt-cluster/package/packagerevision',
-    packageRev
-  );
-  return resp.data;
-}
-
-export async function UpdatePackageRev(name: string, packageRev: any) {
-  const resp = await karmadaClient.put<IResponse<PackageRev>>(
-    `/mgmt-cluster/package/packagerev/${name}`,
-    packageRev
-  );
-  return resp.data;
-}
-
-export async function DeletePackageRev(name: string) {
-  const resp = await karmadaClient.delete<
-    IResponse<{
-      message: string;
-    }>
-  >(`/mgmt-cluster/package/packagerev/${name}`);
-  return resp.data;
-}
-
-export function getRepositoryGroup(repo: Repository) {
-  let group: `${RepositoryGroupType}` = 'organizationalBlueprints';
+export function getRepositoryGroup(repo: Repository): RepositoryContentType {
+  let group: RepositoryContentType = RepositoryContentType.ORGANIZATION_BLUEPRINT;
 
   if (repo.spec?.deployment === true) {
-    group = 'deployments';
+    group = RepositoryContentType.DEPLOYMENT;
   }
   else if (repo.metadata?.labels?.['kpt.dev/repository-content'] === 'external-blueprints') {
-    group = 'externalBlueprints';
+    group = RepositoryContentType.EXTERNAL_BLUEPRINT;
   }
   else if (repo.metadata?.annotations?.['nephio.org/staging'] === 'true') {
-    group = 'teamBlueprints';
+    group = RepositoryContentType.TEAM_BLUEPRINT;
   }
 
   return group;
-} 
+}

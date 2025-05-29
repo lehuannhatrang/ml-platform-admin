@@ -17,7 +17,7 @@ limitations under the License.
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Input, Select, Button, Steps, Space, Radio, Divider, message } from 'antd';
 import { useQuery } from '@tanstack/react-query';
-import { getRepositoryGroup, Repository, REPOSITORY_GROUPS } from '@/services/package';
+import { getRepositoryGroup, Repository, REPOSITORY_GROUPS, RepositoryContentType } from '@/services/package';
 import { GetSecrets, Secret } from '@/services/config';
 import { CreateMemberResource } from '@/services/unstructured';
 
@@ -33,7 +33,7 @@ export interface RepositoryFormData {
   git_branch?: string;
   git_directory?: string;
   oci_registry?: string;
-  repository_group?: string;
+  repository_group: RepositoryContentType;
   auth_type?: 'none' | 'github_token';
   use_existing_secret?: boolean;
   secret_name?: string;
@@ -112,6 +112,7 @@ const RepositoryFormModal: React.FC<RepositoryFormModalProps> = ({
         form.resetFields();
         form.setFieldsValue({
           type: 'git',
+          git_branch: 'main',
           git_directory: '/',
           repository_group: REPOSITORY_GROUPS[0].value,
           auth_type: 'none',

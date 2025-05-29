@@ -72,7 +72,6 @@ const TextareaWithUpload: FC<TextareaWithUploadProps> = (props) => {
   
   // Map the global theme to Monaco editor theme
   const editorTheme = theme === 'dark' ? 'vs-dark' : 'vs';
-  console.log({editorTheme})
   return (
     <div className="relative">
       <Editor

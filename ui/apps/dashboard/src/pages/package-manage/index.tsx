@@ -16,7 +16,7 @@ limitations under the License.
 
 import Panel from '@/components/panel';
 import { useQuery } from '@tanstack/react-query';
-import { Repository, PackageRev, GetRepositories, GetPackageRevs, CreateRepository, UpdateRepository, DeleteRepository, PackageRevisionLifecycle, RepositoryContentType, getRepositoryGroup } from '@/services/package';
+import { Repository, GetRepositories, CreateRepository, UpdateRepository, DeleteRepository, RepositoryContentType, getRepositoryGroup, RepositoryContentDetails } from '@/services/package';
 import {
   Card,
   Tabs,
@@ -40,12 +40,14 @@ import { Icons } from '@/components/icons';
 import { useMemo, useState } from 'react';
 import { CheckCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import RepositoryFormModal, { RepositoryFormData } from './components/repository-form-modal';
+import { GetPackageRevs, PackageRev, PackageRevisionLifecycle } from '@/services/package-revision';
+import { Link } from 'react-router-dom';
 
 const { TabPane } = Tabs;
 const { Title, Text } = Typography;
 
-interface RepositoryGroup {
-  type: `${RepositoryContentType}`;
+type RepositoryGroup = {
+  type: RepositoryContentType;
   title: string;
   repositories: Repository[];
   published: number;
@@ -73,10 +75,10 @@ const PackageManagePage = () => {
   
   // Query for package revisions
   const { data: packageRevData, isLoading: packageRevLoading } = useQuery({
-    queryKey: ['GetPackageRevs'],
+    queryKey: ['GetAllPackageRevs'],
     queryFn: async () => {
       const ret = await GetPackageRevs();
-      return ret;
+      return ret?.items || [];
     },
   });
   
@@ -101,6 +103,8 @@ const PackageManagePage = () => {
 
   const handleRepositoryFormSubmit = async (values: RepositoryFormData) => {
     try {
+      const repositoryContentDetails = RepositoryContentDetails[values.repository_group];
+      
       const repositoryData: any = {
         apiVersion: 'config.porch.kpt.dev/v1alpha1',
         kind: 'Repository',
@@ -113,6 +117,7 @@ const PackageManagePage = () => {
           description: values.description,
           type: values.type,
           deployment: false,
+          content: repositoryContentDetails.repositoryContent
         }
       };
 
@@ -191,7 +196,7 @@ const PackageManagePage = () => {
       title: 'Name',
       key: 'name',
       width: 250,
-      render: (_: any, r: Repository) => <Typography.Link href={`/package-management/repositories/${r.metadata.name}`}>{r.metadata.name}</Typography.Link>,
+      render: (_: any, r: Repository) => <Link to={`/package-management/repositories/${r.metadata.name}`}>{r.metadata.name}</Link>,
     },
     {
       title: 'Type',
@@ -283,7 +288,7 @@ const PackageManagePage = () => {
       return [];
     }
     const repositories = repoData?.data?.resources || [];
-    const packageRevs = packageRevData?.items || [];
+    const packageRevs = packageRevData || [];
     // Create map of repository name to package revisions
     const packageRevsByRepo: Record<string, PackageRev[]> = {};
     
@@ -312,34 +317,41 @@ const PackageManagePage = () => {
     
     // Create repository groups
     const groups: Record<RepositoryContentType, RepositoryGroup> = {
-      deployments: {
-        type: 'deployments',
-        title: 'Deployments',
+      [RepositoryContentType.DEPLOYMENT]: {
+        type: RepositoryContentType.DEPLOYMENT,
+        title: RepositoryContentDetails[RepositoryContentType.DEPLOYMENT].title,
         repositories: [],
         published: 0,
         drafts: 0
       },
-      teamBlueprints: {
-        type: 'teamBlueprints',
-        title: 'Team Blueprints',
+      [RepositoryContentType.TEAM_BLUEPRINT]: {
+        type: RepositoryContentType.TEAM_BLUEPRINT,
+        title: RepositoryContentDetails[RepositoryContentType.TEAM_BLUEPRINT].title,
         repositories: [],
         published: 0,
         drafts: 0
       },
-      externalBlueprints: {
-        type: 'externalBlueprints',
-        title: 'External Blueprints',
+      [RepositoryContentType.EXTERNAL_BLUEPRINT]: {
+        type: RepositoryContentType.EXTERNAL_BLUEPRINT,
+        title: RepositoryContentDetails[RepositoryContentType.EXTERNAL_BLUEPRINT].title,
         repositories: [],
         published: 0,
         drafts: 0
       },
-      organizationalBlueprints: {
-        type: 'organizationalBlueprints',
-        title: 'Organizational Blueprints',
+      [RepositoryContentType.ORGANIZATION_BLUEPRINT]: {
+        type: RepositoryContentType.ORGANIZATION_BLUEPRINT,
+        title: RepositoryContentDetails[RepositoryContentType.ORGANIZATION_BLUEPRINT].title,
         repositories: [],
         published: 0,
         drafts: 0
-      }
+      },
+      [RepositoryContentType.FUNCTION]: {
+        type: RepositoryContentType.FUNCTION,
+        title: RepositoryContentDetails[RepositoryContentType.FUNCTION].title,
+        repositories: [],
+        published: 0,
+        drafts: 0
+      },
     };
     
     // Group repositories based on the specified criteria
@@ -359,25 +371,17 @@ const PackageManagePage = () => {
         groups[group].drafts += draftRevs.length;
     });
     
-    return Object.values(groups);
+    return Object.values(groups).filter((group) => group.type !== RepositoryContentType.FUNCTION);
   }, [repoData, packageRevData]);
   
   // Generate columns for each group table
-  const getColumnsForGroup = (groupType: `${RepositoryContentType}`) => {
+  const getColumnsForGroup = (groupType: RepositoryContentType) => {
     // Create a copy of the base columns
     const groupColumns = [...columns];
     
-    // Get the title based on group type
-    const titleMap: Record<`${RepositoryContentType}`, string> = {
-      'deployments': 'Deployments',
-      'teamBlueprints': 'Team Blueprints',
-      'externalBlueprints': 'External Blueprints',
-      'organizationalBlueprints': 'Organizational Blueprints'
-    };
-    
     // Add a status column specific to the group type
     groupColumns.splice(5, 0, {
-      title: titleMap[groupType] || 'Packages',
+      title: RepositoryContentDetails[groupType].title || 'Packages',
       key: 'packageStats',
       width: 150,
       render: (_, r: any) => {
@@ -442,9 +446,9 @@ const PackageManagePage = () => {
                 <Space>
                   {repo.spec.type === 'git' && <Tag color="blue">Git</Tag>}
                   {repo.spec.type === 'oci' && <Tag color="green">OCI</Tag>}
-                  <Typography.Link href={`/package-management/repositories/${repo.metadata?.name}`}>
+                  <Link to={`/package-management/repositories/${repo.metadata?.name}`}>
                     {repo.metadata?.name}
-                  </Typography.Link>
+                  </Link>
                 </Space>
                 <div>
                   <Typography.Link href={repo.spec?.git?.repo || repo.spec?.oci?.registry} target='_blank'>
