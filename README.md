@@ -39,8 +39,19 @@ Change to the dashboard directory:
 cd dcn-dashboard
 ```
 
-Run this script to deploy Karmada Dashboard:
+Create persistent volumes required for etcd and OpenFGA:
+```bash
+# Create directories for persistent data
+sudo mkdir -p /mnt/data/etcd /mnt/data/postgresql
+sudo chmod -R 777 /mnt/data
+
+# Apply persistent volume configurations
+kubectl apply -f artifacts/persistent-volume/etcd-pv.yaml
+kubectl apply -f artifacts/persistent-volume/openfga-pv.yaml
 ```
+
+Run this script to deploy Karmada Dashboard:
+```bash
 sudo ./setup-nodeport-mode.sh
 ```
 
