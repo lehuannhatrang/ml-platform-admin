@@ -43,6 +43,7 @@ limitations under the License.
   --highlight-color: #1677ff;
   --hover-bg-color: rgba(255, 255, 255, 0.08);
   --sidebar-bg-color: #333333;
+  --sidebar-trigger-bg-color:rgb(88, 88, 88);
   --card-bg-color: #282c34;
   --card-footer-bg-color: #323842;
   --table-header-bg-color: #1d1d1d;
@@ -70,6 +71,10 @@ body {
 .dark .ant-layout-sider {
   background-color: var(--sidebar-bg-color);
   border-right: 1px solid var(--border-color);
+}
+
+.dark .ant-layout-sider-trigger {
+  background-color: var(--sidebar-trigger-bg-color);
 }
 
 .dark .ant-card {

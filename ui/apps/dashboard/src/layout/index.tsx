@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { FC, ReactNode } from 'react';
+import { FC, ReactNode, useState } from 'react';
 import { Layout as AntdLayout } from 'antd';
 import { Outlet, Navigate } from 'react-router-dom';
 import Header from './header';
@@ -28,10 +28,11 @@ import ChatProvider from '@/components/chat';
 const { Sider: AntdSider, Content: AntdContent } = AntdLayout;
 
 export const MainLayout: FC = () => {
+  const [collapsed, setCollapsed] = useState(false);
   const { authenticated, initToken } = useAuth();
   const { width } = useWindowSize();
   const isSmallScreen = width !== null && width <= 768;
-
+  const isCollapsed = isSmallScreen || collapsed;
 
   if (!authenticated) {
     return <Navigate to="/login" />;
@@ -46,11 +47,12 @@ export const MainLayout: FC = () => {
         <AntdSider
           width={getSidebarWidth()}
           collapsible
-          collapsed={isSmallScreen}
+          collapsed={isCollapsed}
           breakpoint="lg"
-          trigger={null}
+          onCollapse={(collapsed) => setCollapsed(collapsed)}
+          // trigger={null}
         >
-          <Sidebar collapsed={isSmallScreen} />
+          <Sidebar collapsed={isCollapsed} />
         </AntdSider>
         <AntdContent >
           <Outlet />

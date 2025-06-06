@@ -16,7 +16,7 @@ limitations under the License.
 
 import React, { useState } from 'react';
 import { useTheme } from '@/contexts/theme-context';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     Tabs,
@@ -32,6 +32,8 @@ import {
     Spin,
     Empty,
     List,
+    Alert,
+    Table,
 } from 'antd';
 import {
     EditOutlined,
@@ -44,7 +46,7 @@ import {
 import Panel from '@/components/panel';
 import { calculateDuration } from '@/utils/time';
 import TextareaWithUpload from '@/components/textarea-with-upload';
-import { GetPackageRev, GetPackageRevisionResources, PackageRevisionLifecycle, UpdatePackageRev, ApprovePackageRev, UpdatePackageRevisionResources, PackageRevisionResources } from '@/services/package-revision';
+import { PackageRevisionResources, PackageRevisionLifecycle, GetPackageRev, GetPackageRevs, GetPackageRevisionResources, UpdatePackageRevisionResources, UpdatePackageRev, ApprovePackageRev } from '../../../services/package-revision';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
@@ -56,6 +58,7 @@ interface ResourceItem {
     type: string;
     content: string;
     yaml?: string;
+    kind?: string; // Kubernetes resource kind (Deployment, Service, etc.)
 }
 
 const PackageDetailsPage: React.FC = () => {
@@ -69,7 +72,7 @@ const PackageDetailsPage: React.FC = () => {
     const isDark = theme === 'dark';
     const [lifecycleUpdating, setLifecycleUpdating] = useState(false);
     const queryClient = useQueryClient();
-    
+
     // Track edited content for resources
     const [editedContent, setEditedContent] = useState<Record<string, string>>({});
 
@@ -94,7 +97,7 @@ const PackageDetailsPage: React.FC = () => {
 
     // Fetch package revision resources
     const {
-        data: packageResourcesResponse,
+        data: packageResources,
         isLoading: resourcesLoading,
         error: resourcesError,
     } = useQuery({
@@ -115,10 +118,10 @@ const PackageDetailsPage: React.FC = () => {
     // Function to update package lifecycle
     const updatePackageLifecycle = async (newLifecycle: PackageRevisionLifecycle) => {
         if (!packageName || !packageRev) return;
-        
+
         try {
             setLifecycleUpdating(true);
-            
+
             // For approval, use the specialized approval endpoint
             if (newLifecycle === PackageRevisionLifecycle.PUBLISHED) {
                 const updatedPackage = {
@@ -139,11 +142,11 @@ const PackageDetailsPage: React.FC = () => {
                         lifecycle: newLifecycle
                     }
                 };
-                
+
                 await UpdatePackageRev(packageName, updatedPackage);
                 messageApi.success(`Package lifecycle updated to ${newLifecycle}`);
             }
-            
+
             // Refetch the package data
             await queryClient.invalidateQueries({ queryKey: ['GetPackageRev', packageName] });
         } catch (error: any) {
@@ -153,17 +156,13 @@ const PackageDetailsPage: React.FC = () => {
         }
     };
 
-    // We don't need to separately track original resources since we can access them via packageResourcesResponse
-    
     // Reset edited content when edit mode is toggled off
     React.useEffect(() => {
         if (!editMode) {
             setEditedContent({});
         }
     }, [editMode]);
-    
-    // Extract the actual resources data from the response
-    const packageResources = packageResourcesResponse;
+
     // Transform resources data for display
     const resourceItems = React.useMemo(() => {
         if (!packageResources || !packageResources.spec || !packageResources.spec.resources) {
@@ -174,7 +173,7 @@ const PackageDetailsPage: React.FC = () => {
         // If we have edited content and are in edit mode, use the edited content
         // otherwise use the original resources
         const resources = Object.keys(editedContent).length > 0 && editMode
-            ? {...packageResources.spec.resources, ...editedContent}
+            ? { ...packageResources.spec.resources, ...editedContent }
             : packageResources.spec.resources;
 
         // Convert the resources object to an array of items
@@ -187,16 +186,60 @@ const PackageDetailsPage: React.FC = () => {
             if (isYaml) type = 'yaml';
             else if (isKustomization) type = 'kustomization';
 
+            // Extract the kind from YAML content if possible
+            let kind = undefined;
+            try {
+                // Use simple regex to extract kind field from YAML
+                const kindMatch = content.match(/kind:\s*([\w]+)/i);
+                if (kindMatch && kindMatch[1]) {
+                    kind = kindMatch[1];
+                }
+            } catch (e) {
+                // Silently fail, kind will remain undefined
+            }
+
             items.push({
                 name,
                 path,
                 type,
                 content,
                 yaml: isYaml ? content : undefined,
+                kind,
             });
         });
 
-        return items.sort((a, b) => a.path.localeCompare(b.path));
+        // Sort items with predefined order for specific kinds, then alphabetically for the rest
+        return items.sort((a, b) => {
+            // Define priority order for specific kinds
+            const kindOrder = [
+                'Kptfile',
+                'StarlarkRun',
+                'ConfigMap',
+                'Cluster',
+                'KubeadmControlPlane',
+                'WorkloadCluster',
+                'KubeadmConfigTemplate',
+                'PackageVariant'
+            ];
+            
+            const kindA = a.kind || 'Unknown';
+            const kindB = b.kind || 'Unknown';
+            
+            // Get indexes for sorting (if not in the priority list, use a high number)
+            const indexA = kindOrder.indexOf(kindA);
+            const indexB = kindOrder.indexOf(kindB);
+            const priorityA = indexA === -1 ? 999 : indexA;
+            const priorityB = indexB === -1 ? 999 : indexB;
+            
+            // Sort by priority first
+            if (priorityA !== priorityB) {
+                return priorityA - priorityB;
+            }
+            
+            // If kinds have the same priority (including when both aren't in priority list),
+            // sort by path
+            return a.path.localeCompare(b.path);
+        });
     }, [packageResources]);
 
     // Handle loading and error states
@@ -280,41 +323,41 @@ const PackageDetailsPage: React.FC = () => {
             }));
         }
     };
-    
+
     // Handle cancel button click
     const handleCancel = () => {
         // Reset edited content
         setEditedContent({});
         // Exit edit mode
         setEditMode(false);
-        
+
         // Show success message
         messageApi.success('Changes discarded');
     };
-    
+
     // Handle save button click
     const handleSave = async () => {
         if (!packageName || !packageResources) {
             messageApi.error('Package data not available');
             return;
         }
-        
+
         // No changes were made
         if (Object.keys(editedContent).length === 0) {
             setEditMode(false);
             return;
         }
-        
+
         try {
             // Set loading state
             const saveLoading = messageApi.loading('Saving changes...');
-            
+
             // Create updated resources by merging original with edited content
             const updatedResources = {
                 ...packageResources.spec?.resources,
                 ...editedContent
             };
-            
+
             // Create the full payload with proper typing
             const updatedPackageResources: PackageRevisionResources = {
                 apiVersion: packageResources.apiVersion,
@@ -329,26 +372,26 @@ const PackageDetailsPage: React.FC = () => {
                 },
                 status: packageResources.status
             };
-            
+
             // Send the update request
             if (packageName) {
                 await UpdatePackageRevisionResources(packageName, updatedPackageResources);
             } else {
                 throw new Error('Package name is required');
             }
-            
+
             // Clear loading
             saveLoading();
-            
+
             // Show success message
             messageApi.success('Package resources updated successfully');
-            
+
             // Clear edited content
             setEditedContent({});
-            
+
             // Exit edit mode
             setEditMode(false);
-            
+
             // Refetch the package resources to get the latest data
             if (packageName) {
                 await queryClient.invalidateQueries({ queryKey: ['GetPackageRevisionResources', packageName] as const });
@@ -361,10 +404,10 @@ const PackageDetailsPage: React.FC = () => {
     // Helper to render the resource content
     const renderResourceContent = (resource: ResourceItem) => {
         // Get current content - use edited content if available
-        const currentContent = editMode && editedContent[resource.path] 
-            ? editedContent[resource.path] 
+        const currentContent = editMode && editedContent[resource.path]
+            ? editedContent[resource.path]
             : resource.content;
-            
+
         return (
             <TextareaWithUpload
                 height="700px"
@@ -374,8 +417,6 @@ const PackageDetailsPage: React.FC = () => {
                     handleContentChange(resource.path, value || '');
                 }}
                 checkContent={(_data) => {
-                    // Properly handle the data validation
-                    // Use underscore prefix to indicate unused parameter
                     return true;
                 }}
                 options={{
@@ -469,6 +510,7 @@ const PackageDetailsPage: React.FC = () => {
                 <Tabs activeKey={activeTab} onChange={setActiveTab} className="mb-4">
                     <TabPane tab="Resources" key="resources" />
                     <TabPane tab="Conditions" key="conditions" />
+                    <TabPane tab="Revisions" key="revisions" />
                 </Tabs>
 
 
@@ -476,55 +518,82 @@ const PackageDetailsPage: React.FC = () => {
                     <Card
                         title={`Resource Files (${resourceItems.length})`}
                         extra={
-                            !editMode ? (
-                                // Only show Edit button if package is not in PUBLISHED state
-                                packageRev?.spec?.lifecycle !== PackageRevisionLifecycle.PUBLISHED ? (
-                                    <Button
-                                    type="primary"
-                                    icon={<EditOutlined />}
-                                    onClick={() => setEditMode(true)}
-                                >
-                                    Edit Package
-                                </Button>
-                            ) : null
-                        ) : (
-                            <Flex gap={8}>
-                                <Button
-                                    type="default"
-                                    icon={<CloseOutlined />}
-                                    onClick={handleCancel}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    type="primary"
-                                    icon={<SaveOutlined />}
-                                    onClick={handleSave}
-                                >
-                                    Save
-                                </Button>
-                            </Flex>
-                        )}
+                            (<Flex gap={8}>
+                                {!editMode ? (
+                                    packageRev?.spec?.lifecycle !== PackageRevisionLifecycle.PUBLISHED ? (
+                                        <Button
+                                            type="primary"
+                                            icon={<EditOutlined />}
+                                            onClick={() => setEditMode(true)}
+                                        >
+                                            Edit Package
+                                        </Button>
+                                    ) : null
+                                ) : (
+                                    <>
+                                        <Button
+                                            type="default"
+                                            icon={<CloseOutlined />}
+                                            onClick={handleCancel}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            type="primary"
+                                            icon={<SaveOutlined />}
+                                            onClick={handleSave}
+                                        >
+                                            Save
+                                        </Button>
+                                    </>
+                                )
+                                }
+                            </Flex>)
+                        }
                     >
                         <Flex className="mb-4">
-                            <div style={{ width: '20%' }} className="pr-4">
-                                <List
-                                    size="large"
-                                    bordered
-                                    dataSource={resourceItems}
-                                    renderItem={(item) => (
-                                        <List.Item
-                                            className={selectedResource?.path === item.path ? (isDark ? 'bg-gray-800' : 'bg-blue-50') : ''}
-                                            onClick={() => setSelectedResource(item)}
-                                            style={{ cursor: 'pointer' }}
-                                        >
-                                            <Space>
-                                                {item.type === 'yaml' ? <FileOutlined /> : <SettingOutlined />}
-                                                <Text ellipsis style={{ maxWidth: 180 }}>{item.name}</Text>
-                                            </Space>
-                                        </List.Item>
-                                    )}
-                                />
+                            <div style={{ width: '20%', maxHeight: 700, overflowY: 'auto' }} className="pr-4">
+                                <div className="resource-list-container">
+                                    {(() => {
+                                        // Group items by kind
+                                        const groupedItems = resourceItems.reduce((groups, item) => {
+                                            const kind = item.kind || 'Other Resources';
+                                            if (!groups[kind]) {
+                                                groups[kind] = [];
+                                            }
+                                            groups[kind].push(item);
+                                            return groups;
+                                        }, {} as Record<string, ResourceItem[]>);
+
+                                        // Convert groups to array and sort by kind
+                                        return Object.entries(groupedItems).map(([kind, items]) => (
+                                            <div key={kind} className="mb-4">
+                                                <div className={`font-bold py-2 px-4 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`} style={{ borderRadius: '8px 8px 0 0' }}>
+                                                    <Text strong>{kind}</Text>
+                                                </div>
+                                                <List
+                                                    size="large"
+                                                    bordered
+                                                    dataSource={items}
+                                                    style={{ borderRadius: '0 0 8px 8px' }}
+                                                    renderItem={(item, index) => (
+                                                        <List.Item
+                                                            className={selectedResource?.path === item.path ? (isDark ? 'bg-gray-800' : 'bg-blue-50') : ''}
+                                                            onClick={() => setSelectedResource(item)}
+                                                            key={`${kind}-${index}`}
+                                                            style={{ cursor: 'pointer', borderRadius: index === items.length - 1 ? '0 0 8px 8px' : 0 }}
+                                                        >
+                                                            <Space>
+                                                                {item.type === 'yaml' ? <FileOutlined /> : <SettingOutlined />}
+                                                                <Text ellipsis style={{ maxWidth: 180 }}>{item.name}</Text>
+                                                            </Space>
+                                                        </List.Item>
+                                                    )}
+                                                />
+                                            </div>
+                                        ));
+                                    })()}
+                                </div>
                             </div>
 
                             <div style={{ flex: 1 }} className="pl-4 border-l">
@@ -543,6 +612,17 @@ const PackageDetailsPage: React.FC = () => {
                                 )}
                             </div>
                         </Flex>
+                    </Card>
+                )}
+
+                {activeTab === 'revisions' && (
+                    <Card>
+                        <Title level={5}>Package Revision History</Title>
+                        <RevisionHistory
+                            packageName={packageRev?.spec?.packageName}
+                            repository={repositoryName}
+                            currentRevision={packageRev?.spec?.revision}
+                        />
                     </Card>
                 )}
 
@@ -589,6 +669,143 @@ const PackageDetailsPage: React.FC = () => {
             </Panel>
         </Spin>
     );
+};
+
+// Component to display revision history
+const RevisionHistory: React.FC<{
+    packageName?: string;
+    repository?: string;
+    currentRevision?: string;
+}> = ({ packageName, repository, currentRevision }) => {
+    // Fetch all package revisions
+    const {
+        data: packageRevisionsData,
+        isLoading,
+        error,
+    } = useQuery({
+        queryKey: ['GetAllPackageRevs'],
+        queryFn: async () => {
+            try {
+                const data = await GetPackageRevs();
+                return data?.items || [];
+            } catch (error) {
+                throw new Error(`Failed to fetch package revisions: ${error}`);
+            }
+        },
+        enabled: !!packageName && !!repository,
+    });
+
+    // Filter revisions by package name and repository
+    const filteredRevisions = React.useMemo(() => {
+        if (!packageRevisionsData || !packageName || !repository) {
+            return [];
+        }
+
+        return packageRevisionsData
+            .filter(rev =>
+                rev.spec.packageName === packageName &&
+                rev.spec.repository === repository
+            )
+            .sort((a, b) => {
+                // Sort by creation timestamp (newest first)
+                const dateA = a.metadata.creationTimestamp ? new Date(a.metadata.creationTimestamp).getTime() : 0;
+                const dateB = b.metadata.creationTimestamp ? new Date(b.metadata.creationTimestamp).getTime() : 0;
+                return dateB - dateA;
+            });
+    }, [packageRevisionsData, packageName, repository]);
+
+    if (isLoading) {
+        return <Spin tip="Loading revision history..." />;
+    }
+
+    if (error) {
+        return <Alert type="error" message="Failed to load revision history" description={`${error}`} />;
+    }
+
+    if (!filteredRevisions.length) {
+        return <Empty description="No revision history found" />;
+    }
+
+    return (
+        <Table
+            rowKey="name"
+            dataSource={filteredRevisions.map(rev => ({
+                ...rev,
+                name: rev.metadata.name,
+                created: rev.metadata.creationTimestamp,
+                revision: rev.spec.revision || 'N/A',
+                lifecycle: rev.spec.lifecycle
+            }))}
+            columns={[
+                {
+                    title: 'Revision',
+                    dataIndex: 'revision',
+                    key: 'revision',
+                    render: (text: string) => (
+                        <Flex align="center" gap={8}>
+                            <Text strong>{text}</Text>
+                            {text === currentRevision && (
+                                <Tag color="processing">Current</Tag>
+                            )}
+                        </Flex>
+                    )
+                },
+                {
+                    title: 'Status',
+                    dataIndex: 'lifecycle',
+                    key: 'lifecycle',
+                    render: (lifecycle: PackageRevisionLifecycle) => (
+                        <Tag color={getLifecycleColor(lifecycle)}>
+                            {lifecycle}
+                        </Tag>
+                    )
+                },
+                {
+                    title: 'Created',
+                    dataIndex: 'created',
+                    key: 'created',
+                    render: (text: string) => text ? new Date(text).toLocaleString() : 'N/A',
+                    sorter: (a: any, b: any) => {
+                        const dateA = a.created ? new Date(a.created).getTime() : 0;
+                        const dateB = b.created ? new Date(b.created).getTime() : 0;
+                        return dateA - dateB;
+                    },
+                    defaultSortOrder: 'descend'
+                },
+                {
+                    title: 'Name',
+                    dataIndex: 'name',
+                    key: 'name'
+                },
+                {
+                    title: 'Actions',
+                    key: 'actions',
+                    render: (_: any, record: any) => (
+                        record.name !== packageName ? (
+                            <Link to={`/package-management/packages/${record.name}`}>
+                                View This Revision
+                            </Link>
+                        ) : (
+                            <Text type="secondary">Current</Text>
+                        )
+                    )
+                }
+            ]}
+            pagination={{ pageSize: 10 }}
+        />
+    );
+};
+
+// Helper function to get color for lifecycle badge
+const getLifecycleColor = (lifecycle: PackageRevisionLifecycle): string => {
+    switch (lifecycle) {
+        case PackageRevisionLifecycle.PUBLISHED:
+            return 'success';
+        case PackageRevisionLifecycle.PROPOSED:
+            return 'warning';
+        default:
+            return 'default';
+    }
 };
 
 export default PackageDetailsPage;

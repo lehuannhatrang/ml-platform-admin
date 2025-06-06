@@ -1,0 +1,138 @@
+version: '3'
+
+services:
+  # PostgreSQL database for OpenFGA
+  postgres:
+    image: postgres:17
+    container_name: postgres
+    command: postgres -c 'max_connections=100'
+    networks:
+      - karmada-network
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # OpenFGA migration
+  migrate:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    image: openfga/openfga:latest
+    container_name: migrate
+    environment:
+      - OPENFGA_DATASTORE_ENGINE=postgres
+      - OPENFGA_DATASTORE_URI=postgres://postgres:password@postgres:5432/postgres?sslmode=disable
+    command: migrate
+    networks:
+      - karmada-network
+
+  # OpenFGA service
+  openfga:
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    image: openfga/openfga:latest
+    container_name: openfga
+    command: run
+    environment:
+      - OPENFGA_DATASTORE_ENGINE=postgres
+      - OPENFGA_DATASTORE_URI=postgres://postgres:password@postgres:5432/postgres?sslmode=disable
+      - OPENFGA_DATASTORE_MAX_OPEN_CONNS=100
+      - OPENFGA_PLAYGROUND_ENABLED=true
+    networks:
+      - karmada-network
+    ports:
+      - "8080:8080" # http
+      - "8081:8081" # grpc
+      - "3000:3000" # playground
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/grpc_health_probe", "-addr=openfga:8081"]
+      interval: 5s
+      timeout: 30s
+      retries: 3
+
+  # etcd service for Karmada Dashboard
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.5
+    container_name: karmada-dashboard-etcd
+    command:
+      - /usr/local/bin/etcd
+      - --advertise-client-urls=http://0.0.0.0:2379
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --data-dir=/etcd-data
+    volumes:
+      - etcd-data:/etcd-data
+    networks:
+      - karmada-network
+    ports:
+      - "2379:2379"
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Karmada Dashboard API
+  karmada-dashboard-api:
+    image: lehuannhatrang/dcn-dashboard-api:v0.31
+    container_name: karmada-dashboard-api
+    depends_on:
+      etcd:
+        condition: service_healthy
+      openfga:
+        condition: service_healthy
+    volumes:
+      - ./artifacts/kubeconfig:/etc/karmada/kubeconfig
+    command:
+      - /bin/karmada-dashboard-api
+      - --bind-address=0.0.0.0
+      - --kubeconfig=/etc/karmada/kubeconfig/mgmt-cluster.config
+      - --karmada-kubeconfig=/etc/karmada/kubeconfig/karmada-apiserver.config
+      - --etcd-host=etcd
+      - --etcd-port=2379
+      - --openfga-api-url=http://openfga:8080
+      - --insecure-bind-address=0.0.0.0
+    networks:
+      - karmada-network
+    ports:
+      - "8000:8000" # HTTP
+      - "8001:8001" # HTTPS
+
+  # Karmada Dashboard Web
+  karmada-dashboard-web:
+    image: lehuannhatrang/dcn-dashboard-web:v0.31
+    container_name: karmada-dashboard-web
+    depends_on:
+      - karmada-dashboard-api
+    volumes:
+      - ./artifacts/dashboard/karmada-dashboard-configmap.yaml:/etc/karmada/config/dashboard-configmap.yaml
+    command:
+      - karmada-dashboard-web
+      - --static-dir=/static
+      - --insecure-bind-address=0.0.0.0
+      - --bind-address=0.0.0.0
+      - --dashboard-config-path=/etc/karmada/config/dashboard-configmap.yaml
+      - --api-proxy-endpoint=http://karmada-dashboard-api:8000
+    networks:
+      - karmada-network
+    ports:
+      - "3800:8000"
+    environment:
+      - GIN_MODE=release
+
+networks:
+  karmada-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  etcd-data:

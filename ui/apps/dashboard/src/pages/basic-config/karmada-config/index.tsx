@@ -5,6 +5,7 @@ import KarmadaHeader from './header';
 import TerminalLogs from './TerminalLogs';
 import dayjs from 'dayjs';
 import Panel from '@/components/panel';
+import { useTheme } from '@/contexts/theme-context';
 
 const { Sider, Content } = Layout;
 
@@ -83,10 +84,12 @@ const KarmadaConfigPage = () => {
     onClick: () => handlePodClick(pod),
   }));
 
+  const {theme} = useTheme();
+
   return (
     <Panel>
       <Layout>
-        <Sider width={260} style={{ background: '#fff' }}>
+        <Sider width={260} style={{ background: theme === 'dark' ? '#001529' : '#fff' }}>
           <Menu
             mode="inline"
             defaultSelectedKeys={['0']}

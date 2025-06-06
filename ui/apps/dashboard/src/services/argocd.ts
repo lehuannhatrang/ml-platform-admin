@@ -1,3 +1,4 @@
+import { getClusterApiPath } from "@/utils/cluster";
 import { convertDataSelectQuery, DataSelectQuery, IResponse, karmadaClient } from "./base";
 
 export interface ArgoProject {
@@ -252,7 +253,7 @@ export async function CreateArgoProject(
   clusterName: string,
   data: CreateArgoProjectRequest
 ): Promise<IResponse<ArgoProject>> {
-  const response = await karmadaClient.post(`/member/${clusterName}/argocd/project`, data);
+  const response = await karmadaClient.post(getClusterApiPath(clusterName, 'argocd/project'), data);
   return response.data;
 }
 
@@ -263,7 +264,7 @@ export async function UpdateArgoProject(
   clusterName: string,
   data: CreateArgoProjectRequest
 ): Promise<IResponse<ArgoProject>> {
-  const response = await karmadaClient.put(`/member/${clusterName}/argocd/project/${data.metadata.name}`, data);
+  const response = await karmadaClient.put(getClusterApiPath(clusterName, 'argocd/project') + `/${data.metadata.name}`, data);
   return response.data;
 }
 
@@ -274,7 +275,7 @@ export async function DeleteArgoProject(
   clusterName: string,
   projectName: string
 ): Promise<IResponse<ArgoProject>> {
-  const response = await karmadaClient.delete(`/member/${clusterName}/argocd/project/${projectName}`);
+  const response = await karmadaClient.delete(getClusterApiPath(clusterName, 'argocd/project') + `/${projectName}`);
   return response.data;
 }
 
@@ -285,7 +286,7 @@ export async function CreateArgoApplication(
   clusterName: string,
   data: CreateArgoApplicationRequest
 ): Promise<IResponse<ArgoApplication>> {
-  const response = await karmadaClient.post(`/member/${clusterName}/argocd/application`, data);
+  const response = await karmadaClient.post(getClusterApiPath(clusterName, 'argocd/application'), data);
   return response.data;
 }
 
@@ -296,7 +297,7 @@ export async function UpdateArgoApplication(
   clusterName: string,
   data: CreateArgoApplicationRequest
 ): Promise<IResponse<ArgoApplication>> {
-  const response = await karmadaClient.put(`/member/${clusterName}/argocd/application/${data.metadata.name}`, data);
+  const response = await karmadaClient.put(getClusterApiPath(clusterName, 'argocd/application') + `/${data.metadata.name}`, data);
   return response.data;
 }
 
@@ -304,7 +305,7 @@ export async function SyncArgoApplication(
   clusterName: string,
   applicationName: string
 ): Promise<IResponse<ArgoApplication>> {
-  const response = await karmadaClient.post(`/member/${clusterName}/argocd/application/${applicationName}/sync`);
+  const response = await karmadaClient.post(getClusterApiPath(clusterName, 'argocd/application') + `/${applicationName}/sync`);
   return response.data;
 }
 
@@ -315,7 +316,7 @@ export async function DeleteArgoApplication(
   clusterName: string,
   applicationName: string
 ): Promise<IResponse<ArgoApplication>> {
-  const response = await karmadaClient.delete(`/member/${clusterName}/argocd/application/${applicationName}`);
+  const response = await karmadaClient.delete(getClusterApiPath(clusterName, 'argocd/application') + `/${applicationName}`);
   return response.data;
 }
 
@@ -325,7 +326,7 @@ export const GetArgoApplications = async (params: Partial<ArgoFilter> = {}) => {
   if (searchText) {
     requestData.filterBy = ['name', searchText];
   }
-  const url = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/argocd/application` : '/aggregated/argocd/application';
+  const url = getClusterApiPath(cluster?.label || '', 'argocd/application');
   const resp = await karmadaClient.get<
     IResponse<{
       errors: string[];
@@ -346,7 +347,7 @@ export const GetArgoProjects = async (params: Partial<ArgoFilter> = {}) => {
   if (searchText) {
     requestData.filterBy = ['name', searchText];
   }
-  const url = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/argocd/project` : '/aggregated/argocd/project';
+  const url = getClusterApiPath(cluster?.label || '', 'argocd/project');
   const resp = await karmadaClient.get<
     IResponse<{
       errors: string[];
@@ -367,7 +368,7 @@ export async function GetArgoApplicationSets(filter: Partial<ArgoFilter> = {}) {
   if (searchText) {
     requestData.filterBy = ['name', searchText];
   }
-  const url = cluster && cluster.value !== 'ALL' ? `/member/${cluster.label}/argocd/applicationset` : '/aggregated/argocd/applicationset';
+  const url = getClusterApiPath(cluster?.label || '', 'argocd/applicationset');
   const resp = await karmadaClient.get<
     IResponse<{
       errors: string[];
@@ -392,7 +393,7 @@ export async function GetArgoProjectDetails(
   project: ArgoProject;
   applications: ArgoApplication[];
 }>> {
-  const response = await karmadaClient.get(`/member/${clusterName}/argocd/project/${projectName}`);
+  const response = await karmadaClient.get(getClusterApiPath(clusterName, 'argocd/project') + `/${projectName}`);
   return response.data;
 }
 
@@ -404,7 +405,7 @@ export async function GetArgoApplicationDetail(
   applicationName: string
 ): Promise<IResponse<ArgoApplicationDetail>> {
   const response = await karmadaClient.get(
-    `/member/${clusterName}/argocd/application/${applicationName}`
+    getClusterApiPath(clusterName, 'argocd/application') + `/${applicationName}`
   );
   return response.data;
 }

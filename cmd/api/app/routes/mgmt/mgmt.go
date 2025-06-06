@@ -17,6 +17,7 @@ limitations under the License.
 package mgmt
 
 import (
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/mgmt/argocd"      // Import ArgoCD management routes
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/mgmt/configmap"
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/mgmt/cronjob"
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/mgmt/customresource"

@@ -58,8 +58,6 @@ const ApplicationInfoDrawer: React.FC<ApplicationInfoDrawerProps> = ({
   const navigate = useNavigate();
 
   const handleSync = async () => {
-    // TODO: Implement sync functionality
-    console.log('Syncing application:', application.metadata?.name);
     const response = await SyncArgoApplication(application.metadata?.labels?.cluster || '', application.metadata?.name);
     if (response.code === 200) {
       message.success('Application sync started successfully');
