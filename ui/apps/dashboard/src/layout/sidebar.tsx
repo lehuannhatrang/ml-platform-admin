@@ -58,7 +58,6 @@ const Sidebar: FC<SidebarProps> = ({ collapsed }) => {
   const filteredMenuItems = useMemo(() => {
     if (!data) return menuItems;
     const menuInfo = traverseMenuConfig(data.menu_configs);
-    console.log({menuInfo, menuItems})
     return filterMenuItems(menuItems, menuInfo);
   }, [data, menuItems]);
   return (

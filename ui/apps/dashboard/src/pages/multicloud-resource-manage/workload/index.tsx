@@ -21,6 +21,7 @@ import {
   App,
   Button,
   Input,
+  message,
   Popconfirm,
   Select,
   Space,
@@ -32,7 +33,7 @@ import {
 } from 'antd';
 import { Icons } from '@/components/icons';
 import type { PodWorkload, Workload } from '@/services/workload';
-import { GetWorkloads } from '@/services/workload';
+import { GetWorkloads, RestartDeployment } from '@/services/workload';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { DeleteMemberResource, GetMemberResource } from '@/services/unstructured.ts';
@@ -204,7 +205,6 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
           title: 'Status',
           key: 'status',
           render: (_: any, r: any) => {
-            console.log('stats', r.status, r)
             const status = getStatusFromCondition(r.status?.conditions || [])
             return <Tag color={getStatusTagColor(status)}>{status}</Tag>
           },
@@ -312,6 +312,59 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
             >
               {'Logs'}
             </Button>}
+            {kind === WorkloadKind.Deployment && 
+            <Popconfirm
+              placement="topRight"
+              title={`Deployment ${r.objectMeta.name} will be restarted`}
+              onConfirm={async () => {
+                try {
+                  message.loading({
+                    content: `Restarting deployment ${r.objectMeta.name}...`,
+                    key: 'restartDeployment',
+                    duration: 0,
+                  });
+                  
+                  await RestartDeployment({
+                    namespace: r.objectMeta.namespace,
+                    name: r.objectMeta.name,
+                    cluster: r.objectMeta.labels?.cluster || selectedCluster.label,
+                  });
+                  
+                  message.success({
+                    content: `Deployment ${r.objectMeta.name} restarted successfully.`,
+                    key: 'restartDeployment',
+                  });
+                  
+                  // Refresh the list after a short delay
+                  setTimeout(() => {
+                    refetch();
+                  }, 1000);
+                  
+                } catch (error: any) {
+                  console.error('Error restarting deployment:', error);
+                  message.error({
+                    content: `Failed to restart deployment: ${error?.message || 'Unknown error'}`,
+                    key: 'restartDeployment',
+                  });
+                }
+              }}
+              okText={i18nInstance.t(
+                'e83a256e4f5bb4ff8b3d804b5473217a',
+                '确认',
+              )}
+              cancelText={i18nInstance.t(
+                '625fb26b4b3340f7872b411f401e754c',
+                '取消',
+              )}
+            >
+              <Button
+                size={'small'}
+                type="link"
+              >
+                {'Restart'}
+              </Button>
+            </Popconfirm>
+            }
             <Button
               size={'small'}
               type="link"

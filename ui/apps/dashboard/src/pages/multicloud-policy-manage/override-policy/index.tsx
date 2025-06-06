@@ -64,7 +64,6 @@ const OverridePolicyManage = () => {
     queryKey: ['GetOverridePolicies', JSON.stringify(filter)],
     queryFn: async () => {
       if (filter.policyScope === 'cluster-scope') {
-        console.log('x');
         const ret = await GetClusterOverridePolicies({
           keyword: filter.searchText,
         });

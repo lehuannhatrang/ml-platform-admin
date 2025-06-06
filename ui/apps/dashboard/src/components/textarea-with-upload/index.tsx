@@ -91,7 +91,6 @@ const TextareaWithUpload: FC<TextareaWithUploadProps> = (props) => {
           beforeUpload={async (file) => {
             const d = await readBlob(file);
             const isValid = checkContent(d);
-            console.log({isValid})
             if (isValid) {
               triggerChange(d.data as string);
             }

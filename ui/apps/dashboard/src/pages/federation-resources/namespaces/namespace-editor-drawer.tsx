@@ -98,7 +98,6 @@ const NamespaceEditorDrawer: FC<NamespaceEditorDrawerProps> = (props) => {
       // Ensure the kind is Namespace
       const expectedKind = 'namespace';
       if (yamlObject.kind?.toLowerCase() !== expectedKind) {
-        console.log(`Kind: ${yamlObject.kind}, Expected: ${expectedKind}`);
         messageApi.error(`Kind must be Namespace`);
         return;
       }

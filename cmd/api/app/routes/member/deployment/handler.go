@@ -18,10 +18,12 @@ package deployment
 
 import (
 	"context"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	v1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
 
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
 	"github.com/karmada-io/dashboard/cmd/api/app/types/common"
@@ -48,36 +50,36 @@ func handleGetMemberDeploymentDetail(c *gin.Context) {
 	memberClient := client.InClusterClientForMemberCluster(c.Param("clustername"))
 	namespace := c.Param("namespace")
 	name := c.Param("deployment")
-	
+
 	// Get deployment details
 	deploymentDetail, err := deployment.GetDeploymentDetail(memberClient, namespace, name)
 	if err != nil {
 		common.Fail(c, err)
 		return
 	}
-	
+
 	// We need to get pods directly using the Kubernetes API with the labels
 	labelSelector := metaV1.FormatLabelSelector(&metaV1.LabelSelector{
 		MatchLabels: deploymentDetail.Selector,
 	})
-	
+
 	// Get pod list using the deployment's label selector
 	podList, err := memberClient.CoreV1().Pods(namespace).List(context.TODO(), metaV1.ListOptions{
 		LabelSelector: labelSelector,
 	})
-	
+
 	if err != nil {
 		common.Fail(c, err)
 		return
 	}
-	
+
 	// Convert to dashboard pod list format
 	pods := &pod.PodList{
 		ListMeta: types.ListMeta{TotalItems: len(podList.Items)},
 		Items:    make([]pod.Pod, 0),
 		Errors:   []error{},
 	}
-	
+
 	for _, item := range podList.Items {
 		pods.Items = append(pods.Items, pod.Pod{
 			ObjectMeta: types.NewObjectMeta(item.ObjectMeta),
@@ -86,7 +88,7 @@ func handleGetMemberDeploymentDetail(c *gin.Context) {
 			Spec:       item.Spec,
 		})
 	}
-	
+
 	// Create response with both deployment and pod details
 	response := struct {
 		*deployment.DeploymentDetail `json:",inline"`
@@ -96,7 +98,7 @@ func handleGetMemberDeploymentDetail(c *gin.Context) {
 		DeploymentDetail: deploymentDetail,
 		PodList:          pods,
 	}
-	
+
 	common.Success(c, response)
 }
 
@@ -113,10 +115,64 @@ func handleGetMemberDeploymentEvents(c *gin.Context) {
 	common.Success(c, result)
 }
 
+func handleRestartMemberDeployment(c *gin.Context) {
+	memberClient := client.InClusterClientForMemberCluster(c.Param("clustername"))
+	namespace := c.Param("namespace")
+	name := c.Param("deployment")
+
+	// First, get the deployment to check if it exists
+	deployment, err := memberClient.AppsV1().Deployments(namespace).Get(
+		context.TODO(),
+		name,
+		metaV1.GetOptions{},
+	)
+	if err != nil {
+		klog.Errorf("Failed to get deployment %s/%s: %v", namespace, name, err)
+		common.Fail(c, err)
+		return
+	}
+
+	// Create a patch to update the kubectl.kubernetes.io/restartedAt annotation with current timestamp
+	timestamp := time.Now().Format(time.RFC3339)
+	// Force restart by setting a new timestamp annotation
+	if deployment.Spec.Template.Annotations == nil {
+		deployment.Spec.Template.Annotations = make(map[string]string)
+	}
+	deployment.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"] = timestamp
+
+	// Update the deployment
+	_, err = memberClient.AppsV1().Deployments(namespace).Update(
+		context.TODO(),
+		deployment,
+		metaV1.UpdateOptions{},
+	)
+
+	if err != nil {
+		klog.Errorf("Failed to restart deployment %s/%s: %v", namespace, name, err)
+		common.Fail(c, err)
+		return
+	}
+
+	// Use a simple struct for response with proper JSON tags
+	type RestartResponse struct {
+		Message   string `json:"message"`
+		Timestamp string `json:"timestamp"`
+	}
+
+	resp := RestartResponse{
+		Message:   "Deployment restarted successfully",
+		Timestamp: timestamp,
+	}
+
+	// Use gin's standard response function
+	c.JSON(200, resp)
+}
+
 func init() {
 	r := router.MemberV1()
 	r.GET("/deployment", handleGetMemberDeployments)
 	r.GET("/deployment/:namespace", handleGetMemberDeployments)
 	r.GET("/deployment/:namespace/:deployment", handleGetMemberDeploymentDetail)
 	r.GET("/deployment/:namespace/:deployment/event", handleGetMemberDeploymentEvents)
+	r.POST("/deployment/:namespace/:deployment/restart", handleRestartMemberDeployment)
 }

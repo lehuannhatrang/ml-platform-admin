@@ -137,7 +137,6 @@ function getTitle(
 }
 
 const WorkloadEditorDrawer: FC<WorkloadEditorDrawerProps> = (props) => {
-  console.log(props);
   const {
     open,
     mode,
@@ -191,7 +190,6 @@ const WorkloadEditorDrawer: FC<WorkloadEditorDrawerProps> = (props) => {
       // Ensure the kind matches the selected type
       const expectedKind = type.toLowerCase();
       if (yamlObject.kind?.toLowerCase() !== expectedKind) {
-        console.log(`Kind: ${yamlObject.kind}, Expected: ${expectedKind}`);
         messageApi.error(`Kind must be ${expectedKind}`);
         return;
       }

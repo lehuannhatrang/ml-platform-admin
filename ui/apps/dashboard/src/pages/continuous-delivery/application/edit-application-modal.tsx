@@ -133,7 +133,6 @@ const EditApplicationModal: React.FC<EditApplicationModalProps> = ({
         response = await UpdateArgoApplication(clusterName, applicationData);
       }
       
-      console.log({response, code: response.code});
       if (response.code === 200) {
         message.success(`Application ${mode === 'create' ? 'created' : 'updated'} successfully`);
         onSuccess();

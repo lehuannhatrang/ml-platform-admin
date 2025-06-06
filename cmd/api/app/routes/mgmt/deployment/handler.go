@@ -18,6 +18,7 @@ package deployment
 
 import (
 	"context"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	v1 "k8s.io/api/core/v1"
@@ -152,6 +153,67 @@ func HandleGetMgmtDeploymentEvents(c *gin.Context) {
 	common.Success(c, events)
 }
 
+// HandleRestartMgmtDeployment handles the restart of a deployment in the management cluster by updating its restartedAt annotation
+func HandleRestartMgmtDeployment(c *gin.Context) {
+	// Get direct client to management cluster
+	k8sClient := client.InClusterClient()
+	if k8sClient == nil {
+		klog.Error("Failed to get management cluster client")
+		common.Fail(c, errors.NewInternal("Failed to get management cluster client"))
+		return
+	}
+
+	namespace := c.Param("namespace")
+	name := c.Param("deployment")
+
+	klog.InfoS("Restarting management cluster deployment", "namespace", namespace, "deployment", name)
+
+	// First, get the deployment to check if it exists
+	deployment, err := k8sClient.AppsV1().Deployments(namespace).Get(
+		context.TODO(),
+		name,
+		metaV1.GetOptions{},
+	)
+	if err != nil {
+		klog.ErrorS(err, "Failed to get management cluster deployment", "namespace", namespace, "deployment", name)
+		common.Fail(c, err)
+		return
+	}
+
+	// Create a patch to update the kubectl.kubernetes.io/restartedAt annotation with current timestamp
+	timestamp := time.Now().Format(time.RFC3339)
+	// Force restart by setting a new timestamp annotation
+	if deployment.Spec.Template.Annotations == nil {
+		deployment.Spec.Template.Annotations = make(map[string]string)
+	}
+	deployment.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"] = timestamp
+
+	// Update the deployment
+	_, err = k8sClient.AppsV1().Deployments(namespace).Update(
+		context.TODO(),
+		deployment,
+		metaV1.UpdateOptions{},
+	)
+
+	if err != nil {
+		klog.ErrorS(err, "Failed to restart management cluster deployment", "namespace", namespace, "deployment", name)
+		common.Fail(c, err)
+		return
+	}
+
+	// Return success response
+	response := struct {
+		Message   string `json:"message"`
+		Timestamp string `json:"timestamp"`
+	}{
+		Message:   "Deployment restarted successfully",
+		Timestamp: timestamp,
+	}
+
+	klog.InfoS("Successfully restarted management cluster deployment", "namespace", namespace, "deployment", name)
+	common.Success(c, response)
+}
+
 func init() {
 	mgmtRouter := router.Mgmt()
 	{
@@ -159,6 +221,7 @@ func init() {
 		mgmtRouter.GET("/deployment/:namespace", HandleGetMgmtDeployments)
 		mgmtRouter.GET("/deployment/:namespace/:deployment", HandleGetMgmtDeploymentDetail)
 		mgmtRouter.GET("/deployment/:namespace/:deployment/event", HandleGetMgmtDeploymentEvents)
+		mgmtRouter.POST("/deployment/:namespace/:deployment/restart", HandleRestartMgmtDeployment)
 	}
 	klog.InfoS("Registered management cluster deployment routes")
 }

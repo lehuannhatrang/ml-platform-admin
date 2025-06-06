@@ -87,7 +87,6 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
       } else {
         response = await UpdateArgoProject(clusterName, projectData);
       }
-      console.log({response, code: response.code})
       if (response.code === 200) {
         message.success(`Project ${mode === 'create' ? 'created' : 'updated'} successfully`);
         onSuccess();

@@ -100,7 +100,6 @@ const ServiceInfoDrawer: FC<ServiceInfoDrawerProps> = (props) => {
   ];
 
   const serviceData = detailData as ServiceRaw;
-  console.log({ serviceData });
   return (
     <Drawer
       title={`SERVICE: ${name}`}

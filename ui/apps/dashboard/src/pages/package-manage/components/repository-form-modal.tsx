@@ -93,7 +93,6 @@ const RepositoryFormModal: React.FC<RepositoryFormModalProps> = ({
     if (visible) {
       setCurrentStep(0);
       if (editingRepository) {
-        console.log({editingRepository})
         const group = getRepositoryGroup(editingRepository);
         form.setFieldsValue({
           name: editingRepository.metadata.name,

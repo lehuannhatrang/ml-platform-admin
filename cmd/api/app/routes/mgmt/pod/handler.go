@@ -137,6 +137,7 @@ func init() {
 	{
 		// Add all management cluster pod-related routes
 		mgmtRouter.GET("/pod", HandleGetMgmtPods)
+		mgmtRouter.GET("/pod/:namespace", HandleGetMgmtPods)
 		mgmtRouter.GET("/pod/:namespace/:name", HandleGetMgmtPodDetails)
 		mgmtRouter.GET("/pod/:namespace/:name/logs", HandleGetMgmtPodLogs)
 	}

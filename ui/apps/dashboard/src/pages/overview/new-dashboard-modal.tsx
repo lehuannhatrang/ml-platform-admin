@@ -68,7 +68,6 @@ const NewDashboardModal = ({ open, onCancel, onSuccess }: NewDashboardModalProps
   const handleOk = async () => {
     try {
       const values = await form.validateFields();
-      console.log({values})
       const monitoring = monitoringData?.monitorings?.find((m: MonitoringConfig) => m.endpoint === values.monitoring);
       const dashboard = dashboardsData?.dashboards?.find((d: MonitoringDashboard) => d.uid === values.dashboard);
       const name = values.name;

@@ -73,7 +73,7 @@ const LogsDrawer: FC<LogsDrawerProps> = (props) => {
             title={`Logs: ${name}`}
             placement="bottom"
             open={open}
-            height={600}
+            height={700}
             loading={isLogsLoading && page === 1}
             onClose={handleOnCloseDrawer}
             extra={
@@ -93,14 +93,14 @@ const LogsDrawer: FC<LogsDrawerProps> = (props) => {
             </Flex>
             }
         >
-            <LogsTerminal
+            {open && <LogsTerminal
                 logs={aggregatedLogs}
-                onScrollTop={fetchNextPage}
+                onLoadMore={fetchNextPage}
                 style={{
-                    height: 480
+                    height: 580
                 }}
                 isLoading={isLogsLoading}
-            />
+            />}
 
         </Drawer>
     );

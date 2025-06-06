@@ -131,7 +131,6 @@ const Overview = () => {
               }))}
               activeTabKey={selectedCluster.value}
               onTabChange={(key) => {
-                console.log('key', key);
                 setSelectedCluster(clusterOptions.find(option => option.value === key) || clusterOptions[0]);
               }}
               tabProps={{

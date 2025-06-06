@@ -57,7 +57,6 @@ const ComponentEditorDrawer: FC<ComponentEditorDrawerProps> = (props) => {
   const handleUpdate = async () => {
     try {
       const updateRet = await UpdatePodYAML(podName, { yamlContent: content });
-      console.log(updateRet);
 
       if (updateRet.code === 200) {
         notification.success({

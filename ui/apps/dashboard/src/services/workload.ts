@@ -287,3 +287,22 @@ export async function CreateDeployment(params: {
   >(`/deployment`, params);
   return resp.data;
 }
+
+/**
+ * Restart a deployment by updating the kubectl.kubernetes.io/restartedAt annotation
+ */
+export async function RestartDeployment(params: {
+  namespace: string;
+  name: string;
+  cluster: string;
+}) {
+  const { namespace, name, cluster } = params;
+  const url = `${getClusterApiPath(cluster, `deployment/${namespace}/${name}/restart`)}`;
+  const resp = await karmadaClient.post<
+    IResponse<{
+      message: string;
+      timestamp: string;
+    }>
+  >(url);
+  return resp.data;
+}
