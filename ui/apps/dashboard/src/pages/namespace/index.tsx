@@ -24,7 +24,6 @@ import {
   TableColumnProps,
   Tag,
   Flex,
-  Tooltip,
 } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 import TagList, { convertLabelToTags } from '@/components/tag-list';

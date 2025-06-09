@@ -32,7 +32,7 @@ interface ChatButtonProps {
   hideOnPaths?: string[];
 }
 // A simple function to initialize the chat
-export const initChat = async (webhookUrl: string, mode: 'window' | 'fullscreen' = 'window', target: string = '#n8n-chat'): Promise<ReturnType<typeof createChat> | null> => {
+export const initChat = async (webhookUrl: string, mode: 'window' | 'fullscreen' = 'window', target?: string): Promise<ReturnType<typeof createChat> | null> => {
   try {
     if (!webhookUrl) {
       console.warn('Chat webhook URL is not configured');
@@ -48,7 +48,7 @@ export const initChat = async (webhookUrl: string, mode: 'window' | 'fullscreen'
       },
       chatSessionKey: `dcn-dashboard-chat`,
       mode: mode === 'fullscreen' ? 'fullscreen' : 'window',
-      target: target
+      target
     });
     return chat;
   } catch (error) {
@@ -61,7 +61,6 @@ export const initChat = async (webhookUrl: string, mode: 'window' | 'fullscreen'
 export const ChatButton: React.FC<ChatButtonProps> = ({ hideOnPaths = [] }) => {
   
   const chatInitializedRef = useRef<ReturnType<typeof createChat> | null>(null);
-  const [chatVisible, setChatVisible] = React.useState(false);
 
   const {data: configData} = useQuery({
     queryKey: ['config'],
@@ -79,7 +78,6 @@ export const ChatButton: React.FC<ChatButtonProps> = ({ hideOnPaths = [] }) => {
   // Initialize chat in current window
   const handleChatInCurrentWindow = async () => {
     if (!chatInitializedRef.current && webhookUrl) {
-      setChatVisible(true);
       const chat = await initChat(webhookUrl, 'window', '#n8n-chat');
       chatInitializedRef.current = chat;
     }
@@ -132,9 +130,6 @@ export const ChatButton: React.FC<ChatButtonProps> = ({ hideOnPaths = [] }) => {
           />
         </Dropdown>
       </div>
-      {chatVisible && (
-        <div id="n8n-chat" style={{position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1000}}/>
-      )}
     </>
   );
 };
