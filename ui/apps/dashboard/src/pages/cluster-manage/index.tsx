@@ -37,7 +37,9 @@ import {
   message,
   Popconfirm,
   Flex,
+  Tooltip,
 } from 'antd';
+import { EyeOutlined, EditOutlined, DeleteOutlined, UserOutlined } from '@ant-design/icons';
 import { Icons } from '@/components/icons';
 import NewClusterModal from './new-cluster-modal';
 import ClusterUsersModal from './cluster-users-modal';
@@ -234,37 +236,39 @@ const ClusterManagePage = () => {
       render: (_, r) => {
         return (
           <Space.Compact>
-            <Button size={'small'} type="link" onClick={() => handleClusterView(r)}>
-              {i18nInstance.t('607e7a4f377fa66b0b28ce318aab841f', '查看')}
-            </Button>
-            <Button
-              size={'small'}
-              type="link"
-              onClick={() => {
-                setUsersModalData({
-                  open: true,
-                  clusterName: r.objectMeta.name,
-                });
-              }}
-              disabled={r.objectMeta.name === 'mgmt-cluster'}
-            >
-              Users
-            </Button>
-            <Button
-              size={'small'}
-              type="link"
-              onClick={async () => {
-                const ret = await GetClusterDetail(r.objectMeta.name);
-                setModalData({
-                  open: true,
-                  mode: 'edit',
-                  clusterDetail: ret.data,
-                });
-              }}
-              disabled={r.objectMeta.name === 'mgmt-cluster'}
-            >
-              {i18nInstance.t('95b351c86267f3aedf89520959bce689', '编辑')}
-            </Button>
+            <Tooltip title="View">
+              <Button size='middle' type="link" icon={<EyeOutlined />} onClick={() => handleClusterView(r)} />
+            </Tooltip>
+            <Tooltip title="Users">
+              <Button
+                size='middle'
+                type="link"
+                icon={<UserOutlined />}
+                onClick={() => {
+                  setUsersModalData({
+                    open: true,
+                    clusterName: r.objectMeta.name,
+                  });
+                }}
+                disabled={r.objectMeta.name === 'mgmt-cluster'}
+              />
+            </Tooltip>
+            <Tooltip title="Edit">
+              <Button
+                size='middle'
+                type="link"
+                icon={<EditOutlined />}
+                onClick={async () => {
+                  const ret = await GetClusterDetail(r.objectMeta.name);
+                  setModalData({
+                    open: true,
+                    mode: 'edit',
+                    clusterDetail: ret.data,
+                  });
+                }}
+                disabled={r.objectMeta.name === 'mgmt-cluster'}
+              />
+            </Tooltip>
             <Popconfirm
               placement="topRight"
               
@@ -298,9 +302,7 @@ const ClusterManagePage = () => {
                 '取消',
               )}
             >
-              <Button size={'small'} type="link" danger disabled={r.objectMeta.name === 'mgmt-cluster'}>
-                {i18nInstance.t('2f4aaddde33c9b93c36fd2503f3d122b', '删除')}
-              </Button>
+              <Button size='middle' type="link" danger icon={<DeleteOutlined />} disabled={r.objectMeta.name === 'mgmt-cluster'} />
             </Popconfirm>
           </Space.Compact>
         );

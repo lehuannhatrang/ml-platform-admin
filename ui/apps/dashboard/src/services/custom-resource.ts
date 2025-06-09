@@ -8,13 +8,18 @@ export interface ApiVersion {
   cluster: string;
 }
 
+export enum CustomResourceDefinitionScope {
+  Cluster = 'Cluster',
+  Namespaced = 'Namespaced',
+}
+
 export type CustomResourceDefinition = {
     apiVersion: string;
     kind: string;
     metadata: ObjectMeta;
     spec: {
         group: string;
-        scope: string;
+        scope: CustomResourceDefinitionScope;
     };
     acceptedNames: {
         kind: string;

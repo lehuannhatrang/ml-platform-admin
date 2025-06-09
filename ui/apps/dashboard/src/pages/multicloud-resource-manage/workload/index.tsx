@@ -31,6 +31,7 @@ import {
   Tag,
   Tooltip
 } from 'antd';
+import { EyeOutlined, EditOutlined, DeleteOutlined, FileTextOutlined, ReloadOutlined } from '@ant-design/icons';
 import { Icons } from '@/components/icons';
 import type { PodWorkload, Workload } from '@/services/workload';
 import { GetWorkloads, RestartDeployment } from '@/services/workload';
@@ -281,37 +282,41 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
       render: (_, r) => {
         return (
           <Space.Compact>
-            <Button
-              size={'small'}
-              type="link"
-              onClick={() => {
-                setDrawerData({
-                  open: true,
-                  kind: r.typeMeta.kind as WorkloadKind,
-                  name: r.objectMeta.name,
-                  namespace: r.objectMeta.namespace,
-                  cluster: r.objectMeta.labels?.cluster || selectedCluster.label,
-                });
-              }}
-            >
-              {i18nInstance.t('607e7a4f377fa66b0b28ce318aab841f', '查看')}
-            </Button>
-            {kind === WorkloadKind.Pod && <Button
-              size={'small'}
-              type="link"
-              onClick={() => {
-                setLogsDrawerData({
-                  open: true,
-                  kind: r.typeMeta.kind as WorkloadKind,
-                  name: r.objectMeta.name,
-                  namespace: r.objectMeta.namespace,
-                  cluster: r.objectMeta.labels?.cluster || selectedCluster.label,
-                  containers: (r as PodWorkload).spec?.containers?.map((i: any) => i.name) || [],
-                });
-              }}
-            >
-              {'Logs'}
-            </Button>}
+            <Tooltip title="View">
+              <Button
+                size='middle'
+                type="link"
+                icon={<EyeOutlined />}
+                onClick={() => {
+                  setDrawerData({
+                    open: true,
+                    kind: r.typeMeta.kind as WorkloadKind,
+                    name: r.objectMeta.name,
+                    namespace: r.objectMeta.namespace,
+                    cluster: r.objectMeta.labels?.cluster || selectedCluster.label,
+                  });
+                }}
+              />
+            </Tooltip>
+            {kind === WorkloadKind.Pod && 
+              <Tooltip title="Logs">
+                <Button
+                  size='middle'
+                  type="link"
+                  icon={<FileTextOutlined />}
+                  onClick={() => {
+                    setLogsDrawerData({
+                      open: true,
+                      kind: r.typeMeta.kind as WorkloadKind,
+                      name: r.objectMeta.name,
+                      namespace: r.objectMeta.namespace,
+                      cluster: r.objectMeta.labels?.cluster || selectedCluster.label,
+                      containers: (r as PodWorkload).spec?.containers?.map((i: any) => i.name) || [],
+                    });
+                  }}
+                />
+              </Tooltip>
+            }
             {kind === WorkloadKind.Deployment && 
             <Popconfirm
               placement="topRight"
@@ -358,33 +363,33 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
               )}
             >
               <Button
-                size={'small'}
+                size='middle'
                 type="link"
-              >
-                {'Restart'}
-              </Button>
+                icon={<ReloadOutlined />}
+              />
             </Popconfirm>
             }
-            <Button
-              size={'small'}
-              type="link"
-              onClick={async () => {
-                const ret = await GetMemberResource({
-                  kind: r.typeMeta.kind as WorkloadKind,
-                  name: r.objectMeta.name,
-                  namespace: r.objectMeta.namespace,
-                  cluster: r.objectMeta.labels?.cluster || selectedCluster.label,
-                });
-                setEditorState({
-                  mode: 'edit',
-                  content: stringify(ret.data),
-                  cluster: r.objectMeta.labels?.cluster || selectedCluster.label,
-                });
-                toggleShowModal(true);
-              }}
-            >
-              {i18nInstance.t('95b351c86267f3aedf89520959bce689', '编辑')}
-            </Button>
+            <Tooltip title="Edit">
+              <Button
+                size='middle'
+                type="link"
+                icon={<EditOutlined />}
+                onClick={async () => {
+                  const ret = await GetMemberResource({
+                    kind: r.typeMeta.kind as WorkloadKind,
+                    name: r.objectMeta.name,
+                    namespace: r.objectMeta.namespace,
+                    cluster: r.objectMeta.labels?.cluster || selectedCluster.label,
+                  });
+                  setEditorState({
+                    mode: 'edit',
+                    content: stringify(ret.data),
+                    cluster: r.objectMeta.labels?.cluster || selectedCluster.label,
+                  });
+                  toggleShowModal(true);
+                }}
+              />
+            </Tooltip>
 
             <Popconfirm
               placement="topRight"
@@ -412,9 +417,7 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
                 '取消',
               )}
             >
-              <Button size={'small'} type="link" danger>
-                {i18nInstance.t('2f4aaddde33c9b93c36fd2503f3d122b', '删除')}
-              </Button>
+              <Button size='middle' type="link" danger icon={<DeleteOutlined />} />
             </Popconfirm>
           </Space.Compact>
         );

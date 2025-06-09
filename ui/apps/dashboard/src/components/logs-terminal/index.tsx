@@ -377,10 +377,8 @@ const LogsTerminal: React.FC<TerminalLogsProps> = ({ logs, style, onScrollTop, i
                 ref={logContainerRef}
                 onScroll={handleScroll}
                 style={{
-                    backgroundColor: colors.background,
                     borderRadius: '4px',
                     padding: '8px',
-                    maxHeight: '500px',
                     overflowY: 'auto',
                     border: theme === 'light' ? '1px solid #e0e0e0' : '1px solid #303030',
                 }}
@@ -390,7 +388,7 @@ const LogsTerminal: React.FC<TerminalLogsProps> = ({ logs, style, onScrollTop, i
                     color: colors.text,
                     margin: 0,
                     fontFamily: '"Consolas", "Courier New", monospace',
-                    fontSize: '12px',
+                    fontSize: '14px',
                     whiteSpace: 'pre-wrap',
                     wordBreak: 'break-all',
                 }}

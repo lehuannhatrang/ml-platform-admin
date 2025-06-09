@@ -34,11 +34,12 @@ import {
   Col,
   Statistic,
   Popconfirm,
+  Tooltip,
 } from 'antd';
 import type { ColumnType } from 'antd/es/table';
 import { Icons } from '@/components/icons';
 import { useMemo, useState } from 'react';
-import { CheckCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, InfoCircleOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import RepositoryFormModal, { RepositoryFormData } from './components/repository-form-modal';
 import { GetPackageRevs, PackageRev, PackageRevisionLifecycle } from '@/services/package-revision';
 import { Link } from 'react-router-dom';
@@ -258,13 +259,14 @@ const PackageManagePage = () => {
       render: (_: any, r: Repository) => {
         return (
           <Space.Compact>
-            <Button
-              size={'small'}
-              type="link"
-              onClick={() => handleEditRepository(r)}
-            >
-              Edit
-            </Button>
+            <Tooltip title="Edit">
+              <Button
+                size={'small'}
+                type="link"
+                icon={<EditOutlined />}
+                onClick={() => handleEditRepository(r)}
+              />
+            </Tooltip>
             <Popconfirm
               placement="topRight"
               title={`Are you sure you want to delete repository '${r.metadata.name}'?`}
@@ -272,9 +274,7 @@ const PackageManagePage = () => {
               okText="Confirm"
               cancelText="Cancel"
             >
-              <Button size={'small'} type="link" danger>
-                Delete
-              </Button>
+              <Button size={'small'} type="link" danger icon={<DeleteOutlined />} />
             </Popconfirm>
           </Space.Compact>
         );

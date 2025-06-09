@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button, Input, Popconfirm, Space, Table, Tag, Card, Row, Col, Radio, Tooltip, Flex } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
-import { SearchOutlined, PlusOutlined, TableOutlined, AppstoreOutlined } from '@ant-design/icons';
+import { SearchOutlined, PlusOutlined, TableOutlined, AppstoreOutlined, EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { ArgoApplication, DeleteArgoApplication, GetArgoApplications } from '../../../services/argocd';
 import useCluster from '@/hooks/use-cluster';
 import { calculateDuration } from '@/utils/time';
@@ -145,32 +145,34 @@ export default function ContinuousDeliveryApplicationPage() {
             key: 'action',
             render: (_, record) => (
                 <Space.Compact>
-                    <Button
-                        size={'small'}
-                        type="link"
-                        onClick={() => {
-                            setDrawerState({
-                                open: true,
-                                application: record,
-                            });
-                        }}
-                    >
-                        {i18nInstance.t('607e7a4f377fa66b0b28ce318aab841f', '查看')}
-                    </Button>
-                    <Button
-                        size={'small'}
-                        type="link"
-                        onClick={() => {
-                            setModalState({
-                                open: true,
-                                mode: 'edit',
-                                application: record,
-                                cluster: record.metadata?.labels?.cluster || selectedCluster.value,
-                            });
-                        }}
-                    >
-                        {i18nInstance.t('95b351c86267f3aedf89520959bce689', '编辑')}
-                    </Button>
+                    <Tooltip title="View">
+                        <Button
+                            size='middle'
+                            type="link"
+                            icon={<EyeOutlined />}
+                            onClick={() => {
+                                setDrawerState({
+                                    open: true,
+                                    application: record,
+                                });
+                            }}
+                        />
+                    </Tooltip>
+                    <Tooltip title="Edit">
+                        <Button
+                            size='middle'
+                            type="link"
+                            icon={<EditOutlined />}
+                            onClick={() => {
+                                setModalState({
+                                    open: true,
+                                    mode: 'edit',
+                                    application: record,
+                                    cluster: record.metadata?.labels?.cluster || selectedCluster.value,
+                                });
+                            }}
+                        />
+                    </Tooltip>
 
                     <Popconfirm
                         placement="topRight"
@@ -190,9 +192,7 @@ export default function ContinuousDeliveryApplicationPage() {
                             '取消',
                         )}
                     >
-                        <Button size={'small'} type="link" danger>
-                            {i18nInstance.t('2f4aaddde33c9b93c36fd2503f3d122b', '删除')}
-                        </Button>
+                        <Button size='middle' type="link" danger icon={<DeleteOutlined />} />
                     </Popconfirm>
                 </Space.Compact>
             ),
@@ -225,33 +225,33 @@ export default function ContinuousDeliveryApplicationPage() {
                             </Space>
                         }
                         actions={[
-                            <Button
-                                key="view"
-                                type="text"
-                                onClick={() => {
-                                    setDrawerState({
-                                        open: true,
-                                        application: app,
-                                    });
-                                }}
-                            >
-                                View
-                            </Button>,
-                            <Button
-                                key="edit"
-                                type="text"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setModalState({
-                                        open: true,
-                                        mode: 'edit',
-                                        application: app,
-                                        cluster: app.metadata?.labels?.cluster || selectedCluster.value,
-                                    });
-                                }}
-                            >
-                                Edit
-                            </Button>,
+                            <Tooltip key="view" title="View">
+                                <Button
+                                    type="text"
+                                    icon={<EyeOutlined />}
+                                    onClick={() => {
+                                        setDrawerState({
+                                            open: true,
+                                            application: app,
+                                        });
+                                    }}
+                                />
+                            </Tooltip>,
+                            <Tooltip key="edit" title="Edit">
+                                <Button
+                                    type="text"
+                                    icon={<EditOutlined />}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setModalState({
+                                            open: true,
+                                            mode: 'edit',
+                                            application: app,
+                                            cluster: app.metadata?.labels?.cluster || selectedCluster.value,
+                                        });
+                                    }}
+                                />
+                            </Tooltip>,
                             <Popconfirm
                                 key="delete"
                                 placement="topRight"
@@ -265,7 +265,7 @@ export default function ContinuousDeliveryApplicationPage() {
                                 okText="Confirm"
                                 cancelText="Cancel"
                             >
-                                <Button type="text" danger>Delete</Button>
+                                <Button type="text" danger icon={<DeleteOutlined />} />
                             </Popconfirm>,
                         ]}
                     >

@@ -73,7 +73,7 @@ const LogsDrawer: FC<LogsDrawerProps> = (props) => {
             title={`Logs: ${name}`}
             placement="bottom"
             open={open}
-            height={700}
+            height='100vh'
             loading={isLogsLoading && page === 1}
             onClose={handleOnCloseDrawer}
             extra={
@@ -95,9 +95,9 @@ const LogsDrawer: FC<LogsDrawerProps> = (props) => {
         >
             {open && <LogsTerminal
                 logs={aggregatedLogs}
-                onLoadMore={fetchNextPage}
+                onLoadMore={!containerLogs?.totalPages || page >= containerLogs.totalPages ? undefined : fetchNextPage}
                 style={{
-                    height: 580
+                    height: '100%'
                 }}
                 isLoading={isLogsLoading}
             />}

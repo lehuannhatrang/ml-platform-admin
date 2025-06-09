@@ -15,7 +15,8 @@ limitations under the License.
 */
 
 import i18nInstance from '@/utils/i18n';
-import { Button, Popconfirm, Space, Table, TableColumnProps } from 'antd';
+import { Button, Popconfirm, Space, Table, TableColumnProps, Tooltip } from 'antd';
+import { EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import {
   GetServices,
   Service,
@@ -156,28 +157,30 @@ const ServiceTable: FC<ServiceTableProps> = (props) => {
       render: (_, r) => {
         return (
           <Space.Compact>
-            <Button
-              size={'small'}
-              type="link"
-              onClick={() => onViewService(r, r.objectMeta.labels?.cluster || clusterOption.label)}
-            >
-              View
-            </Button>
-            <Button
-              size={'small'}
-              type="link"
-              onClick={async () => {
-                const ret = await GetMemberResource({
-                  kind: r.typeMeta.kind,
-                  name: r.objectMeta.name,
-                  namespace: r.objectMeta.namespace,
-                  cluster: r.objectMeta.labels?.cluster || clusterOption.label
-                });
-                onEditServiceContent(ret?.data, r.objectMeta.labels?.cluster || clusterOption.label);
-              }}
-            >
-              {i18nInstance.t('95b351c86267f3aedf89520959bce689', '编辑')}
-            </Button>
+            <Tooltip title="View">
+              <Button
+                size='middle'
+                type="link"
+                icon={<EyeOutlined />}
+                onClick={() => onViewService(r, r.objectMeta.labels?.cluster || clusterOption.label)}
+              />
+            </Tooltip>
+            <Tooltip title="Edit">
+              <Button
+                size='middle'
+                type="link"
+                icon={<EditOutlined />}
+                onClick={async () => {
+                  const ret = await GetMemberResource({
+                    kind: r.typeMeta.kind,
+                    name: r.objectMeta.name,
+                    namespace: r.objectMeta.namespace,
+                    cluster: r.objectMeta.labels?.cluster || clusterOption.label
+                  });
+                  onEditServiceContent(ret?.data, r.objectMeta.labels?.cluster || clusterOption.label);
+                }}
+              />
+            </Tooltip>
 
             <Popconfirm
               placement="topRight"
@@ -193,9 +196,7 @@ const ServiceTable: FC<ServiceTableProps> = (props) => {
               )}
               cancelText={i18nInstance.t('625fb26b4b3340f7872b411f401e754c')}
             >
-              <Button size={'small'} type="link" danger>
-                {i18nInstance.t('2f4aaddde33c9b93c36fd2503f3d122b', '删除')}
-              </Button>
+              <Button size='middle' type="link" danger icon={<DeleteOutlined />} />
             </Popconfirm>
           </Space.Compact>
         );

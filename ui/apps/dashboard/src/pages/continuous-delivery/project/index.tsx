@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Input, Select, Space, Table, Button, Popconfirm } from 'antd';
+import { Input, Select, Space, Table, Button, Popconfirm, Tooltip } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
-import { SearchOutlined, PlusOutlined } from '@ant-design/icons';
+import { SearchOutlined, PlusOutlined, EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 
 import { ArgoProject, DeleteArgoProject, GetArgoProjects } from '../../../services/argocd';
 import { useCluster } from '@/hooks';
@@ -172,22 +172,24 @@ export default function ContinuousDeliveryProjectPage() {
             key: 'actions',
             render: (_: any, record: ArgoProject) => (
                 <Space.Compact>
-                    <Button
-                        size={'small'}
-                        type="link"
-                        onClick={() => {
-                            handleOpenDrawer(record, record.metadata?.labels?.cluster || filter.selectedCluster.value);
-                        }}
-                    >
-                        {i18nInstance.t('607e7a4f377fa66b0b28ce318aab841f', '查看')}
-                    </Button>
-                    <Button
-                        onClick={() => handleOpenModal('edit', record)}
-                        size={'small'}
-                        type="link"
-                    >
-                        {i18nInstance.t('95b351c86267f3aedf89520959bce689', '编辑')}
-                    </Button>
+                    <Tooltip title="View">
+                        <Button
+                            size='middle'
+                            type="link"
+                            icon={<EyeOutlined />}
+                            onClick={() => {
+                                handleOpenDrawer(record, record.metadata?.labels?.cluster || filter.selectedCluster.value);
+                            }}
+                        />
+                    </Tooltip>
+                    <Tooltip title="Edit">
+                        <Button
+                            onClick={() => handleOpenModal('edit', record)}
+                            size='middle'
+                            type="link"
+                            icon={<EditOutlined />}
+                        />
+                    </Tooltip>
 
                     <Popconfirm
                         placement="topRight"
@@ -207,9 +209,7 @@ export default function ContinuousDeliveryProjectPage() {
                             '取消',
                         )}
                     >
-                        <Button size={'small'} type="link" danger>
-                            {i18nInstance.t('2f4aaddde33c9b93c36fd2503f3d122b', '删除')}
-                        </Button>
+                        <Button size='middle' type="link" danger icon={<DeleteOutlined />} />
                     </Popconfirm>
                 </Space.Compact>
             ),

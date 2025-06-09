@@ -131,7 +131,7 @@ func HandleListMgmtCustomResourcesByGroupAndCRD(c *gin.Context) {
 		}
 
 		// Add management cluster indicator
-		metadata["labels"].(map[string]interface{})["isManagementCluster"] = "true"
+		metadata["labels"].(map[string]interface{})["cluster"] = "mgmt-cluster"
 
 		// Remove managedFields to reduce payload size
 		delete(metadata, "managedFields")
@@ -188,7 +188,7 @@ func HandleGetMgmtClusterCRDs(c *gin.Context) {
 		}
 
 		// Add management cluster indicator
-		metadata["labels"].(map[string]interface{})["isManagementCluster"] = "true"
+		metadata["labels"].(map[string]interface{})["cluster"] = "mgmt-cluster"
 
 		// Remove managedFields
 		delete(metadata, "managedFields")
@@ -259,8 +259,8 @@ func HandleGetMgmtClusterCRDs(c *gin.Context) {
 	} else {
 		// Return flat list of all CRDs in expected format
 		common.Success(c, gin.H{
-			"crds":      allCRDs,
-			"totalCrds": len(allCRDs),
+			"items":      allCRDs,
+			"totalItems": len(allCRDs),
 		})
 	}
 }
@@ -304,7 +304,9 @@ func HandleGetMgmtCRDByName(c *gin.Context) {
 		"cluster": "mgmt-cluster",
 	})
 
-	common.Success(c, crd)
+	common.Success(c, gin.H{
+		"crd":      crd,
+	})
 }
 
 // HandleUpdateMgmtCRD handles PUT requests to update a CustomResourceDefinition
@@ -438,7 +440,6 @@ func HandleGetMgmtCustomResources(c *gin.Context) {
 		}
 
 		// Add management cluster indicator
-		metadata["labels"].(map[string]interface{})["isManagementCluster"] = "true"
 		metadata["labels"].(map[string]interface{})["cluster"] = "mgmt-cluster"
 
 		// Remove managedFields to reduce payload size

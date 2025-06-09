@@ -30,8 +30,10 @@ import {
   Radio,
   Card,
   Spin,
+  Tooltip,
 } from 'antd';
 import { Dendrogram } from '@ant-design/graphs';
+import { EyeOutlined } from '@ant-design/icons';
 
 import { useEffect, useState } from 'react';
 import { useCluster } from '@/hooks';
@@ -200,15 +202,20 @@ const NodeManagePage = () => {
       render: (_, r) => {
         return (
           <Space.Compact>
-            <Button size={'small'} type="link" onClick={() => {
-              setNodeDetailData({
-                open: true,
-                name: r.objectMeta.name,
-                clusterName: r.objectMeta.annotations?.['cluster.x-k8s.io/cluster-name'] || selectedCluster.label,
-              })
-            }}>
-              {i18nInstance.t('607e7a4f377fa66b0b28ce318aab841f', '查看')}
-            </Button>
+            <Tooltip title="View">
+              <Button 
+                size='middle' 
+                type="link" 
+                icon={<EyeOutlined />}
+                onClick={() => {
+                  setNodeDetailData({
+                    open: true,
+                    name: r.objectMeta.name,
+                    clusterName: r.objectMeta.annotations?.['cluster.x-k8s.io/cluster-name'] || selectedCluster.label,
+                  })
+                }} 
+              />
+            </Tooltip>
           </Space.Compact>
         );
       },

@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 import { useState, useEffect } from 'react';
-import { Tabs, Table, Tag, Space, Typography, Button, Input, message, Select, Modal } from 'antd';
-import { ClockCircleOutlined } from '@ant-design/icons';
+import { Tabs, Table, Tag, Space, Typography, Button, Input, message, Select, Modal, Tooltip } from 'antd';
+import { ClockCircleOutlined, EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import { calculateDuration } from '@/utils/time';
 import Panel from '@/components/panel';
@@ -287,56 +287,59 @@ const FederationServicesPage = () => {
       width: 200,
       render: (_: any, record: ServiceItem) => (
         <Space.Compact>
-          <Button
-            size={'small'}
-            type="link"
-            onClick={async () => {
-              // View details action
-              const itemName = record.objectMeta?.name;
-              const namespace = record.objectMeta?.namespace;
-              const details = await fetchServiceDetails(itemName, namespace, activeTab);
-              
-              if (details) {
-                setEditorDrawerData({
-                  open: true,
-                  mode: 'detail',
-                  type: activeTab as 'service' | 'ingress',
-                  name: itemName,
-                  namespace: namespace,
-                  serviceContent: details,
-                });
-              }
-            }}
-          >
-            View
-          </Button>
-          <Button
-            size={'small'}
-            type="link"
-            onClick={async () => {
-              // Edit action
-              const itemName = record.objectMeta?.name;
-              const namespace = record.objectMeta?.namespace;
-              const details = await fetchServiceDetails(itemName, namespace, activeTab);
-              
-              if (details) {
-                setEditorDrawerData({
-                  open: true,
-                  mode: 'edit',
-                  type: activeTab as 'service' | 'ingress',
-                  name: itemName,
-                  namespace: namespace,
-                  serviceContent: details,
-                });
-              }
-            }}
-          >
-            Edit
-          </Button>
+          <Tooltip title="View">
+            <Button
+              size={'small'}
+              type="link"
+              icon={<EyeOutlined />}
+              onClick={async () => {
+                // View details action
+                const itemName = record.objectMeta?.name;
+                const namespace = record.objectMeta?.namespace;
+                const details = await fetchServiceDetails(itemName, namespace, activeTab);
+                
+                if (details) {
+                  setEditorDrawerData({
+                    open: true,
+                    mode: 'detail',
+                    type: activeTab as 'service' | 'ingress',
+                    name: itemName,
+                    namespace: namespace,
+                    serviceContent: details,
+                  });
+                }
+              }}
+            />
+          </Tooltip>
+          <Tooltip title="Edit">
+            <Button
+              size={'small'}
+              type="link"
+              icon={<EditOutlined />}
+              onClick={async () => {
+                // Edit action
+                const itemName = record.objectMeta?.name;
+                const namespace = record.objectMeta?.namespace;
+                const details = await fetchServiceDetails(itemName, namespace, activeTab);
+                
+                if (details) {
+                  setEditorDrawerData({
+                    open: true,
+                    mode: 'edit',
+                    type: activeTab as 'service' | 'ingress',
+                    name: itemName,
+                    namespace: namespace,
+                    serviceContent: details,
+                  });
+                }
+              }}
+            />
+          </Tooltip>
           <Button
             size={'small'}
             type="link"
             danger
+            icon={<DeleteOutlined />}
             onClick={() => {
               // Delete action - show confirmation modal
               const itemName = record.objectMeta?.name;
@@ -386,9 +389,7 @@ const FederationServicesPage = () => {
                 },
               });
             }}
-          >
-            Delete
-          </Button>
+          />
         </Space.Compact>
       ),
     },
@@ -481,56 +482,59 @@ const FederationServicesPage = () => {
       width: 200,
       render: (_: any, record: IngressItem) => (
         <Space.Compact>
-          <Button
-            size={'small'}
-            type="link"
-            onClick={async () => {
-              // View details action
-              const itemName = record.objectMeta?.name;
-              const namespace = record.objectMeta?.namespace;
-              const details = await fetchServiceDetails(itemName, namespace, activeTab);
-              
-              if (details) {
-                setEditorDrawerData({
-                  open: true,
-                  mode: 'detail',
-                  type: activeTab as 'service' | 'ingress',
-                  name: itemName,
-                  namespace: namespace,
-                  serviceContent: details,
-                });
-              }
-            }}
-          >
-            View
-          </Button>
-          <Button
-            size={'small'}
-            type="link"
-            onClick={async () => {
-              // Edit action
-              const itemName = record.objectMeta?.name;
-              const namespace = record.objectMeta?.namespace;
-              const details = await fetchServiceDetails(itemName, namespace, activeTab);
-              
-              if (details) {
-                setEditorDrawerData({
-                  open: true,
-                  mode: 'edit',
-                  type: activeTab as 'service' | 'ingress',
-                  name: itemName,
-                  namespace: namespace,
-                  serviceContent: details,
-                });
-              }
-            }}
-          >
-            Edit
-          </Button>
+          <Tooltip title="View">
+            <Button
+              size={'small'}
+              type="link"
+              icon={<EyeOutlined />}
+              onClick={async () => {
+                // View details action
+                const itemName = record.objectMeta?.name;
+                const namespace = record.objectMeta?.namespace;
+                const details = await fetchServiceDetails(itemName, namespace, activeTab);
+                
+                if (details) {
+                  setEditorDrawerData({
+                    open: true,
+                    mode: 'detail',
+                    type: activeTab as 'service' | 'ingress',
+                    name: itemName,
+                    namespace: namespace,
+                    serviceContent: details,
+                  });
+                }
+              }}
+            />
+          </Tooltip>
+          <Tooltip title="Edit">
+            <Button
+              size={'small'}
+              type="link"
+              icon={<EditOutlined />}
+              onClick={async () => {
+                // Edit action
+                const itemName = record.objectMeta?.name;
+                const namespace = record.objectMeta?.namespace;
+                const details = await fetchServiceDetails(itemName, namespace, activeTab);
+                
+                if (details) {
+                  setEditorDrawerData({
+                    open: true,
+                    mode: 'edit',
+                    type: activeTab as 'service' | 'ingress',
+                    name: itemName,
+                    namespace: namespace,
+                    serviceContent: details,
+                  });
+                }
+              }}
+            />
+          </Tooltip>
           <Button
             size={'small'}
             type="link"
             danger
+            icon={<DeleteOutlined />}
             onClick={() => {
               // Delete action - show confirmation modal
               const itemName = record.objectMeta?.name;
@@ -579,9 +583,7 @@ const FederationServicesPage = () => {
                 },
               });
             }}
-          >
-            Delete
-          </Button>
+          />
         </Space.Compact>
       ),
     },

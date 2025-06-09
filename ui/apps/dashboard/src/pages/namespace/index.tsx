@@ -23,8 +23,10 @@ import {
   Table,
   TableColumnProps,
   Tag,
-  Flex
+  Flex,
+  Tooltip,
 } from 'antd';
+import { DeleteOutlined } from '@ant-design/icons';
 import TagList, { convertLabelToTags } from '@/components/tag-list';
 import { useToggle, useWindowSize } from '@uidotdev/usehooks';
 
@@ -150,9 +152,7 @@ const NamespacePage = () => {
                 '取消',
               )}
             >
-              <Button size={'small'} type="link" danger>
-                {i18nInstance.t('2f4aaddde33c9b93c36fd2503f3d122b', '删除')}
-              </Button>
+              <Button size='middle' type="link" danger icon={<DeleteOutlined />} />
             </Popconfirm>
           </Space.Compact>
         );

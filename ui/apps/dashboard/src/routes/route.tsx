@@ -61,6 +61,7 @@ import FederationWorkloadsPage from '@/pages/federation-resources/workloads';
 import PackageManagePage from '@/pages/package-manage';
 import RepositoryDetailsPage from '@/pages/package-manage/repository-details';
 import PackageDetailsPage from '@/pages/package-manage/package-details';
+import ChatPage from '@/pages/chat';
 
 export interface IRouteObjectHandle {
   icon?: ReactNode;
@@ -538,6 +539,11 @@ export function getRoutes() {
       path: '/init-token',
       errorElement: <ErrorBoundary />,
       element: <InitTokenPage />,
+    },
+    {
+      path: '/chat',
+      errorElement: <ErrorBoundary />,
+      element: <ChatPage />,
     },
   ];
 

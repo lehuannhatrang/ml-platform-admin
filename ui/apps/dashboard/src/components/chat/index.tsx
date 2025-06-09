@@ -18,8 +18,8 @@ import React, { useRef } from 'react';
 import '@n8n/chat/style.css';
 import './chat.css';
 import { createChat } from '@n8n/chat';
-import { Button, Tooltip } from 'antd';
-import { MessageOutlined } from '@ant-design/icons';
+import { Button, Dropdown, MenuProps } from 'antd';
+import { MessageOutlined, ExpandOutlined, CommentOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { GetDashboardConfig } from '@/services/dashboard-config';
 
@@ -31,16 +31,15 @@ interface ChatProviderProps {
 interface ChatButtonProps {
   hideOnPaths?: string[];
 }
-
 // A simple function to initialize the chat
-export const initChat = async (webhookUrl: string) => {
+export const initChat = async (webhookUrl: string, mode: 'window' | 'fullscreen' = 'window', target: string = '#n8n-chat'): Promise<ReturnType<typeof createChat> | null> => {
   try {
     if (!webhookUrl) {
       console.warn('Chat webhook URL is not configured');
-      return;
+      return null;
     }
     
-    createChat({
+    const chat = createChat({
       webhookUrl,
       initialMessages: ['Hi there! I\'m the DCN Dashboard assistant. How can I help you today?'],
       webhookConfig: {
@@ -48,16 +47,21 @@ export const initChat = async (webhookUrl: string) => {
         headers: {}
       },
       chatSessionKey: `dcn-dashboard-chat`,
+      mode: mode === 'fullscreen' ? 'fullscreen' : 'window',
+      target: target
     });
+    return chat;
   } catch (error) {
     console.error('Failed to initialize chat:', error);
+    return null;
   }
 };
 
 // Chat button component that shows in the bottom right of the screen
 export const ChatButton: React.FC<ChatButtonProps> = ({ hideOnPaths = [] }) => {
   
-  const chatInitializedRef = useRef(false);
+  const chatInitializedRef = useRef<ReturnType<typeof createChat> | null>(null);
+  const [chatVisible, setChatVisible] = React.useState(false);
 
   const {data: configData} = useQuery({
     queryKey: ['config'],
@@ -72,13 +76,35 @@ export const ChatButton: React.FC<ChatButtonProps> = ({ hideOnPaths = [] }) => {
     return hideOnPaths.some(path => currentPath.includes(path));
   };
   
-  // Initialize chat when button is clicked
-  const handleChatButtonClick = async () => {
+  // Initialize chat in current window
+  const handleChatInCurrentWindow = async () => {
     if (!chatInitializedRef.current && webhookUrl) {
-      await initChat(webhookUrl);
-      chatInitializedRef.current = true;
+      setChatVisible(true);
+      const chat = await initChat(webhookUrl, 'window', '#n8n-chat');
+      chatInitializedRef.current = chat;
     }
   };
+
+  // Open chat in fullscreen mode in new tab
+  const handleChatFullscreen = () => {
+    window.open('/chat', '_blank');
+  };
+
+  // Menu items for the dropdown
+  const menuItems: MenuProps['items'] = [
+    {
+      key: 'current-window',
+      label: 'Current window',
+      icon: <CommentOutlined />,
+      onClick: handleChatInCurrentWindow,
+    },
+    {
+      key: 'fullscreen',
+      label: 'Fullscreen',
+      icon: <ExpandOutlined />,
+      onClick: handleChatFullscreen,
+    },
+  ];
   
   if (shouldHideOnCurrentPath()) {
     return null;
@@ -89,19 +115,27 @@ export const ChatButton: React.FC<ChatButtonProps> = ({ hideOnPaths = [] }) => {
   }
   
   return (
-    <div className="chat-button-container">
-      <Tooltip title="Open chat assistant">
-        <Button 
-          type="primary" 
-          shape="circle" 
-          size='large'
-          icon={<MessageOutlined />} 
-          onClick={handleChatButtonClick}
-          className="chat-float-button"
-          aria-label="Open chat assistant"
-        />
-      </Tooltip>
-    </div>
+    <>
+      <div className="chat-button-container">
+        <Dropdown 
+          menu={{ items: menuItems }} 
+          trigger={['click']}
+          placement="topRight"
+        >
+          <Button 
+            type="primary" 
+            shape="circle" 
+            size='large'
+            icon={<MessageOutlined />} 
+            className="chat-float-button"
+            aria-label="Open chat assistant"
+          />
+        </Dropdown>
+      </div>
+      {chatVisible && (
+        <div id="n8n-chat" style={{position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1000}}/>
+      )}
+    </>
   );
 };
 

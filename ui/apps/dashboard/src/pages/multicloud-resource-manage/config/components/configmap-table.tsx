@@ -15,7 +15,8 @@ limitations under the License.
 */
 
 import i18nInstance from '@/utils/i18n';
-import { Button, Popconfirm, Space, Table, TableColumnProps } from 'antd';
+import { Button, Popconfirm, Space, Table, TableColumnProps, Tooltip } from 'antd';
+import { EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import TagList from '@/components/tag-list';
 import { FC } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -118,36 +119,38 @@ const ConfigMapTable: FC<ConfigMapTableProps> = (props) => {
       render: (_, r) => {
         return (
           <Space.Compact>
-            <Button
-              size={'small'}
-              type="link"
-              onClick={async () => {
-                const ret = await GetMemberResource({
-                  kind: r.typeMeta.kind,
-                  name: r.objectMeta.name,
-                  namespace: r.objectMeta.namespace,
-                  cluster: r.objectMeta.labels?.cluster || clusterOption.label,
-                });
-                onViewConfigMapContent(ret?.data, r.objectMeta.labels?.cluster || clusterOption.label);
-              }}
-            >
-              {i18nInstance.t('607e7a4f377fa66b0b28ce318aab841f', '查看')}
-            </Button>
-            <Button
-              size={'small'}
-              type="link"
-              onClick={async () => {
-                const ret = await GetMemberResource({
-                  kind: r.typeMeta.kind,
-                  name: r.objectMeta.name,
-                  namespace: r.objectMeta.namespace,
-                  cluster: r.objectMeta.labels?.cluster || clusterOption.label,
-                });
-                onEditConfigMapContent(ret?.data, r.objectMeta.labels?.cluster || clusterOption.label);
-              }}
-            >
-              {i18nInstance.t('95b351c86267f3aedf89520959bce689', '编辑')}
-            </Button>
+            <Tooltip title="View">
+              <Button
+                size='middle'
+                type="link"
+                icon={<EyeOutlined />}
+                onClick={async () => {
+                  const ret = await GetMemberResource({
+                    kind: r.typeMeta.kind,
+                    name: r.objectMeta.name,
+                    namespace: r.objectMeta.namespace,
+                    cluster: r.objectMeta.labels?.cluster || clusterOption.label,
+                  });
+                  onViewConfigMapContent(ret?.data, r.objectMeta.labels?.cluster || clusterOption.label);
+                }}
+              />
+            </Tooltip>
+            <Tooltip title="Edit">
+              <Button
+                size='middle'
+                type="link"
+                icon={<EditOutlined />}
+                onClick={async () => {
+                  const ret = await GetMemberResource({
+                    kind: r.typeMeta.kind,
+                    name: r.objectMeta.name,
+                    namespace: r.objectMeta.namespace,
+                    cluster: r.objectMeta.labels?.cluster || clusterOption.label,
+                  });
+                  onEditConfigMapContent(ret?.data, r.objectMeta.labels?.cluster || clusterOption.label);
+                }}
+              />
+            </Tooltip>
 
             <Popconfirm
               placement="topRight"
@@ -166,9 +169,7 @@ const ConfigMapTable: FC<ConfigMapTableProps> = (props) => {
                 '取消',
               )}
             >
-              <Button size={'small'} type="link" danger>
-                {i18nInstance.t('2f4aaddde33c9b93c36fd2503f3d122b', '删除')}
-              </Button>
+              <Button size='middle' type="link" danger icon={<DeleteOutlined />} />
             </Popconfirm>
           </Space.Compact>
         );

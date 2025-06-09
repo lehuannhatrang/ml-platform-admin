@@ -26,7 +26,8 @@ import {
     TableColumnProps,
     Flex,
     Tag,
-    App
+    App,
+    Tooltip
 } from 'antd';
 import type { PersistentVolume } from '@/services/persistentvolume';
 import { GetPersistentVolumes } from '@/services/persistentvolume';
@@ -44,7 +45,7 @@ import PersistentVolumeDetailDrawer, {
 import PersistentVolumeEditorModal from './persistent-volume-editor-modal';
 import { DeleteMemberResource, GetMemberResource } from '@/services/unstructured';
 import { stringify } from 'yaml';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 
 const PersistentVolumePage = () => {
     const [searchParams] = useSearchParams();
@@ -259,32 +260,38 @@ const PersistentVolumePage = () => {
             render: (_, record) => {
                 return (
                     <Space>
-                        <Button
-                            type="link"
-                            onClick={() => {
-                                setDrawerData({
-                                    open: true,
-                                    namespace: record.objectMeta.namespace,
-                                    name: record.objectMeta.name,
-                                    cluster: record.objectMeta.labels?.cluster || selectedCluster.label,
-                                });
-                            }}
-                        >
-                            View
-                        </Button>
-                        <Button
-                            type="link"
-                            onClick={() => handleEdit(record)}
-                        >
-                            Edit
-                        </Button>
-                        <Button
-                            type="link"
-                            danger
-                            onClick={() => handleDelete(record)}
-                        >
-                            Delete
-                        </Button>
+                        <Tooltip title="View">
+                            <Button
+                                size='middle'
+                                type="link"
+                                icon={<EyeOutlined />}
+                                onClick={() => {
+                                    setDrawerData({
+                                        open: true,
+                                        namespace: record.objectMeta.namespace,
+                                        name: record.objectMeta.name,
+                                        cluster: record.objectMeta.labels?.cluster || selectedCluster.label,
+                                    });
+                                }}
+                            />
+                        </Tooltip>
+                        <Tooltip title="Edit">
+                            <Button
+                                size='middle'
+                                type="link"
+                                icon={<EditOutlined />}
+                                onClick={() => handleEdit(record)}
+                            />
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                            <Button
+                                size='middle'
+                                type="link"
+                                danger
+                                icon={<DeleteOutlined />}
+                                onClick={() => handleDelete(record)}
+                            />
+                        </Tooltip>
                     </Space>
                 );
             },

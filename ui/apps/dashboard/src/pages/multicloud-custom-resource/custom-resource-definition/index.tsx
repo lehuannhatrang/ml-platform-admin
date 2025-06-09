@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Button, Input, Popconfirm, Space, Table, message } from 'antd';
+import { Button, Input, Popconfirm, Space, Table, message, Tooltip } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import _ from 'lodash';
 import { useCluster } from '@/hooks';
@@ -9,7 +9,7 @@ import i18nInstance from '@/utils/i18n';
 import Panel from '@/components/panel';
 import CustomResourceDefinitionDrawer from './custom-resource-definition-drawer';
 import CustomResourceDefinitionEditModal from './custom-resource-definition-edit-modal';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 
 const CustomResourceDefinitionPage: React.FC = () => {
     const { clusterOptions, selectedCluster } = useCluster({});
@@ -181,20 +181,22 @@ const CustomResourceDefinitionPage: React.FC = () => {
             render: (_, r) => {
                 return (
                     <Space.Compact>
-                        <Button
-                            size={'small'}
-                            type="link"
-                            onClick={() => handleViewCrd(r)}
-                        >
-                            {i18nInstance.t('607e7a4f377fa66b0b28ce318aab841f', '查看')}
-                        </Button>
-                        <Button
-                            size={'small'}
-                            type="link"
-                            onClick={() => handleEditCrd(r)}
-                        >
-                            {i18nInstance.t('95b351c86267f3aedf89520959bce689', '编辑')}
-                        </Button>
+                        <Tooltip title="View">
+                            <Button
+                                size='middle'
+                                type="link"
+                                icon={<EyeOutlined />}
+                                onClick={() => handleViewCrd(r)}
+                            />
+                        </Tooltip>
+                        <Tooltip title="Edit">
+                            <Button
+                                size='middle'
+                                type="link"
+                                icon={<EditOutlined />}
+                                onClick={() => handleEditCrd(r)}
+                            />
+                        </Tooltip>
 
                         <Popconfirm
                             placement="topRight"
@@ -212,9 +214,7 @@ const CustomResourceDefinitionPage: React.FC = () => {
                                 '取消',
                             )}
                         >
-                            <Button size={'small'} type="link" danger>
-                                {i18nInstance.t('2f4aaddde33c9b93c36fd2503f3d122b', '删除')}
-                            </Button>
+                            <Button size='middle' type="link" danger icon={<DeleteOutlined />} />
                         </Popconfirm>
                     </Space.Compact>
                 );
