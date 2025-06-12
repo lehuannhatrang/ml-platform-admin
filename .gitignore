@@ -36,3 +36,4 @@ cmd/ops
 # local api pid
 .api.pid
 artifacts/kubeconfig
+artifacts/n8n/local-files
