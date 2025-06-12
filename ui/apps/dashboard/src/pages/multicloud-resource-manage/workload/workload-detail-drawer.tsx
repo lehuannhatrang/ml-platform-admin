@@ -28,6 +28,7 @@ import {
   Tag,
   Button,
   Alert,
+  Space,
 } from 'antd';
 import {
   GetWorkloadDetail,
@@ -58,10 +59,17 @@ export type WorkloadDetailDrawerProps = {
     cluster: string;
     containers: string[];
   }) => void;
+  onOpenTerminal?: (params: {
+    kind: WorkloadKind;
+    namespace: string;
+    name: string;
+    cluster: string;
+    containers: string[];
+  }) => void;
 }
 
 const WorkloadDetailDrawer: FC<WorkloadDetailDrawerProps> = (props) => {
-  const { open, kind, namespace, name, onClose, cluster, onOpenLogs } = props;
+  const { open, kind, namespace, name, onClose, cluster, onOpenLogs, onOpenTerminal } = props;
   const navigate = useNavigate();
 
   const enableFetch = useMemo(() => {
@@ -109,15 +117,28 @@ const WorkloadDetailDrawer: FC<WorkloadDetailDrawerProps> = (props) => {
       title: 'Action',
       key: 'action',
       render: () => {
-        return <Button type="link" onClick={() => {
-          onOpenLogs?.({
-            kind,
-            namespace,
-            name,
-            cluster,
-            containers: detailData?.status?.containerStatuses?.map((c) => c.name) || [],
-          });
-        }}>Logs</Button>;
+        return (
+          <Space size="small">
+            <Button type="link" onClick={() => {
+              onOpenLogs?.({
+                kind,
+                namespace,
+                name,
+                cluster,
+                containers: detailData?.status?.containerStatuses?.map((c) => c.name) || [],
+              });
+            }}>Logs</Button>
+            <Button type="link" onClick={() => {
+              onOpenTerminal?.({
+                kind,
+                namespace,
+                name,
+                cluster,
+                containers: detailData?.status?.containerStatuses?.map((c) => c.name) || [],
+              });
+            }}>Terminal</Button>
+          </Space>
+        );
       },
     }
   ];

@@ -31,9 +31,10 @@ import {
   Card,
   Spin,
   Tooltip,
+  Drawer,
 } from 'antd';
 import { Dendrogram } from '@ant-design/graphs';
-import { EyeOutlined } from '@ant-design/icons';
+import { CodeOutlined, EyeOutlined } from '@ant-design/icons';
 
 import { useEffect, useState } from 'react';
 import { useCluster } from '@/hooks';
@@ -41,6 +42,7 @@ import { Node } from '@/services/node';
 import NodeDetailDrawer, { NodeDetailDrawerProps } from './node-detail-drawer';
 import { useSearchParams } from 'react-router-dom';
 import { TableOutlined, ApartmentOutlined } from '@ant-design/icons';
+import ExecTerminal from '@/components/exec-terminal';
 
 interface TreeNode {
   id: string;
@@ -61,6 +63,12 @@ const NodeManagePage = () => {
     open: false,
     name: '',
     clusterName: '',
+  });
+
+  const [terminalDrawerData, setTerminalDrawerData] = useState({
+    open: false,
+    node: '',
+    cluster: '',
   });
 
   const { selectedCluster } = useCluster({});
@@ -121,7 +129,7 @@ const NodeManagePage = () => {
       title: 'Cluster',
       key: 'cluster',
       render: (_: any, r: Node) => {
-        return r.objectMeta.annotations['cluster.x-k8s.io/cluster-name']
+        return r.objectMeta.labels?.cluster
       },
     }] : []),
     {
@@ -211,9 +219,23 @@ const NodeManagePage = () => {
                   setNodeDetailData({
                     open: true,
                     name: r.objectMeta.name,
-                    clusterName: r.objectMeta.annotations?.['cluster.x-k8s.io/cluster-name'] || selectedCluster.label,
+                    clusterName: r.objectMeta?.labels?.cluster || selectedCluster.label,
                   })
                 }} 
+              />
+            </Tooltip>
+            <Tooltip title="Terminal">
+              <Button
+                size='middle'
+                type="link"
+                icon={<CodeOutlined />}
+                onClick={() => {
+                  setTerminalDrawerData({
+                    open: true,
+                    node: r.objectMeta.name,
+                    cluster: r.objectMeta?.labels?.cluster || selectedCluster.label,
+                  });
+                }}
               />
             </Tooltip>
           </Space.Compact>
@@ -277,68 +299,80 @@ const NodeManagePage = () => {
   };
 
   return (
-    <Panel>
-      <div className="flex justify-between mb-4">
-        <Input.Search
-          placeholder='Search by node name'
-          className={'w-[400px] mr-4'}
-          onSearch={handleSearch}
-          disabled={viewMode === 'graph'}
-        />
-        <Flex>
-          <Radio.Group value={viewMode} onChange={e => setViewMode(e.target.value)}>
-            <Radio.Button value="table"><TableOutlined /> Table</Radio.Button>
-            <Radio.Button value="graph"><ApartmentOutlined /> Graph</Radio.Button>
-          </Radio.Group>
-        </Flex>
-      </div>
+    <>
+      <Panel>
+        <div className="flex justify-between mb-4">
+          <Input.Search
+            placeholder='Search by node name'
+            className={'w-[400px] mr-4'}
+            onSearch={handleSearch}
+            disabled={viewMode === 'graph'}
+          />
+          <Flex>
+            <Radio.Group value={viewMode} onChange={e => setViewMode(e.target.value)}>
+              <Radio.Button value="table"><TableOutlined /> Table</Radio.Button>
+              <Radio.Button value="graph"><ApartmentOutlined /> Graph</Radio.Button>
+            </Radio.Group>
+          </Flex>
+        </div>
 
-      {viewMode === 'table' ? (
-        <Table
-          rowKey={(r: Node) => r.objectMeta.name || ''}
-          columns={columns}
-          loading={isLoading}
-          dataSource={data?.items || []}
-        />
-      ) : (
-        <Card style={{ minHeight: 500 }}>
-          {isLoading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
-              <Spin size="large" />
-            </div>
-          ) : (
-            <div style={{ height: 500, width: '100%' }}>
-              {dendrogramData ? (
-                <Dendrogram 
-                  data={dendrogramData}
-                  direction="horizontal"
-                  autoFit="view"
-                  behaviors={['click-select']}
-                />
-              ) : (
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                  <Spin tip="Preparing visualization data..." />
-                </div>
-              )}
-            </div>
-          )}
-        </Card>
-      )}
-
+        {viewMode === 'table' ? (
+          <Table
+            rowKey={(r: Node) => r.objectMeta.name || ''}
+            columns={columns}
+            loading={isLoading}
+            dataSource={data?.items || []}
+          />
+        ) : (
+          <Card style={{ minHeight: 500 }}>
+            {isLoading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+                <Spin size="large" />
+              </div>
+            ) : (
+              <div style={{ height: 500, width: '100%' }}>
+                {dendrogramData ? (
+                  <Dendrogram 
+                    data={dendrogramData}
+                    direction="horizontal"
+                    autoFit="view"
+                    behaviors={['click-select']}
+                  />
+                ) : (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                    <Spin tip="Preparing visualization data..." />
+                  </div>
+                )}
+              </div>
+            )}
+          </Card>
+        )}
+      </Panel>
       <NodeDetailDrawer
-        open={nodeDetailData.open}
-        name={nodeDetailData.name}
-        clusterName={nodeDetailData.clusterName}
+        {...nodeDetailData}
         onClose={() => {
+          setNodeDetailData({ open: false, name: '', clusterName: '' });
           setSearchParams({});
-          setNodeDetailData({
-            open: false,
-            name: '',
-            clusterName: '',
-          });
         }}
       />
-    </Panel>
+      <Drawer
+        title={`Node Terminal: ${terminalDrawerData.node}`}
+        placement="bottom"
+        height="100vh"
+        onClose={() => setTerminalDrawerData({ open: false, node: '', cluster: '' })}
+        open={terminalDrawerData.open}
+        maskClosable={false}
+      >
+        {terminalDrawerData.open && (
+          <ExecTerminal
+            execMode="node"
+            node={terminalDrawerData.node}
+            cluster={terminalDrawerData.cluster}
+          />
+        )}
+      </Drawer>
+    </>
   );
 };
+
 export default NodeManagePage;

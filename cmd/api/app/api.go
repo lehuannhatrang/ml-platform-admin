@@ -55,6 +55,7 @@ import (
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/setting/monitoring" // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/setting/user"       // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/statefulset"        // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/terminal"           // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/unstructured"       // Importing route packages forces route registration
 	"github.com/karmada-io/dashboard/pkg/auth"
 	"github.com/karmada-io/dashboard/pkg/auth/fga"

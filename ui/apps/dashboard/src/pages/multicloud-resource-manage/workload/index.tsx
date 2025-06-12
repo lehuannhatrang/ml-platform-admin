@@ -31,7 +31,7 @@ import {
   Tag,
   Tooltip
 } from 'antd';
-import { EyeOutlined, EditOutlined, DeleteOutlined, FileTextOutlined, ReloadOutlined } from '@ant-design/icons';
+import { EyeOutlined, EditOutlined, DeleteOutlined, FileTextOutlined, ReloadOutlined, CodeOutlined } from '@ant-design/icons';
 import { Icons } from '@/components/icons';
 import type { PodWorkload, Workload } from '@/services/workload';
 import { GetWorkloads, RestartDeployment } from '@/services/workload';
@@ -52,6 +52,7 @@ import { calculateDuration } from '@/utils/time.ts';
 import { getStatusFromCondition, getStatusTagColor } from '@/utils/resource.ts';
 import dayjs from 'dayjs';
 import LogsDrawer, { LogsDrawerProps } from './logs-drawer.tsx';
+import ExecDrawer, { ExecDrawerProps } from './exec-drawer.tsx';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 type WorkloadPageProps = {
@@ -122,6 +123,17 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
 
   const [logsDrawerData, setLogsDrawerData] = useState<
     Omit<LogsDrawerProps, 'onClose'>
+  >({
+    open: false,
+    kind: WorkloadKind.Pod,
+    namespace: '',
+    name: '',
+    cluster: '',
+    containers: [],
+  });
+
+  const [execDrawerData, setExecDrawerData] = useState<
+    Omit<ExecDrawerProps, 'onClose'>
   >({
     open: false,
     kind: WorkloadKind.Pod,
@@ -299,23 +311,42 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
               />
             </Tooltip>
             {kind === WorkloadKind.Pod && 
-              <Tooltip title="Logs">
-                <Button
-                  size='middle'
-                  type="link"
-                  icon={<FileTextOutlined />}
-                  onClick={() => {
-                    setLogsDrawerData({
-                      open: true,
-                      kind: r.typeMeta.kind as WorkloadKind,
-                      name: r.objectMeta.name,
-                      namespace: r.objectMeta.namespace,
-                      cluster: r.objectMeta.labels?.cluster || selectedCluster.label,
-                      containers: (r as PodWorkload).spec?.containers?.map((i: any) => i.name) || [],
-                    });
-                  }}
-                />
-              </Tooltip>
+              <>
+                <Tooltip title="Logs">
+                  <Button
+                    size='middle'
+                    type="link"
+                    icon={<FileTextOutlined />}
+                    onClick={() => {
+                      setLogsDrawerData({
+                        open: true,
+                        kind: r.typeMeta.kind as WorkloadKind,
+                        name: r.objectMeta.name,
+                        namespace: r.objectMeta.namespace,
+                        cluster: r.objectMeta.labels?.cluster || selectedCluster.label,
+                        containers: (r as PodWorkload).spec?.containers?.map((i: any) => i.name) || [],
+                      });
+                    }}
+                  />
+                </Tooltip>
+                <Tooltip title="Terminal">
+                  <Button
+                    size='middle'
+                    type="link"
+                    icon={<CodeOutlined />}
+                    onClick={() => {
+                      setExecDrawerData({
+                        open: true,
+                        kind: r.typeMeta.kind as WorkloadKind,
+                        name: r.objectMeta.name,
+                        namespace: r.objectMeta.namespace,
+                        cluster: r.objectMeta.labels?.cluster || selectedCluster.label,
+                        containers: (r as PodWorkload).spec?.containers?.map((i: any) => i.name) || [],
+                      });
+                    }}
+                  />
+                </Tooltip>
+              </>
             }
             {kind === WorkloadKind.Deployment && 
             <Popconfirm
@@ -559,6 +590,23 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
             containers,
           });
         }}
+        onOpenTerminal={({
+          kind,
+          namespace,
+          name,
+          cluster,
+          containers,
+        }) => {
+          handleCloseDrawer();
+          setExecDrawerData({
+            open: true,
+            kind,
+            namespace,
+            name,
+            cluster,
+            containers,
+          });
+        }}
       />
       <LogsDrawer
         open={logsDrawerData.open}
@@ -569,6 +617,24 @@ const WorkloadPage = ({ kind }: WorkloadPageProps) => {
         containers={logsDrawerData.containers}
         onClose={() => {
           setLogsDrawerData({
+            open: false,
+            kind: WorkloadKind.Pod,
+            namespace: '',
+            name: '',
+            cluster: '',
+            containers: [],
+          });
+        }}
+      />
+      <ExecDrawer
+        open={execDrawerData.open}
+        kind={execDrawerData.kind}
+        name={execDrawerData.name}
+        namespace={execDrawerData.namespace}
+        cluster={execDrawerData.cluster}
+        containers={execDrawerData.containers}
+        onClose={() => {
+          setExecDrawerData({
             open: false,
             kind: WorkloadKind.Pod,
             namespace: '',

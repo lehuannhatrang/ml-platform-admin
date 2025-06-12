@@ -60,6 +60,7 @@ export default defineConfig(({ mode }) => {
         '^/api/v1.*': {
           target: 'http://localhost:8000',
           changeOrigin: true,
+          ws: true, // Enable WebSocket proxying
           headers: {
             // cookie: env.VITE_COOKIES,
             // Authorization: `Bearer ${env.VITE_TOKEN}`
