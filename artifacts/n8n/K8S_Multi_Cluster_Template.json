@@ -1,0 +1,198 @@
+{
+  "name": "K8S Multi Cluster Template",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.chatInput || \"Hi, How can i assit you today?\" }}",
+        "options": {
+          "systemMessage": "=You are an AI Agent specialized in managing Kubernetes clusters using tools available through MCP Clients. Your capabilities are limited to executing pre-defined workflows to perform tasks and answer questions.\nGuidelines:\n* Use only the tools provided by the MCP Server to interact with Kubernetes resources and manage workflows.\n* You may create, modify, and execute workflows if required to complete a task.\n* Prefer using existing active workflows when available. You may query or inspect available workflows using the appropriate MCP tools.\n* If no existing workflow fits the user’s request, you may create or modify workflows as needed, using the available toolset.\n* Always ask the user before adding or enabling a new workflow in the active pool.\n* Once a workflow is approved or available, you may execute it without confirming each individual step.\n* Refer to the workflow’s schema and metadata (retrievable via MCP tools) to understand required parameters."
+        }
+      },
+      "id": "b003ba0e-606c-4657-bb00-5e35c9a435cd",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        260,
+        0
+      ],
+      "typeVersion": 1.8
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body['dcn-dashboard-chat'] }}",
+        "contextWindowLength": 30
+      },
+      "id": "927dc3df-3d07-4a27-b152-78908e234a9a",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        300,
+        260
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "o3-mini",
+          "mode": "list",
+          "cachedResultName": "o3-mini"
+        },
+        "options": {}
+      },
+      "id": "c8533405-b7f8-4a2e-917e-dbee2d34ecf5",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [
+        80,
+        260
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "openAiApi": {
+          "id": "NgoUXwobBUCSgsWO",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        0
+      ],
+      "id": "179e1613-7444-4922-8a5f-3147db99f365",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "b7beb5f1-e128-4bbc-bdaf-6b14b23277a9",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -20,
+        0
+      ],
+      "id": "3cc9091f-ad8b-4a60-9308-3ace4cbab517",
+      "name": "Webhook",
+      "webhookId": "b7beb5f1-e128-4bbc-bdaf-6b14b23277a9"
+    },
+    {
+      "parameters": {
+        "sseEndpoint": "http://192.168.28.236:31331/sse"
+      },
+      "id": "4f1fbcfb-fb84-43fa-a164-7c686f376f16",
+      "name": "MCP Client - Cluster 1",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "position": [
+        520,
+        260
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "sseEndpoint": "http://192.168.28.236:31332/sse"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1,
+      "position": [
+        700,
+        260
+      ],
+      "id": "9a4f24b3-8a25-40c2-b9a3-c45233bffd9b",
+      "name": "MCP Client - Cluster 2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client - Cluster 1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client - Cluster 2": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8f79ba22-04d5-41a6-9b6b-1fc3b840f06c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "165e7060d90ce0f692b731713457977082eb10530c54f9c9251728fe287c76f9"
+  },
+  "id": "CKsJ8nhwE75QleYm",
+  "tags": []
+}
