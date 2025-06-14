@@ -103,6 +103,45 @@ You can uninstall the dashboard and openfga by running the following command:
 ./setup-nodeport-mode.sh --uninstall
 ```
 
+## 🤖 AI Agent Setup
+
+To enable AI agent functionality in Karmada Dashboard, you need to deploy n8n workflows and MCP servers.
+
+### Prerequisites
+- n8n server with production webhook capabilities
+- MCP (Model Context Protocol) servers
+
+### Setup Instructions
+
+1. **Deploy n8n and MCP servers**
+
+   Follow the setup guide from this repository:
+   ```
+   https://github.com/lehuannhatrang/n8n-deployment
+   ```
+
+2. **Get the n8n webhook URL**
+
+   After completing the n8n setup, copy your production webhook URL from n8n dashboard.
+
+3. **Update Karmada Dashboard configuration**
+
+   Add the webhook URL to the configmap by updating the `ai_agent_chat_webhook` field:
+   ```yaml
+   ai_agent_chat_webhook: 'https://n8n.my-domain.com/webhook/abcxyz....'
+   ```
+
+4. **Restart the API deployment**
+
+   Apply the configmap changes and restart the API deployment:
+   ```bash
+   kubectl rollout restart deployment/karmada-dashboard-api -n karmada-system
+   ```
+
+The AI agent functionality will be available in the dashboard once the deployment is successfully restarted.
+
+![image](docs/images/dashboard-chatbot.png)
+
 ## Meeting
 
 Regular Meeting For dashboard:
