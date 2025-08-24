@@ -62,6 +62,10 @@ import PackageManagePage from '@/pages/package-manage';
 import RepositoryDetailsPage from '@/pages/package-manage/repository-details';
 import PackageDetailsPage from '@/pages/package-manage/package-details';
 import ChatPage from '@/pages/chat';
+import RegistryPage from '@/pages/backup-recovery/registry';
+import BackupPage from '@/pages/backup-recovery/backup';
+import RecoveryPage from '@/pages/backup-recovery/recovery';
+import BackupSettingsPage from '@/pages/backup-recovery/settings';
 
 export interface IRouteObjectHandle {
   icon?: ReactNode;
@@ -395,6 +399,49 @@ export function getRoutes() {
         {
           path: '/package-management/packages/:packageName',
           element: <PackageDetailsPage />,
+        },
+        {
+          path: '/backup-recovery',
+          handle: {
+            sidebarKey: 'BACKUP-RECOVERY',
+            sidebarName: 'Backup & Recovery',
+            icon: <Icons.backup {...IconStyles} />,
+            isPage: false,
+          },
+          children: [
+            {
+              path: 'registry',
+              element: <RegistryPage />,
+              handle: {
+                sidebarKey: 'BACKUP-REGISTRY',
+                sidebarName: 'Registry',
+              },
+            },
+            {
+              path: 'backup',
+              element: <BackupPage />,
+              handle: {
+                sidebarKey: 'BACKUP-CONFIG',
+                sidebarName: 'Backup',
+              },
+            },
+            {
+              path: 'recovery',
+              element: <RecoveryPage />,
+              handle: {
+                sidebarKey: 'BACKUP-RECOVERY-HISTORY',
+                sidebarName: 'Recovery',
+              },
+            },
+            {
+              path: 'settings',
+              element: <BackupSettingsPage />,
+              handle: {
+                sidebarKey: 'BACKUP-SETTINGS',
+                sidebarName: 'Settings',
+              },
+            },
+          ],
         },
         {
           path: '/basic-config',

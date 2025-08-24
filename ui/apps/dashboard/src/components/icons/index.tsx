@@ -61,7 +61,8 @@ import {
   Sailboat,
   Earth,
   Hammer,
-  Package
+  Package,
+  Shield
 } from 'lucide-react';
 
 export type Icon = LucideIcon;
@@ -95,6 +96,7 @@ export const Icons = {
   federation: Earth,
   build: Hammer,
   package: Package,
+  backup: Shield,
   gitHub: ({ ...props }: LucideProps) => (
     <svg
       aria-hidden="true"
