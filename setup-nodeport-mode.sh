@@ -220,7 +220,9 @@ install_all() {
       --set datastore.uri="postgres://postgres:password@openfga-postgresql.karmada-system.svc.cluster.local:5432/postgres?sslmode=disable" \
       --set postgresql.enabled=true \
       --set postgresql.auth.postgresPassword=password \
-      --set postgresql.auth.database=postgres
+      --set postgresql.auth.database=postgres \
+      --set postgresql.image.repository=bitnamilegacy/postgresql \
+      --set postgresql.image.tag=15.4.0-debian-11-r45
     echo "OpenFGA installed via Helm."
   fi
   echo ""
