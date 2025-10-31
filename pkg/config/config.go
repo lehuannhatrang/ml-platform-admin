@@ -34,9 +34,10 @@ import (
 var dashboardConfig DashboardConfig
 
 const (
-	configName      = "ml-platform-admin-configmap"
-	configNamespace = "ml-platform-system"
-	defaultEnvName  = "prod"
+	configName             = "ml-platform-admin-configmap"
+	configNamespace        = "ml-platform-system"
+	defaultEnvName         = "prod"
+	defaultSystemNamespace = "ml-platform-system"
 )
 
 var (
@@ -56,6 +57,17 @@ func GetConfigKey() string {
 	return fmt.Sprintf("%s.yaml", envName)
 }
 
+// GetNamespace returns the system namespace from environment variable or default.
+// Environment variable: KARMADA_SYSTEM_NAMESPACE
+// Default: ml-platform-system
+func GetNamespace() string {
+	namespace := os.Getenv("KARMADA_SYSTEM_NAMESPACE")
+	if namespace == "" {
+		namespace = defaultSystemNamespace
+	}
+	return namespace
+}
+
 // InitDashboardConfig initializes the dashboard configuration using a Kubernetes client.
 func InitDashboardConfig(k8sClient kubernetes.Interface, stopper <-chan struct{}) {
 	factory := informers.NewSharedInformerFactory(k8sClient, 0)
@@ -66,7 +78,7 @@ func InitDashboardConfig(k8sClient kubernetes.Interface, stopper <-chan struct{}
 	}
 	filterFunc := func(obj interface{}) bool {
 		configMap, ok := obj.(*v1.ConfigMap)
-		return ok && configMap.Namespace == configNamespace && configMap.Name == configName
+		return ok && configMap.Namespace == GetNamespace() && configMap.Name == configName
 	}
 	onAdd := func(obj interface{}) {
 		configMap := obj.(*v1.ConfigMap)
@@ -114,7 +126,7 @@ func GetDashboardConfig() DashboardConfig {
 // UpdateDashboardConfig updates the dashboard configuration in the Kubernetes ConfigMap.
 func UpdateDashboardConfig(k8sClient kubernetes.Interface, newDashboardConfig DashboardConfig) error {
 	ctx := context.TODO()
-	oldConfigMap, err := k8sClient.CoreV1().ConfigMaps(configNamespace).Get(ctx, configName, metav1.GetOptions{})
+	oldConfigMap, err := k8sClient.CoreV1().ConfigMaps(GetNamespace()).Get(ctx, configName, metav1.GetOptions{})
 	if err != nil {
 		klog.Errorf("Failed to get ConfigMap %s: %v", configName, err)
 		return err
@@ -126,7 +138,7 @@ func UpdateDashboardConfig(k8sClient kubernetes.Interface, newDashboardConfig Da
 		return err
 	}
 	oldConfigMap.Data[configKey] = string(buff)
-	_, err = k8sClient.CoreV1().ConfigMaps(configNamespace).Update(ctx, oldConfigMap, metav1.UpdateOptions{})
+	_, err = k8sClient.CoreV1().ConfigMaps(GetNamespace()).Update(ctx, oldConfigMap, metav1.UpdateOptions{})
 	if err != nil {
 		klog.Errorf("Failed to update ConfigMap %s: %v", configName, err)
 		return err

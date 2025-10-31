@@ -183,7 +183,7 @@ func getClusterPods(ctx context.Context, cluster *v1alpha1.Cluster) ([]db.PodInf
 		return nil, fmt.Errorf("failed to create kubeclient for cluster %s: %v", cluster.Name, err)
 	}
 
-	podList, err := kubeClient.CoreV1().Pods("karmada-system").List(ctx, metav1.ListOptions{})
+	podList, err := kubeClient.CoreV1().Pods(db.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list pods for cluster %s: %v", cluster.Name, err)
 	}
@@ -240,7 +240,7 @@ func getKarmadaAgentMetrics(ctx context.Context, podName string, clusterName str
 	}
 
 	metricsOutput, err := restClient.CoreV1().RESTClient().Get().
-		Namespace("karmada-system").
+		Namespace(db.Namespace).
 		Resource("pods").
 		SubResource("proxy").
 		Name(fmt.Sprintf("%s:8080", podName)).

@@ -34,6 +34,7 @@ import (
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
 	"github.com/karmada-io/dashboard/cmd/api/app/types/common"
 	"github.com/karmada-io/dashboard/pkg/client"
+	"github.com/karmada-io/dashboard/pkg/config"
 )
 
 // generateRandomString generates a RFC 1123 subdomain-compliant random string
@@ -111,25 +112,25 @@ func isAlphanumeric(r rune) bool {
 }
 
 func handleAddGrafana(c *gin.Context) {
-	var config GrafanaConfig
-	if err := c.ShouldBindJSON(&config); err != nil {
+	var grafanaConfig GrafanaConfig
+	if err := c.ShouldBindJSON(&grafanaConfig); err != nil {
 		common.Fail(c, fmt.Errorf("invalid request body: %w", err))
 		return
 	}
 
 	// Validate input
-	if strings.TrimSpace(config.Name) == "" {
+	if strings.TrimSpace(grafanaConfig.Name) == "" {
 		common.Fail(c, fmt.Errorf("name cannot be empty"))
 		return
 	}
 
-	if strings.TrimSpace(config.Token) == "" {
+	if strings.TrimSpace(grafanaConfig.Token) == "" {
 		common.Fail(c, fmt.Errorf("token cannot be empty"))
 		return
 	}
 
 	// Normalize endpoint URL
-	config.Endpoint = strings.TrimRight(config.Endpoint, "/")
+	grafanaConfig.Endpoint = strings.TrimRight(grafanaConfig.Endpoint, "/")
 
 	// Get kubernetes client
 	kubeClient := client.InClusterClient()
@@ -151,12 +152,12 @@ func handleAddGrafana(c *gin.Context) {
 	}
 
 	// Format name for label
-	formattedName := formatLabelValue(config.Name)
+	formattedName := formatLabelValue(grafanaConfig.Name)
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
-			Namespace: "karmada-system",
+			Namespace: config.GetNamespace(),
 			Labels: map[string]string{
 				"app.kubernetes.io/name":  "grafana",
 				"grafana.karmada.io/name": formattedName,
@@ -164,11 +165,11 @@ func handleAddGrafana(c *gin.Context) {
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
-			"token": []byte(base64.StdEncoding.EncodeToString([]byte(config.Token))),
+			"token": []byte(base64.StdEncoding.EncodeToString([]byte(grafanaConfig.Token))),
 		},
 	}
 
-	_, err = kubeClient.CoreV1().Secrets("karmada-system").Create(c, secret, metav1.CreateOptions{})
+	_, err = kubeClient.CoreV1().Secrets(config.GetNamespace()).Create(c, secret, metav1.CreateOptions{})
 	if err != nil {
 		klog.ErrorS(err, "Failed to create Grafana token secret")
 		common.Fail(c, err)
@@ -176,7 +177,7 @@ func handleAddGrafana(c *gin.Context) {
 	}
 
 	// Get existing configmap or create if not exists
-	configMap, err := kubeClient.CoreV1().ConfigMaps("karmada-system").Get(c, "ml-platform-admin-configmap", metav1.GetOptions{})
+	configMap, err := kubeClient.CoreV1().ConfigMaps(config.GetNamespace()).Get(c, "ml-platform-admin-configmap", metav1.GetOptions{})
 	if err != nil {
 		if !strings.Contains(err.Error(), "not found") {
 			klog.ErrorS(err, "Failed to get ml-platform-admin-configmap")
@@ -188,12 +189,12 @@ func handleAddGrafana(c *gin.Context) {
 		configMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ml-platform-admin-configmap",
-				Namespace: "karmada-system",
+				Namespace: config.GetNamespace(),
 			},
 			Data: make(map[string]string),
 		}
 
-		configMap, err = kubeClient.CoreV1().ConfigMaps("karmada-system").Create(c, configMap, metav1.CreateOptions{})
+		configMap, err = kubeClient.CoreV1().ConfigMaps(config.GetNamespace()).Create(c, configMap, metav1.CreateOptions{})
 		if err != nil {
 			klog.ErrorS(err, "Failed to create ml-platform-admin-configmap")
 			common.Fail(c, err)
@@ -217,12 +218,12 @@ func handleAddGrafana(c *gin.Context) {
 
 		// Check for duplicate name or endpoint
 		for _, m := range monitoringConfig.Monitorings {
-			if m.Name == config.Name {
-				common.Fail(c, fmt.Errorf("grafana configuration with name '%s' already exists", config.Name))
+			if m.Name == grafanaConfig.Name {
+				common.Fail(c, fmt.Errorf("grafana configuration with name '%s' already exists", grafanaConfig.Name))
 				return
 			}
-			if strings.TrimRight(m.Endpoint, "/") == strings.TrimRight(config.Endpoint, "/") {
-				common.Fail(c, fmt.Errorf("grafana configuration with endpoint '%s' already exists", config.Endpoint))
+			if strings.TrimRight(m.Endpoint, "/") == strings.TrimRight(grafanaConfig.Endpoint, "/") {
+				common.Fail(c, fmt.Errorf("grafana configuration with endpoint '%s' already exists", grafanaConfig.Endpoint))
 				return
 			}
 		}
@@ -234,9 +235,9 @@ func handleAddGrafana(c *gin.Context) {
 			Endpoint string `yaml:"endpoint"`
 			Token    string `yaml:"token"`
 		}{
-			Name:     config.Name,
+			Name:     grafanaConfig.Name,
 			Type:     "grafana",
-			Endpoint: config.Endpoint,
+			Endpoint: grafanaConfig.Endpoint,
 			Token:    secretName,
 		})
 	} else {
@@ -248,9 +249,9 @@ func handleAddGrafana(c *gin.Context) {
 			Token    string `yaml:"token"`
 		}{
 			{
-				Name:     config.Name,
+				Name:     grafanaConfig.Name,
 				Type:     "grafana",
-				Endpoint: config.Endpoint,
+				Endpoint: grafanaConfig.Endpoint,
 				Token:    secretName,
 			},
 		}
@@ -265,7 +266,7 @@ func handleAddGrafana(c *gin.Context) {
 	}
 	configMap.Data["monitoring"] = string(yamlBytes)
 
-	_, err = kubeClient.CoreV1().ConfigMaps("karmada-system").Update(c, configMap, metav1.UpdateOptions{})
+	_, err = kubeClient.CoreV1().ConfigMaps(config.GetNamespace()).Update(c, configMap, metav1.UpdateOptions{})
 	if err != nil {
 		klog.ErrorS(err, "Failed to update ml-platform-admin-configmap")
 		common.Fail(c, err)
@@ -290,7 +291,7 @@ func handleGetMonitoring(c *gin.Context) {
 	kubeClient := client.InClusterClient()
 
 	// Get configmap
-	configMap, err := kubeClient.CoreV1().ConfigMaps("karmada-system").Get(c, "ml-platform-admin-configmap", metav1.GetOptions{})
+	configMap, err := kubeClient.CoreV1().ConfigMaps(config.GetNamespace()).Get(c, "ml-platform-admin-configmap", metav1.GetOptions{})
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			common.Success(c, gin.H{"monitorings": []MonitoringResponse{}})
@@ -325,7 +326,7 @@ func handleGetMonitoring(c *gin.Context) {
 		}
 
 		// Try to get token from secret
-		secret, err := kubeClient.CoreV1().Secrets("karmada-system").Get(c, monitoring.Token, metav1.GetOptions{})
+		secret, err := kubeClient.CoreV1().Secrets(config.GetNamespace()).Get(c, monitoring.Token, metav1.GetOptions{})
 		if err != nil {
 			klog.ErrorS(err, "Failed to get monitoring secret", "name", monitoring.Name, "secret", monitoring.Token)
 			// Still include the monitoring entry but without token
@@ -381,7 +382,7 @@ func handleGetDashboards(c *gin.Context) {
 	kubeClient := client.InClusterClient()
 
 	// Get configmap
-	configMap, err := kubeClient.CoreV1().ConfigMaps("karmada-system").Get(c, "ml-platform-admin-configmap", metav1.GetOptions{})
+	configMap, err := kubeClient.CoreV1().ConfigMaps(config.GetNamespace()).Get(c, "ml-platform-admin-configmap", metav1.GetOptions{})
 	if err != nil {
 		klog.ErrorS(err, "Failed to get ml-platform-admin-configmap")
 		common.Fail(c, err)
@@ -426,7 +427,7 @@ func handleGetDashboards(c *gin.Context) {
 	}
 
 	// Get token from secret
-	secret, err := kubeClient.CoreV1().Secrets("karmada-system").Get(c, monitoring.Token, metav1.GetOptions{})
+	secret, err := kubeClient.CoreV1().Secrets(config.GetNamespace()).Get(c, monitoring.Token, metav1.GetOptions{})
 	if err != nil {
 		klog.ErrorS(err, "Failed to get monitoring secret", "name", name)
 		common.Fail(c, err)
@@ -513,7 +514,7 @@ func handleDeleteMonitoring(c *gin.Context) {
 	kubeClient := client.InClusterClient()
 
 	// Get existing configmap
-	configMap, err := kubeClient.CoreV1().ConfigMaps("karmada-system").Get(c, "ml-platform-admin-configmap", metav1.GetOptions{})
+	configMap, err := kubeClient.CoreV1().ConfigMaps(config.GetNamespace()).Get(c, "ml-platform-admin-configmap", metav1.GetOptions{})
 	if err != nil {
 		klog.ErrorS(err, "Failed to get ml-platform-admin-configmap")
 		common.Fail(c, err)
@@ -562,7 +563,7 @@ func handleDeleteMonitoring(c *gin.Context) {
 	}
 
 	configMap.Data["monitoring"] = string(monitoringYAML)
-	_, err = kubeClient.CoreV1().ConfigMaps("karmada-system").Update(c, configMap, metav1.UpdateOptions{})
+	_, err = kubeClient.CoreV1().ConfigMaps(config.GetNamespace()).Update(c, configMap, metav1.UpdateOptions{})
 	if err != nil {
 		klog.ErrorS(err, "Failed to update ml-platform-admin-configmap")
 		common.Fail(c, err)
@@ -570,7 +571,7 @@ func handleDeleteMonitoring(c *gin.Context) {
 	}
 
 	// List secrets to find the one associated with this monitoring config
-	secrets, err := kubeClient.CoreV1().Secrets("karmada-system").List(c, metav1.ListOptions{
+	secrets, err := kubeClient.CoreV1().Secrets(config.GetNamespace()).List(c, metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("app.kubernetes.io/name=grafana,grafana.karmada.io/name=%s", formattedName),
 	})
 	if err != nil {
@@ -581,7 +582,7 @@ func handleDeleteMonitoring(c *gin.Context) {
 
 	// Delete associated secrets
 	for _, secret := range secrets.Items {
-		err = kubeClient.CoreV1().Secrets("karmada-system").Delete(c, secret.Name, metav1.DeleteOptions{})
+		err = kubeClient.CoreV1().Secrets(config.GetNamespace()).Delete(c, secret.Name, metav1.DeleteOptions{})
 		if err != nil {
 			klog.ErrorS(err, "Failed to delete Grafana secret", "secretName", secret.Name)
 			common.Fail(c, err)

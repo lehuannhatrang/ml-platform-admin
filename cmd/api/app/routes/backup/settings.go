@@ -43,6 +43,7 @@ import (
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
 	"github.com/karmada-io/dashboard/cmd/api/app/types/common"
 	"github.com/karmada-io/dashboard/pkg/client"
+	"github.com/karmada-io/dashboard/pkg/config"
 )
 
 // ClusterInfo represents cluster information with migration controller status
@@ -381,7 +382,7 @@ func checkManagementMigrationController() (status, versionResult string, err err
 	}
 
 	// Try to list resources - if CRD doesn't exist, this will fail
-	_, err = dynamicClient.Resource(statefulMigrationGVR).Namespace("karmada-system").List(context.TODO(), metav1.ListOptions{Limit: 1})
+	_, err = dynamicClient.Resource(statefulMigrationGVR).Namespace(config.GetNamespace()).List(context.TODO(), metav1.ListOptions{Limit: 1})
 	if err != nil {
 		return "error", "", fmt.Errorf("statefulMigration CRD not found or not accessible: %v", err)
 	}

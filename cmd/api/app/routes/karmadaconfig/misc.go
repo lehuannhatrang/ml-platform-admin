@@ -1,29 +1,26 @@
 package karmadaconfig
 
 import (
-
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log"
- 	"bytes"
-	 "io"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"github.com/karmada-io/dashboard/pkg/client"
-	v1 "github.com/karmada-io/dashboard/cmd/api/app/types/api/v1"
-	corev1 "k8s.io/api/core/v1" 
- 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"sigs.k8s.io/yaml"
-)
 
-const (
-	namespace  = "karmada-system"
+	v1 "github.com/karmada-io/dashboard/cmd/api/app/types/api/v1"
+	"github.com/karmada-io/dashboard/pkg/client"
+	"github.com/karmada-io/dashboard/pkg/config"
 )
 
 func GetRunningapps() ([]string, error) {
 	kubeClient := client.InClusterClient()
-	pods, err := kubeClient.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+	pods, err := kubeClient.CoreV1().Pods(config.GetNamespace()).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		log.Printf("Error listing apps: %v", err)
 		return nil, fmt.Errorf("error listing apps")
@@ -50,7 +47,7 @@ func GetRunningapps() ([]string, error) {
 
 func GetMetaData(appLabel string) ([]v1.PodMetadata, error) {
 	kubeClient := client.InClusterClient()
-	pods, err := kubeClient.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+	pods, err := kubeClient.CoreV1().Pods(config.GetNamespace()).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("app=%s", appLabel),
 	})
 	if err != nil {
@@ -79,7 +76,7 @@ func GetMetaData(appLabel string) ([]v1.PodMetadata, error) {
 
 func GetDeploymentStatus(deploymentName string) (string, error) {
 	kubeClient := client.InClusterClient()
-	deployment, err := kubeClient.AppsV1().Deployments(namespace).Get(context.TODO(), deploymentName, metav1.GetOptions{})
+	deployment, err := kubeClient.AppsV1().Deployments(config.GetNamespace()).Get(context.TODO(), deploymentName, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("Error getting deployment: %v", err)
 		return "", fmt.Errorf("error getting deployment")
@@ -95,12 +92,12 @@ func GetDeploymentStatus(deploymentName string) (string, error) {
 func RestartDeployment(deploymentName string) (string, error) {
 	kubeClient := client.InClusterClient()
 
-	deployment, err := kubeClient.AppsV1().Deployments(namespace).Get(context.TODO(), deploymentName, metav1.GetOptions{})
+	deployment, err := kubeClient.AppsV1().Deployments(config.GetNamespace()).Get(context.TODO(), deploymentName, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("Error getting deployment: %v", err)
 		return "", fmt.Errorf("error getting deployment")
 	}
-	_, err = kubeClient.AppsV1().Deployments(namespace).Update(context.TODO(), deployment, metav1.UpdateOptions{})
+	_, err = kubeClient.AppsV1().Deployments(config.GetNamespace()).Update(context.TODO(), deployment, metav1.UpdateOptions{})
 	if err != nil {
 		log.Printf("Error restarting deployment: %v", err)
 		return "", fmt.Errorf("error restarting deployment")
@@ -112,7 +109,7 @@ func RestartDeployment(deploymentName string) (string, error) {
 func DeletePod(podName string) (string, error) {
 	kubeClient := client.InClusterClient()
 
-	err := kubeClient.CoreV1().Pods(namespace).Delete(context.TODO(), podName, metav1.DeleteOptions{})
+	err := kubeClient.CoreV1().Pods(config.GetNamespace()).Delete(context.TODO(), podName, metav1.DeleteOptions{})
 	if err != nil {
 		log.Printf("Error deleting pod: %v", err)
 		return "", fmt.Errorf("error deleting pod")
@@ -122,26 +119,26 @@ func DeletePod(podName string) (string, error) {
 }
 
 func GetPodLogs(podName string) (string, error) {
-    kubeClient := client.InClusterClient()
-    logOptions := &corev1.PodLogOptions{}
-    req := kubeClient.CoreV1().Pods(namespace).GetLogs(podName, logOptions)
-    podLogs, err := req.Stream(context.TODO())
-    if err != nil {
-        return "", fmt.Errorf("error getting pod logs: %v", err)
-    }
-    defer podLogs.Close()
-    buf := new(bytes.Buffer)
-    _, err = io.Copy(buf, podLogs)
-    if err != nil {
-        return "", fmt.Errorf("error reading pod logs: %v", err)
-    }
+	kubeClient := client.InClusterClient()
+	logOptions := &corev1.PodLogOptions{}
+	req := kubeClient.CoreV1().Pods(config.GetNamespace()).GetLogs(podName, logOptions)
+	podLogs, err := req.Stream(context.TODO())
+	if err != nil {
+		return "", fmt.Errorf("error getting pod logs: %v", err)
+	}
+	defer podLogs.Close()
+	buf := new(bytes.Buffer)
+	_, err = io.Copy(buf, podLogs)
+	if err != nil {
+		return "", fmt.Errorf("error reading pod logs: %v", err)
+	}
 
-    return buf.String(), nil
+	return buf.String(), nil
 }
 
 func GetPodYAML(podName string) (string, error) {
 	kubeClient := client.InClusterClient()
-	pod, err := kubeClient.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
+	pod, err := kubeClient.CoreV1().Pods(config.GetNamespace()).Get(context.TODO(), podName, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("Error getting pod: %v", err)
 		return "", fmt.Errorf("error getting pod")
@@ -159,30 +156,29 @@ func GetPodYAML(podName string) (string, error) {
 	return buf.String(), nil
 }
 
-
 func UpdatePodYAML(podName string, yamlContent string) (string, error) {
-    ctx := context.TODO()
-    kubeClient := client.InClusterClient()
+	ctx := context.TODO()
+	kubeClient := client.InClusterClient()
 
-    var newPod corev1.Pod
-    if err := yaml.Unmarshal([]byte(yamlContent), &newPod); err != nil {
-        return "", fmt.Errorf("failed to unmarshal Pod: %v", err)
-    }
+	var newPod corev1.Pod
+	if err := yaml.Unmarshal([]byte(yamlContent), &newPod); err != nil {
+		return "", fmt.Errorf("failed to unmarshal Pod: %v", err)
+	}
 
-    oldPod, err := kubeClient.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
-    if err != nil {
-        return "", fmt.Errorf("failed to get existing Pod: %v", err)
-    }
-    newPod.TypeMeta = oldPod.TypeMeta
-    newPod.ObjectMeta = oldPod.ObjectMeta
+	oldPod, err := kubeClient.CoreV1().Pods(config.GetNamespace()).Get(ctx, podName, metav1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to get existing Pod: %v", err)
+	}
+	newPod.TypeMeta = oldPod.TypeMeta
+	newPod.ObjectMeta = oldPod.ObjectMeta
 
-    _, err = kubeClient.CoreV1().Pods(namespace).Update(ctx, &newPod, metav1.UpdateOptions{})
-    if err != nil {
-        return "", fmt.Errorf("failed to update Pod: %v", err)
-    }
+	_, err = kubeClient.CoreV1().Pods(config.GetNamespace()).Update(ctx, &newPod, metav1.UpdateOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to update Pod: %v", err)
+	}
 
-    // Return success message
-    successMessage := fmt.Sprintf("Pod '%s' in namespace '%s' successfully updated", podName, namespace)
-    fmt.Printf("Update successful: %s\n", successMessage)
-    return successMessage, nil
+	// Return success message
+	successMessage := fmt.Sprintf("Pod '%s' in namespace '%s' successfully updated", podName, config.GetNamespace())
+	fmt.Printf("Update successful: %s\n", successMessage)
+	return successMessage, nil
 }

@@ -16,9 +16,11 @@ limitations under the License.
 
 package db
 
+import (
+	"os"
+)
+
 const (
-	// Namespace is the namespace of karmada.
-	Namespace = "karmada-system"
 	// KarmadaAgent is the name of karmada agent.
 	KarmadaAgent = "karmada-agent"
 	// KarmadaScheduler is the name of karmada scheduler.
@@ -31,4 +33,19 @@ const (
 	SchedulerPort = "10351"
 	// ControllerManagerPort is the port of karmada controller manager.
 	ControllerManagerPort = "8080"
+	// DefaultNamespace is the default namespace for karmada system.
+	DefaultNamespace = "ml-platform-system"
 )
+
+// Namespace returns the system namespace from environment variable or default.
+// Environment variable: KARMADA_SYSTEM_NAMESPACE
+// Default: ml-platform-system
+var Namespace = getNamespace()
+
+func getNamespace() string {
+	namespace := os.Getenv("KARMADA_SYSTEM_NAMESPACE")
+	if namespace == "" {
+		namespace = DefaultNamespace
+	}
+	return namespace
+}

@@ -41,11 +41,11 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/karmada-io/dashboard/pkg/auth/fga"
+	"github.com/karmada-io/dashboard/pkg/config"
 )
 
 const (
-	namespace = "karmada-system"
-	app       = "karmada-controller-manager"
+	app = "karmada-controller-manager"
 )
 
 // GetControllerManagerVersionInfo returns the version info of karmada-controller-manager.
@@ -56,7 +56,7 @@ func GetControllerManagerVersionInfo() (*version.Info, error) {
 		return nil, err
 	}
 	labelSelector := labels.Set{"app": app}
-	podListResult, err := kubeClient.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+	podListResult, err := kubeClient.CoreV1().Pods(config.GetNamespace()).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: labelSelector.String(),
 	})
 	if err != nil {
@@ -74,7 +74,7 @@ func GetControllerManagerVersionInfo() (*version.Info, error) {
 	req := kubeClient.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(pod.Name).
-		Namespace(namespace).
+		Namespace(config.GetNamespace()).
 		SubResource("exec").
 		VersionedParams(&corev1.PodExecOptions{
 			Command:   []string{"karmada-controller-manager", "version"},
@@ -147,7 +147,7 @@ func GetControllerManagerInfo() (*v1.KarmadaInfo, error) {
 	}
 
 	kubeClient := client.InClusterClient()
-	ret, err := kubeClient.AppsV1().Deployments("karmada-system").Get(context.TODO(), "karmada-controller-manager", metav1.GetOptions{})
+	ret, err := kubeClient.AppsV1().Deployments(config.GetNamespace()).Get(context.TODO(), "karmada-controller-manager", metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}

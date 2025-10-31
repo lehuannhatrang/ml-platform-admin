@@ -33,6 +33,7 @@ import (
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
 	"github.com/karmada-io/dashboard/cmd/api/app/types/common"
 	"github.com/karmada-io/dashboard/pkg/client"
+	"github.com/karmada-io/dashboard/pkg/config"
 )
 
 // RecoveryRecord represents a recovery operation record
@@ -235,7 +236,7 @@ func convertCheckpointRestoreToEvent(cr *unstructured.Unstructured, clusterName 
 				// If backup is in a cluster-specific namespace, extract cluster from namespace
 				if strings.HasPrefix(namespace, "cluster-") {
 					event.SourceCluster = strings.TrimPrefix(namespace, "cluster-")
-				} else if namespace != "default" && namespace != "kube-system" && namespace != "karmada-system" {
+				} else if namespace != "default" && namespace != "kube-system" && namespace != config.GetNamespace() {
 					// Use namespace as source cluster if it's not a system namespace
 					event.SourceCluster = namespace
 				}
@@ -560,7 +561,7 @@ func handleGetRecoveryRecord(c *gin.Context) {
 	}
 
 	// Get the StatefulMigration CR for recovery
-	unstructuredObj, err := dynamicClient.Resource(recoveryStatefulMigrationGVR).Namespace("karmada-system").Get(context.TODO(),
+	unstructuredObj, err := dynamicClient.Resource(recoveryStatefulMigrationGVR).Namespace(config.GetNamespace()).Get(context.TODO(),
 		fmt.Sprintf("recovery-%s", recoveryID), metav1.GetOptions{})
 	if err != nil {
 		klog.ErrorS(err, "Failed to get recovery StatefulMigration CR", "recoveryID", recoveryID)
@@ -601,7 +602,7 @@ func handleCreateRecovery(c *gin.Context) {
 		common.Fail(c, err)
 		return
 	}
-	_, err = dynamicClient.Resource(recoveryStatefulMigrationGVR).Namespace("karmada-system").Create(context.TODO(),
+	_, err = dynamicClient.Resource(recoveryStatefulMigrationGVR).Namespace(config.GetNamespace()).Create(context.TODO(),
 		statefulMigration, metav1.CreateOptions{})
 	if err != nil {
 		klog.ErrorS(err, "Failed to create recovery StatefulMigration CR")
@@ -625,7 +626,7 @@ func handleExecuteRecovery(c *gin.Context) {
 
 	// Get the StatefulMigration CR
 	smName := fmt.Sprintf("recovery-%s", recoveryID)
-	unstructuredObj, err := dynamicClient.Resource(recoveryStatefulMigrationGVR).Namespace("karmada-system").Get(context.TODO(),
+	unstructuredObj, err := dynamicClient.Resource(recoveryStatefulMigrationGVR).Namespace(config.GetNamespace()).Get(context.TODO(),
 		smName, metav1.GetOptions{})
 	if err != nil {
 		klog.ErrorS(err, "Failed to get recovery StatefulMigration CR", "recoveryID", recoveryID)
@@ -653,7 +654,7 @@ func handleExecuteRecovery(c *gin.Context) {
 	}
 	unstructured.SetNestedMap(unstructuredObj.Object, status, "status")
 
-	_, err = dynamicClient.Resource(recoveryStatefulMigrationGVR).Namespace("karmada-system").Update(context.TODO(),
+	_, err = dynamicClient.Resource(recoveryStatefulMigrationGVR).Namespace(config.GetNamespace()).Update(context.TODO(),
 		unstructuredObj, metav1.UpdateOptions{})
 	if err != nil {
 		klog.ErrorS(err, "Failed to trigger recovery execution")
@@ -678,7 +679,7 @@ func handleDeleteRecoveryRecord(c *gin.Context) {
 	}
 
 	smName := fmt.Sprintf("recovery-%s", recoveryID)
-	err = dynamicClient.Resource(recoveryStatefulMigrationGVR).Namespace("karmada-system").Delete(context.TODO(),
+	err = dynamicClient.Resource(recoveryStatefulMigrationGVR).Namespace(config.GetNamespace()).Delete(context.TODO(),
 		smName, metav1.DeleteOptions{})
 	if err != nil {
 		klog.ErrorS(err, "Failed to delete recovery StatefulMigration CR", "recoveryID", recoveryID)
@@ -704,7 +705,7 @@ func handleCancelRecovery(c *gin.Context) {
 
 	// Get the StatefulMigration CR
 	smName := fmt.Sprintf("recovery-%s", recoveryID)
-	unstructuredObj, err := dynamicClient.Resource(recoveryStatefulMigrationGVR).Namespace("karmada-system").Get(context.TODO(),
+	unstructuredObj, err := dynamicClient.Resource(recoveryStatefulMigrationGVR).Namespace(config.GetNamespace()).Get(context.TODO(),
 		smName, metav1.GetOptions{})
 	if err != nil {
 		klog.ErrorS(err, "Failed to get recovery StatefulMigration CR", "recoveryID", recoveryID)
@@ -729,7 +730,7 @@ func handleCancelRecovery(c *gin.Context) {
 	}
 	unstructured.SetNestedMap(unstructuredObj.Object, status, "status")
 
-	_, err = dynamicClient.Resource(recoveryStatefulMigrationGVR).Namespace("karmada-system").Update(context.TODO(),
+	_, err = dynamicClient.Resource(recoveryStatefulMigrationGVR).Namespace(config.GetNamespace()).Update(context.TODO(),
 		unstructuredObj, metav1.UpdateOptions{})
 	if err != nil {
 		klog.ErrorS(err, "Failed to cancel recovery")
@@ -759,7 +760,7 @@ func handleGetBackupHistory(c *gin.Context) {
 		Group:    "",
 		Version:  "v1",
 		Resource: "configmaps",
-	}).Namespace("karmada-system").List(context.TODO(), metav1.ListOptions{
+	}).Namespace(config.GetNamespace()).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("app=backup-history,backup-id=%s", backupID),
 	})
 	if err != nil {
@@ -850,7 +851,7 @@ func createRecoveryStatefulMigrationCR(recoveryID string, req CreateRecoveryRequ
 	})
 
 	sm.SetName(fmt.Sprintf("recovery-%s", recoveryID))
-	sm.SetNamespace("karmada-system")
+	sm.SetNamespace(config.GetNamespace())
 
 	// Set labels
 	sm.SetLabels(map[string]string{
@@ -921,7 +922,7 @@ func getBackupByID(backupID string) (BackupConfiguration, error) {
 	}
 	smName := fmt.Sprintf("backup-%s", backupID)
 
-	unstructuredObj, err := dynamicClient.Resource(statefulMigrationGVR).Namespace("karmada-system").Get(context.TODO(),
+	unstructuredObj, err := dynamicClient.Resource(statefulMigrationGVR).Namespace(config.GetNamespace()).Get(context.TODO(),
 		smName, metav1.GetOptions{})
 	if err != nil {
 		return BackupConfiguration{}, err
