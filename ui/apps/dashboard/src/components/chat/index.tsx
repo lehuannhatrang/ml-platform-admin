@@ -46,7 +46,7 @@ export const initChat = async (webhookUrl: string, mode: 'window' | 'fullscreen'
         method: 'POST',
         headers: {}
       },
-      chatSessionKey: `dcn-dashboard-chat`,
+      chatSessionKey: `ml-platform-admin-chat`,
       mode: mode === 'fullscreen' ? 'fullscreen' : 'window',
       target
     });

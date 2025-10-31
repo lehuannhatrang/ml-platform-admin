@@ -31,12 +31,12 @@ kubectl config use-context kubernetes
 
 Clone this repo to your machine:
 ```
-git clone https://github.com/lehuannhatrang/dcn-dashboard
+git clone https://github.com/lehuannhatrang/ml-platform-admin
 ```
 
 Change to the dashboard directory:
 ```
-cd dcn-dashboard
+cd ml-platform-admin
 ```
 
 Create persistent volumes required for etcd and OpenFGA:

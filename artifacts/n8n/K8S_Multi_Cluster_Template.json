@@ -21,7 +21,7 @@
     {
       "parameters": {
         "sessionIdType": "customKey",
-        "sessionKey": "={{ $('Webhook').item.json.body['dcn-dashboard-chat'] }}",
+        "sessionKey": "={{ $('Webhook').item.json.body['ml-platform-admin-chat'] }}",
         "contextWindowLength": 30
       },
       "id": "927dc3df-3d07-4a27-b152-78908e234a9a",

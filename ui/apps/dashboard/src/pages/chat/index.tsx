@@ -42,7 +42,7 @@ const ChatPage: React.FC = () => {
               method: 'POST',
               headers: {}
             },
-            chatSessionKey: `dcn-dashboard-chat`,
+            chatSessionKey: `ml-platform-admin-chat`,
             mode: 'fullscreen',
             target: '#fullscreen-chat'
           });

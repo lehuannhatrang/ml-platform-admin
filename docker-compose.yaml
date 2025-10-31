@@ -83,7 +83,7 @@ services:
 
   # Karmada Dashboard API
   karmada-dashboard-api:
-    image: lehuannhatrang/dcn-dashboard-api:v0.46
+    image: lehuannhatrang/ml-platform-admin-api:v0.46
     container_name: karmada-dashboard-api
     depends_on:
       etcd:
@@ -109,7 +109,7 @@ services:
 
   # Karmada Dashboard Web
   karmada-dashboard-web:
-    image: lehuannhatrang/dcn-dashboard-web:v0.46
+    image: lehuannhatrang/ml-platform-admin-web:v0.46
     container_name: karmada-dashboard-web
     depends_on:
       - karmada-dashboard-api

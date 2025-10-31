@@ -39,7 +39,7 @@ interface ThemeProviderProps {
 }
 
 // Local storage key for theme
-const THEME_STORAGE_KEY = 'dcn-dashboard-theme';
+const THEME_STORAGE_KEY = 'ml-platform-admin-theme';
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [theme, setTheme] = useState<ThemeMode>(() => {
