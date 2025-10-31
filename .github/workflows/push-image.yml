@@ -37,8 +37,8 @@ jobs:
     runs-on: ubuntu-22.04
     needs: [ "build-fronted" ]
     env:
-      IMAGE_NAME: karmada/karmada-dashboard-web
-      BINARY_NAME: karmada-dashboard-web
+      IMAGE_NAME: lehuannhatrang/ml-platform-admin-web
+      BINARY_NAME: ml-platform-admin-web
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -57,8 +57,8 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USER_NAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build karmada-dashboard-web binary
-        run: make karmada-dashboard-web
+      - name: Build ml-platform-admin-web binary
+        run: make ml-platform-admin-web
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
@@ -90,8 +90,8 @@ jobs:
     if: ${{ github.repository == 'karmada-io/dashboard' }}
     runs-on: ubuntu-22.04
     env:
-      IMAGE_NAME: karmada/karmada-dashboard-api
-      BINARY_NAME: karmada-dashboard-api
+      IMAGE_NAME: lehuannhatrang/ml-platform-admin-api
+      BINARY_NAME: ml-platform-admin-api
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -115,8 +115,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ steps.misc.outputs.image_name }}
-      - name: Build karmada-dashboard-api binary
-        run: make karmada-dashboard-api
+      - name: Build ml-platform-admin-api binary
+        run: make ml-platform-admin-api
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:

@@ -260,7 +260,7 @@ func generateToken(username, role string) (string, error) {
 			ExpiresAt: jwt.NewNumericDate(now.Add(tokenExpiryDuration)),
 			IssuedAt:  jwt.NewNumericDate(now),
 			NotBefore: jwt.NewNumericDate(now),
-			Issuer:    "karmada-dashboard-api",
+			Issuer:    "ml-platform-admin-api",
 			Subject:   username,
 		},
 	}
@@ -279,7 +279,7 @@ func getJWTSecret() string {
 	secret := os.Getenv("KARMADA_DASHBOARD_JWT_SECRET")
 	if secret == "" {
 		// In production, you should set a secure secret via environment variable
-		secret = "default-karmada-dashboard-secret-key"
+		secret = "default-ml-platform-admin-secret-key"
 		klog.InfoS("Using default JWT secret. This is not secure for production. Set KARMADA_DASHBOARD_JWT_SECRET environment variable.")
 	}
 	return secret

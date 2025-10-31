@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "karmada-dashboard.name" . }}-web
-  namespace: {{ include "karmada-dashboard.namespace" . }}
+  name: {{ include "ml-platform-admin.name" . }}-web
+  namespace: {{ include "ml-platform-admin.namespace" . }}
   labels:
-    {{- include "karmada-dashboard.web.labels" . | nindent 4 }}
+    {{- include "ml-platform-admin.web.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.web.service.type }}
   ports:
@@ -16,4 +16,4 @@ spec:
       nodePort: {{ .Values.web.service.nodePort }}
       {{- end }}
   selector:
-    {{- include "karmada-dashboard.web.labels" . | nindent 4 }}
+    {{- include "ml-platform-admin.web.labels" . | nindent 4 }}

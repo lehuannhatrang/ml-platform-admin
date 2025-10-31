@@ -1,10 +1,10 @@
-# Default values for karmada-dashboard.
+# Default values for ml-platform-admin.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 nameOverride: ""
 fullnameOverride: ""
 
-## @param global karmada-dashboard global config
+## @param global ml-platform-admin global config
 global:
   ## @param global.imageRegistry Global Docker image registry
   imageRegistry: ""
@@ -13,17 +13,17 @@ global:
   ##   - myRegistryKeySecretName
   imagePullSecrets: [ ]
 
-## @karmadaDashboardImageVersion the image version of each karmada-dashboard components
+## @karmadaDashboardImageVersion the image version of each ml-platform-admin components
 ## "latest" is a default value for local installation.
 ## If update this anchors("&karmadaDashboardImageVersion"), also update hack/package-helm-chart.sh.
 ## See https://yaml.org/spec/1.2/spec.html#id2765878 and
 ## https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_advanced_syntax.html#yaml-anchors-and-aliases-sharing-variable-values
 ## for more details about yaml anchors and aliases.
-karmadaDashboardImageVersion: &karmadaDashboardImageVersion main
+mlPlatformAdminImageVersion: &mlPlatformAdminImageVersion main
 
-## Specify the imagePullPolicy of karmada-dashboard images
+## Specify the imagePullPolicy of ml-platform-admin images
 ## Defaults to 'IfNotPresent', you can set to 'Always' in cases of special needs
-karmadaDashboardImagePullPolicy: &karmadaDashboardImagePullPolicy IfNotPresent
+mlPlatformAdminImagePullPolicy: &mlPlatformAdminImagePullPolicy IfNotPresent
 
 podDisruptionBudget: &podDisruptionBudget { }
 
@@ -59,9 +59,9 @@ api:
   ##
   image:
     registry: docker.io
-    repository: karmada/karmada-dashboard-api
-    tag: *karmadaDashboardImageVersion
-    pullPolicy: *karmadaDashboardImagePullPolicy
+    repository: lehuannhatrang/ml-platform-admin-api
+    tag: *mlPlatformAdminImageVersion
+    pullPolicy: *mlPlatformAdminImagePullPolicy
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
     ## Example:
@@ -128,9 +128,9 @@ web:
   ##
   image:
     registry: docker.io
-    repository: karmada/karmada-dashboard-web
-    tag: *karmadaDashboardImageVersion
-    pullPolicy: *karmadaDashboardImagePullPolicy
+    repository: lehuannhatrang/ml-platform-admin-web
+    tag: *mlPlatformAdminImageVersion
+    pullPolicy: *mlPlatformAdminImagePullPolicy
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
     ## Example:

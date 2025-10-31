@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	userAgent = "karmada-dashboard"
+	userAgent = "ml-platform-admin"
 	dev       = "0.0.0-dev"
 )
 

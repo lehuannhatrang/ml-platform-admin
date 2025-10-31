@@ -79,7 +79,7 @@ type GrafanaConfig struct {
 type MonitoringConfig struct {
 	Monitorings []struct {
 		Name     string `yaml:"name"`
-		Type    string `yaml:"type"`
+		Type     string `yaml:"type"`
 		Endpoint string `yaml:"endpoint"`
 		Token    string `yaml:"token"`
 	} `yaml:"monitorings"`
@@ -158,8 +158,8 @@ func handleAddGrafana(c *gin.Context) {
 			Name:      secretName,
 			Namespace: "karmada-system",
 			Labels: map[string]string{
-				"app.kubernetes.io/name":     "grafana",
-				"grafana.karmada.io/name":    formattedName,
+				"app.kubernetes.io/name":  "grafana",
+				"grafana.karmada.io/name": formattedName,
 			},
 		},
 		Type: corev1.SecretTypeOpaque,
@@ -176,10 +176,10 @@ func handleAddGrafana(c *gin.Context) {
 	}
 
 	// Get existing configmap or create if not exists
-	configMap, err := kubeClient.CoreV1().ConfigMaps("karmada-system").Get(c, "karmada-dashboard-configmap", metav1.GetOptions{})
+	configMap, err := kubeClient.CoreV1().ConfigMaps("karmada-system").Get(c, "ml-platform-admin-configmap", metav1.GetOptions{})
 	if err != nil {
 		if !strings.Contains(err.Error(), "not found") {
-			klog.ErrorS(err, "Failed to get karmada-dashboard-configmap")
+			klog.ErrorS(err, "Failed to get ml-platform-admin-configmap")
 			common.Fail(c, err)
 			return
 		}
@@ -187,7 +187,7 @@ func handleAddGrafana(c *gin.Context) {
 		// Create new configmap if it doesn't exist
 		configMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "karmada-dashboard-configmap",
+				Name:      "ml-platform-admin-configmap",
 				Namespace: "karmada-system",
 			},
 			Data: make(map[string]string),
@@ -195,7 +195,7 @@ func handleAddGrafana(c *gin.Context) {
 
 		configMap, err = kubeClient.CoreV1().ConfigMaps("karmada-system").Create(c, configMap, metav1.CreateOptions{})
 		if err != nil {
-			klog.ErrorS(err, "Failed to create karmada-dashboard-configmap")
+			klog.ErrorS(err, "Failed to create ml-platform-admin-configmap")
 			common.Fail(c, err)
 			return
 		}
@@ -267,7 +267,7 @@ func handleAddGrafana(c *gin.Context) {
 
 	_, err = kubeClient.CoreV1().ConfigMaps("karmada-system").Update(c, configMap, metav1.UpdateOptions{})
 	if err != nil {
-		klog.ErrorS(err, "Failed to update karmada-dashboard-configmap")
+		klog.ErrorS(err, "Failed to update ml-platform-admin-configmap")
 		common.Fail(c, err)
 		return
 	}
@@ -280,7 +280,7 @@ func handleAddGrafana(c *gin.Context) {
 // MonitoringResponse represents a Grafana monitoring configuration
 type MonitoringResponse struct {
 	Name     string `json:"name"`
-	Type    string `json:"type"`
+	Type     string `json:"type"`
 	Endpoint string `json:"endpoint"`
 	Token    string `json:"token,omitempty"` // omitempty to avoid exposing token in logs
 }
@@ -290,13 +290,13 @@ func handleGetMonitoring(c *gin.Context) {
 	kubeClient := client.InClusterClient()
 
 	// Get configmap
-	configMap, err := kubeClient.CoreV1().ConfigMaps("karmada-system").Get(c, "karmada-dashboard-configmap", metav1.GetOptions{})
+	configMap, err := kubeClient.CoreV1().ConfigMaps("karmada-system").Get(c, "ml-platform-admin-configmap", metav1.GetOptions{})
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			common.Success(c, gin.H{"monitorings": []MonitoringResponse{}})
 			return
 		}
-		klog.ErrorS(err, "Failed to get karmada-dashboard-configmap")
+		klog.ErrorS(err, "Failed to get ml-platform-admin-configmap")
 		common.Fail(c, err)
 		return
 	}
@@ -381,9 +381,9 @@ func handleGetDashboards(c *gin.Context) {
 	kubeClient := client.InClusterClient()
 
 	// Get configmap
-	configMap, err := kubeClient.CoreV1().ConfigMaps("karmada-system").Get(c, "karmada-dashboard-configmap", metav1.GetOptions{})
+	configMap, err := kubeClient.CoreV1().ConfigMaps("karmada-system").Get(c, "ml-platform-admin-configmap", metav1.GetOptions{})
 	if err != nil {
-		klog.ErrorS(err, "Failed to get karmada-dashboard-configmap")
+		klog.ErrorS(err, "Failed to get ml-platform-admin-configmap")
 		common.Fail(c, err)
 		return
 	}
@@ -513,9 +513,9 @@ func handleDeleteMonitoring(c *gin.Context) {
 	kubeClient := client.InClusterClient()
 
 	// Get existing configmap
-	configMap, err := kubeClient.CoreV1().ConfigMaps("karmada-system").Get(c, "karmada-dashboard-configmap", metav1.GetOptions{})
+	configMap, err := kubeClient.CoreV1().ConfigMaps("karmada-system").Get(c, "ml-platform-admin-configmap", metav1.GetOptions{})
 	if err != nil {
-		klog.ErrorS(err, "Failed to get karmada-dashboard-configmap")
+		klog.ErrorS(err, "Failed to get ml-platform-admin-configmap")
 		common.Fail(c, err)
 		return
 	}
@@ -564,7 +564,7 @@ func handleDeleteMonitoring(c *gin.Context) {
 	configMap.Data["monitoring"] = string(monitoringYAML)
 	_, err = kubeClient.CoreV1().ConfigMaps("karmada-system").Update(c, configMap, metav1.UpdateOptions{})
 	if err != nil {
-		klog.ErrorS(err, "Failed to update karmada-dashboard-configmap")
+		klog.ErrorS(err, "Failed to update ml-platform-admin-configmap")
 		common.Fail(c, err)
 		return
 	}

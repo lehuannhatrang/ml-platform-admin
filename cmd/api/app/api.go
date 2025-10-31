@@ -70,8 +70,8 @@ import (
 func NewAPICommand(ctx context.Context) *cobra.Command {
 	opts := options.NewOptions()
 	cmd := &cobra.Command{
-		Use:  "karmada-dashboard-api",
-		Long: `The karmada-dashboard-api provide api for karmada-dashboard web ui. It need to access host cluster apiserver and karmada apiserver internally, it will access host cluster apiserver for creating some resource like configmap in host cluster, meanwhile it will access karmada apiserver for interactiving for purpose of managing karmada-specific resources, like cluster、override policy、propagation policy and so on.`,
+		Use:  "ml-platform-admin-api",
+		Long: `The ml-platform-admin-api provide api for ML Platform Admin web ui. It need to access host cluster apiserver and karmada apiserver internally, it will access host cluster apiserver for creating some resource like configmap in host cluster, meanwhile it will access karmada apiserver for interactiving for purpose of managing karmada-specific resources, like cluster、override policy、propagation policy and so on.`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			// validate options
 			//if errs := opts.Validate(); len(errs) != 0 {

@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: frontend
-  name: karmada-dashboard
+  name: ml-platform-admin-web
   namespace: karmada-system
 spec:
   replicas: 1
@@ -17,7 +17,7 @@ spec:
         app: frontend
     spec:
       containers:
-        - image: swr.ap-southeast-1.myhuaweicloud.com/karmada/karmada-dashboard:latest
+        - image: docker.io/lehuannhatrang/ml-platform-admin-web:latest
           name: frontend
           imagePullPolicy: Always
           ports:
@@ -29,7 +29,7 @@ kind: Service
 metadata:
   labels:
     app: frontend
-  name: karmada-dashboard
+  name: ml-platform-admin
   namespace: karmada-system
 spec:
   ports:

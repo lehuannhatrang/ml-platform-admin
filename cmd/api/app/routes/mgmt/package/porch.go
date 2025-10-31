@@ -158,7 +158,7 @@ func proxyToPorch(c *gin.Context, path string) {
 
 	// Get service account token for the porch-server service account
 	// token, err := getServiceAccountToken(c.Request.Context(), "porch-server", "porch-system")
-	token, err := getServiceAccountToken(c.Request.Context(), "karmada-dashboard", "karmada-system")
+	token, err := getServiceAccountToken(c.Request.Context(), "ml-platform-admin", "ml-platform-system")
 
 	if err != nil {
 		klog.ErrorS(err, "Failed to get service account token")

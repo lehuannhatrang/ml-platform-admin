@@ -1,15 +1,15 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: karmada-dashboard-api
-  namespace: karmada-system
+  name: ml-platform-admin-api
+  namespace: ml-platform-system
   labels:
-    app: karmada-dashboard-api
+    app: ml-platform-admin-api
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: karmada-dashboard-api
+      app: ml-platform-admin-api
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -18,25 +18,25 @@ spec:
   template:
     metadata:
       labels:
-        app: karmada-dashboard-api
+        app: ml-platform-admin-api
     spec:
-      serviceAccountName: karmada-dashboard
+      serviceAccountName: ml-platform-admin
       automountServiceAccountToken: true
       containers:
         - command:
-            - karmada-dashboard-api
+            - ml-platform-admin-api
             - --karmada-kubeconfig=/etc/kubeconfig-karmada-apiserver
             - --karmada-context=karmada-apiserver
             - --kubeconfig=/etc/kubeconfig
             - --context=karmada
             - --insecure-bind-address=0.0.0.0
             - --bind-address=0.0.0.0
-            - --etcd-host=karmada-dashboard-etcd.karmada-system.svc.cluster.local
+            - --etcd-host=ml-platform-admin-etcd.ml-platform-system.svc.cluster.local
             - --etcd-port=2379
             - --porch-api=https://api.porch-system.svc.cluster.local:443
             - --skip-porch-tls-verify=true
-          name: karmada-dashboard-api
-          image: lehuannhatrang/ml-platform-admin-api:v0.39
+          name: ml-platform-admin-api
+          image: lehuannhatrang/ml-platform-admin-api:v0.1
           imagePullPolicy: IfNotPresent
           env:
             - name: GIN_MODE
@@ -49,14 +49,14 @@ spec:
             - name: KARMADA_DASHBOARD_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: karmada-dashboard-admin
+                  name: ml-platform-admin-inital-password
                   key: password
                   optional: true
             # JWT Secret for token signing
             - name: KARMADA_DASHBOARD_JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: karmada-dashboard-jwt
+                  name: ml-platform-admin-jwt
                   key: secret
                   optional: true
           livenessProbe:
@@ -103,16 +103,16 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: karmada-dashboard-api
-  namespace: karmada-system
+  name: ml-platform-admin-api
+  namespace: ml-platform-system
   labels:
-    app: karmada-dashboard-api
+    app: ml-platform-admin-api
 spec:
   ports:
-    - name: karmada-dashboard-api
+    - name: ml-platform-admin-api
       port: 8000
       protocol: TCP
       targetPort: 8000
   selector:
-    app: karmada-dashboard-api
+    app: ml-platform-admin-api
   type: ClusterIP

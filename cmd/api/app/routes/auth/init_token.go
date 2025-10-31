@@ -64,22 +64,22 @@ func validateToken(token string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// Set the token in the Authorization header
 	req.Header.Set("Authorization", "Bearer "+token)
-	
+
 	// Try to get a Karmada client using this token
 	karmadaClient, err := client.GetKarmadaClientFromRequest(req)
 	if err != nil {
 		return err
 	}
-	
+
 	// Try to get the server version to verify connectivity and permissions
 	_, err = karmadaClient.Discovery().ServerVersion()
 	if err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -88,22 +88,22 @@ func saveTokenToEtcd(ctx context.Context, token string) error {
 	// Create a timeout context
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	
+
 	// Get the etcd client
 	etcdClient, err := etcd.GetEtcdClient(nil)
 	if err != nil || etcdClient == nil {
 		return apierrors.NewInternalError(err)
 	}
-	
-	// Store the token in etcd with the key "karmada-dashboard/service-account-token"
+
+	// Store the token in etcd with the key "ml-platform-admin/service-account-token"
 	key := ServiceAccountTokenKey
 	_, err = etcdClient.Put(ctx, key, token)
-	
+
 	return err
 }
 
 // Constants for service account token storage
 const (
 	// ServiceAccountTokenKey is the key used to store the token in etcd
-	ServiceAccountTokenKey = "karmada-dashboard/service-account-token"
+	ServiceAccountTokenKey = "ml-platform-admin/service-account-token"
 )

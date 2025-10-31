@@ -1,15 +1,15 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: karmada-dashboard-web
-  namespace: karmada-system
+  name: ml-platform-admin-web
+  namespace: ml-platform-system
   labels:
-    app: karmada-dashboard-web
+    app: ml-platform-admin-web
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: karmada-dashboard-web
+      app: ml-platform-admin-web
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -18,18 +18,18 @@ spec:
   template:
     metadata:
       labels:
-        app: karmada-dashboard-web
+        app: ml-platform-admin-web
     spec:
       automountServiceAccountToken: false
       containers:
         - command:
-            - karmada-dashboard-web
+            - ml-platform-admin-web
             - --static-dir=/static
             - --insecure-bind-address=0.0.0.0
             - --bind-address=0.0.0.0
             - --dashboard-config-path=/config/dashboard-config.yaml
-          name: karmada-dashboard-web
-          image: lehuannhatrang/ml-platform-admin-web:v0.39
+          name: ml-platform-admin-web
+          image: lehuannhatrang/ml-platform-admin-web:v0.1
           imagePullPolicy: IfNotPresent
           env:
             - name: GIN_MODE
@@ -73,22 +73,22 @@ spec:
             secretName: kubeconfig
         - name: dashboard-config
           configMap:
-            name:  karmada-dashboard-configmap
+            name:  ml-platform-admin-configmap
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: karmada-dashboard-web
-  namespace: karmada-system
+  name: ml-platform-admin-web
+  namespace: ml-platform-system
   labels:
-    app: karmada-dashboard-web
+    app: ml-platform-admin-web
 spec:
   ports:
-    - name: karmada-dashboard-web
+    - name: ml-platform-admin-web
       port: 8000
       protocol: TCP
       targetPort: 8000
   selector:
-    app: karmada-dashboard-web
+    app: ml-platform-admin-web
   type: ClusterIP

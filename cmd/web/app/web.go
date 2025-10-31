@@ -43,8 +43,8 @@ import (
 func NewWebCommand(ctx context.Context) *cobra.Command {
 	opts := options.NewOptions()
 	cmd := &cobra.Command{
-		Use:  "karmada-dashboard-web",
-		Long: `The karmada-dashboard-web serve static files and api proxy for karmada-dashboard web ui. `,
+		Use:  "ml-platform-admin-web",
+		Long: `The ml-platform-admin-web serve static files and api proxy for ml-platform-admin web ui. `,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			// validate options
 			//if errs := opts.Validate(); len(errs) != 0 {

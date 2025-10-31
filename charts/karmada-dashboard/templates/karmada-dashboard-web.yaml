@@ -1,15 +1,15 @@
-{{- $name := include "karmada-dashboard.name" . -}}
+{{- $name := include "ml-platform-admin.name" . -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ $name }}-web
-  namespace: {{ include "karmada-dashboard.namespace" . }}
+  namespace: {{ include "ml-platform-admin.namespace" . }}
   labels:
-    {{- include "karmada-dashboard.web.labels" . | nindent 4 }}
+    {{- include "ml-platform-admin.web.labels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:
-      {{- include "karmada-dashboard.web.labels" . | nindent 6 }}
+      {{- include "ml-platform-admin.web.labels" . | nindent 6 }}
   replicas: {{ .Values.web.replicaCount }}
   {{- with .Values.web.strategy }}
   strategy:
@@ -22,19 +22,19 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "karmada-dashboard.web.labels" . | nindent 8 }}
+        {{- include "ml-platform-admin.web.labels" . | nindent 8 }}
         {{- with .Values.web.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      {{- include "karmada-dashboard.imagePullSecrets" . | nindent 6 }}
+      {{- include "ml-platform-admin.imagePullSecrets" . | nindent 6 }}
       securityContext:
         {{- toYaml .Values.web.podSecurityContext | nindent 8 }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.web.securityContext | nindent 12 }}
-          image: {{ template "karmada-dashboard.web.image" . }}
+          image: {{ template "ml-platform-admin.web.image" . }}
           imagePullPolicy: {{ .Values.web.image.pullPolicy }}
           ports:
             - name: http
@@ -62,7 +62,7 @@ spec:
           resources:
             {{- toYaml .Values.web.resources | nindent 12 }}
           command:
-            - karmada-dashboard-web
+            - ml-platform-admin-web
             - --static-dir=/static
             - --insecure-bind-address=0.0.0.0
             - --bind-address=0.0.0.0
@@ -86,7 +86,7 @@ spec:
       volumes:
         - name: dashboard-config
           configMap:
-            name: karmada-dashboard-configmap
+            name: ml-platform-admin-configmap
 
 {{ if .Values.web.podDisruptionBudget }}
 ---
@@ -94,12 +94,12 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: {{ $name }}-web
-  namespace: {{ include "karmada-dashboard.namespace" . }}
+  namespace: {{ include "ml-platform-admin.namespace" . }}
   labels:
-    {{- include "karmada-dashboard.web.labels" . | nindent 4 }}
+    {{- include "ml-platform-admin.web.labels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:
-      {{- include "karmada-dashboard.web.labels" . | nindent 6 }}
+      {{- include "ml-platform-admin.web.labels" . | nindent 6 }}
   {{ toYaml .Values.web.podDisruptionBudget | nindent 2 }}
 {{- end -}}

@@ -1,12 +1,12 @@
 {
-  "name": "karmada-dashboard-ui",
+  "name": "ml-platform-admin-ui",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dashboard:dev": "turbo dev --filter @karmada/dashboard",
-    "demos:dev": "turbo dev --filter @karmada/demos",
-    "dashboard:build": "turbo build --filter @karmada/dashboard",
+    "dashboard:dev": "turbo dev --filter @ml-platform-admin/dashboard",
+    "demos:dev": "turbo dev --filter @ml-platform-admin/demos",
+    "dashboard:build": "turbo build --filter @ml-platform-admin/dashboard",
     "prepare": "cd .. && husky install ui/.husky"
   },
   "engines": {

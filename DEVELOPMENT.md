@@ -44,9 +44,9 @@ Bringup the development services:
 kubectl apply -k artifacts/developments
 ```
 
-The minimal environment consists of one host cluster and three member cluster, the host cluster is responsible for deploying karmada control-plane, after karmada control-plane is up, member clusters will be managed by karmada control-plane, member1 and member2 cluster will be managed in `push` mode, and the member3 cluster will be managed in `pull` mode. After you see the success tips for installing, you can start `api` project. To start the `api` project locally, you should fetch kubeconfig for `karmada-apiserver` and `karmada-host` context, you can get the file under the `$HOME/.kubeconfig/karmada.config`. Executing command `make karmada-dashboard-api` to build binary for `api` project, you can start `api` by 
+The minimal environment consists of one host cluster and three member cluster, the host cluster is responsible for deploying karmada control-plane, after karmada control-plane is up, member clusters will be managed by karmada control-plane, member1 and member2 cluster will be managed in `push` mode, and the member3 cluster will be managed in `pull` mode. After you see the success tips for installing, you can start `api` project. To start the `api` project locally, you should fetch kubeconfig for `karmada-apiserver` and `karmada-host` context, you can get the file under the `$HOME/.kubeconfig/karmada.config`. Executing command `make ml-platform-admin-api` to build binary for `api` project, you can start `api` by 
 ```shell
-_output/bin/${os name}/${os arch}/karmada-dashboard-api \
+_output/bin/${os name}/${os arch}/ml-platform-admin-api \
   --karmada-kubeconfig=${path/to/karmada.config} \
   --karmada-context=karmada-apiserver \
   --skip-karmada-apiserver-tls-verify \

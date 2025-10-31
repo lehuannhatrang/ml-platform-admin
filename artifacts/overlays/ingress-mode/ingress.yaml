@@ -1,14 +1,14 @@
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  name: ingress-karmada-dashboard
-  namespace: karmada-system
+  name: ingress-ml-platform-admin
+  namespace: ml-platform-system
 spec:
   rules:
     - http:
         paths:
           - backend:
-              serviceName: karmada-dashboard-web
+              serviceName: ml-platform-admin-web
               servicePort: 8000
             path: /
             pathType: ImplementationSpecific

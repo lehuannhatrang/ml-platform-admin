@@ -1,7 +1,7 @@
-# Karmada-dashboard
+# ML Platform Admin
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/kubernetes/dashboard/blob/master/LICENSE)
 
-Karmada Dashboard is a general-purpose, web-based control panel for Karmada which is a multi-cluster management project.
+ML Platform Admin is a web-based control panel for Admin of ML Platform to management Infra, Quota and Users.
 ![image](docs/images/readme-dcn_dashboard.png)
 
 ## 🚀QuickStart
@@ -14,8 +14,8 @@ If you don't already have the Karmada, you can launch one by following this [tut
 
 
 ---
-### Install Karmada-dashboard
-In the following steps, we are going to install Karmada Dashboard on the `mgmt-cluster` where running the Karmada
+### Install ML Platform Admin
+In the following steps, we are going to install ML Platform Admin Dashboard on the `mgmt-cluster` where running the Karmada
 control plane components. We assume that Karmada was installed in namespace `karmada-system` and mgmt-cluster config is 
 located at `$HOME/.kube/config`, if this differs from your environment, please modify the following commands 
 accordingly. 
@@ -27,7 +27,7 @@ export KUBECONFIG="$HOME/.kube/config"
 kubectl config use-context kubernetes
 ```
 
-2. Deploy Karmada Dashboard
+2. Deploy ML Platform Admin
 
 Clone this repo to your machine:
 ```
@@ -50,7 +50,7 @@ kubectl apply -f artifacts/persistent-volume/etcd-pv.yaml
 kubectl apply -f artifacts/persistent-volume/openfga-pv.yaml
 ```
 
-Run this script to deploy Karmada Dashboard:
+Run this script to deploy ML Platform Admin:
 ```bash
 sudo ./setup-nodeport-mode.sh
 ```
@@ -62,13 +62,13 @@ eyJhbGciOiJSUzI1NiIsImtpZCI6InZLdkRNclVZSFB6SUVXczBIRm8zMDBxOHFOanQxbWU4WUk1VVVp
 ```
 
 
-Then you will be able to access the Karmada Dashboard by `http://your-karmada-host:32000`.
-Note that, the Karmada Dashboard service type is `NodePort`, this exposes the dashboard on a specific port on each node
+Then you will be able to access the ML Platform Admin by `http://your-portal-host:32000`.
+Note that, the ML Platform Admin service type is `NodePort`, this exposes the dashboard on a specific port on each node
 of your `host cluster`, allowing you to access it via any node's IP address and that port.
 
 You also can use `kubectl port-forward` to forward a local port to the Dashboard's backend pod:
 ```
-kubectl port-forward -n karmada-system services/karmada-dashboard-web --address 0.0.0.0 8000:8000
+kubectl port-forward -n ml-platform-system services/ML Platform Admin-web --address 0.0.0.0 8000:8000
 ```
 Then you can access it via `http://localhost:8000`.
 
@@ -77,7 +77,7 @@ You still need the credentials and jwt token to login to the dashboard.
 
 
 ### Login Dashboard
-Now open Karmada-dashboard with url [http://your-karmada-host:32000 ]()
+Now open Admin portal with url [http://your-portal-host:32000 ]()
 
 Login to the dashboard with username and password:
 
@@ -92,7 +92,7 @@ Default username and password:
 
 The 1st time you login, you need to copy the token you just generated and paste it into the Enter token field on the login page. 
 ![image](docs/images/readme-login-en.png)
-Once the process of authentication passed, you can use karmada dashboard freely. You can follow the Usage of karmada-dashboard to have a quick experience of  karmada dashboard.
+Once the process of authentication passed, you can use Admin Portal freely. You can follow the Usage of ml-platform-admin to have a quick experience of Admin dashboard.
 
 Note: You may need to refresh the page after submitting the token.
 
@@ -105,7 +105,7 @@ You can uninstall the dashboard and openfga by running the following command:
 
 ## 🤖 AI Agent Setup
 
-To enable AI agent functionality in Karmada Dashboard, you need to deploy n8n workflows and MCP servers.
+To enable AI agent functionality in Admin Dashboard, you need to deploy n8n workflows and MCP servers.
 
 ### Prerequisites
 - n8n server with production webhook capabilities
@@ -124,7 +124,7 @@ To enable AI agent functionality in Karmada Dashboard, you need to deploy n8n wo
 
    After completing the n8n setup, copy your production webhook URL from n8n dashboard.
 
-3. **Update Karmada Dashboard configuration**
+3. **Update Admin Dashboard configuration**
 
    Add the webhook URL to the configmap by updating the `ai_agent_chat_webhook` field:
    ```yaml
@@ -135,29 +135,13 @@ To enable AI agent functionality in Karmada Dashboard, you need to deploy n8n wo
 
    Apply the configmap changes and restart the API deployment:
    ```bash
-   kubectl rollout restart deployment/karmada-dashboard-api -n karmada-system
+   kubectl rollout restart deployment/ml-platform-system-admin-api -n ml-platform-system
    ```
 
 The AI agent functionality will be available in the dashboard once the deployment is successfully restarted.
 
 ![image](docs/images/dashboard-chatbot.png)
 
-## Meeting
-
-Regular Meeting For dashboard:
-* Wednesday at 14:30 UTC+8 (Chinese)(biweekly). [Convert to your timezone](https://www.thetimezoneconverter.com/?t=14%3A30&tz=GMT%2B8&).
-* There isn't a dedicated English meeting yet. If you have any topics to discuss, please join [the community meeting](https://github.com/karmada-io/karmada?tab=readme-ov-file#meeting).
-
-Resources:
-- [Meeting Notes and Agenda](https://docs.google.com/document/d/1dX3skCE-QRBWzABq3O9cG7yhIDUWLYWmg7kGq8UHU6s/edit)
-- [Meeting Calendar](https://calendar.google.com/calendar/embed?src=a71aae8a75e3558a90683596c71382b8195bf7c84cb50e6e75d1a3e64e08480b%40group.calendar.google.com&ctz=Asia%2FShanghai) | [Subscribe](https://calendar.google.com/calendar/u/1?cid=YTcxYWFlOGE3NWUzNTU4YTkwNjgzNTk2YzcxMzgyYjgxOTViZjdjODRjYjUwZTZlNzVkMWEzZTY0ZTA4NDgwYkBncm91cC5jYWxlbmRhci5nb29nbGUuY29t)
-- [Meeting Link](https://zoom.us/j/97070047574?pwd=lXha0Sqngw4mwtmArP1sjsLMMXk34z.1)
-
-## 💻Contributing
-Karmada dashboard is still catching up with the features of Karmada, we have only implemented the basic functionalities currently. 
-If you want to contribute to the development of the Karmada dashboard, you can refer to the document of development, we are happy to see more contributors join us.
-Please feel free to submit issues or pull requests to our repository.
-
 ## License
 
-Karmada-dashboard is under the Apache 2.0 license. See the [LICENSE](LICENSE) file for details.
+ML Platform Admin Dashboard is under the Apache 2.0 license. See the [LICENSE](LICENSE) file for details.

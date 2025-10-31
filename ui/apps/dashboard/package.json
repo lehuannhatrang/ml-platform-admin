@@ -1,5 +1,5 @@
 {
-  "name": "@karmada/dashboard",
+  "name": "@ml-platform-admin/dashboard",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",

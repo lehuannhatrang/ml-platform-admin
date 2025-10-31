@@ -1,15 +1,15 @@
-{{- $name := include "karmada-dashboard.name" . -}}
+{{- $name := include "ml-platform-admin.name" . -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ $name }}-api
-  namespace: {{ include "karmada-dashboard.namespace" . }}
+  namespace: {{ include "ml-platform-admin.namespace" . }}
   labels:
-    {{- include "karmada-dashboard.api.labels" . | nindent 4 }}
+    {{- include "ml-platform-admin.api.labels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:
-      {{- include "karmada-dashboard.selectorLabels" . | nindent 6 }}
+      {{- include "ml-platform-admin.selectorLabels" . | nindent 6 }}
   replicas: {{ .Values.api.replicaCount }}
   {{- with .Values.api.strategy }}
   strategy:
@@ -22,20 +22,20 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "karmada-dashboard.api.labels" . | nindent 8 }}
+        {{- include "ml-platform-admin.api.labels" . | nindent 8 }}
         {{- with .Values.api.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      serviceAccountName: karmada-dashboard
-      {{- include "karmada-dashboard.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: ml-platform-admin
+      {{- include "ml-platform-admin.imagePullSecrets" . | nindent 6 }}
       securityContext:
         {{- toYaml .Values.api.podSecurityContext | nindent 8 }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.api.securityContext | nindent 12 }}
-          image: {{ template "karmada-dashboard.api.image" . }}
+          image: {{ template "ml-platform-admin.api.image" . }}
           imagePullPolicy: {{ .Values.api.image.pullPolicy }}
           ports:
             - name: http
@@ -67,7 +67,7 @@ spec:
               subPath: kubeconfig
               mountPath: /etc/kubeconfig
           command:
-            - karmada-dashboard-api
+            - ml-platform-admin-api
             - --karmada-kubeconfig=/etc/kubeconfig
             - --karmada-context={{ .Values.api.kubeconfigContext }}
             - --kubeconfig=/etc/kubeconfig
@@ -97,12 +97,12 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: {{ $name }}-api
-  namespace: {{ include "karmada-dashboard.namespace" . }}
+  namespace: {{ include "ml-platform-admin.namespace" . }}
   labels:
-    {{- include "karmada-dashboard.api.labels" . | nindent 4 }}
+    {{- include "ml-platform-admin.api.labels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:
-      {{- include "karmada-dashboard.api.labels" . | nindent 6 }}
+      {{- include "ml-platform-admin.api.labels" . | nindent 6 }}
   {{ toYaml .Values.api.podDisruptionBudget | nindent 2 }}
 {{- end -}}

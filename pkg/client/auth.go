@@ -23,11 +23,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/karmada-io/dashboard/pkg/etcd"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-	"github.com/karmada-io/dashboard/pkg/etcd"
 )
 
 const (
@@ -36,7 +36,7 @@ const (
 	// authorizationTokenPrefix is the default bearer token prefix.
 	authorizationTokenPrefix = "Bearer "
 	// serviceAccountTokenKey is the key used to store the token in etcd
-	serviceAccountTokenKey = "karmada-dashboard/service-account-token"
+	serviceAccountTokenKey = "ml-platform-admin/service-account-token"
 )
 
 func karmadaConfigFromRequest(request *http.Request) (*rest.Config, error) {
@@ -85,7 +85,7 @@ func buildAuthInfo(request *http.Request) (*clientcmdapi.AuthInfo, error) {
 		handleImpersonation(authInfo, request)
 		return authInfo, nil
 	}
-	
+
 	// If no authorization header is present, try to use the saved service account token
 	token, err := GetServiceAccountTokenFromEtcd(request.Context())
 	if err == nil && token != "" {
@@ -95,7 +95,7 @@ func buildAuthInfo(request *http.Request) (*clientcmdapi.AuthInfo, error) {
 		}
 		return authInfo, nil
 	}
-	
+
 	return nil, k8serrors.NewUnauthorized("MSG_LOGIN_UNAUTHORIZED_ERROR")
 }
 
@@ -104,23 +104,23 @@ func GetServiceAccountTokenFromEtcd(ctx context.Context) (string, error) {
 	// Create a timeout context
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	
+
 	// Get the etcd client
 	etcdClient, err := etcd.GetEtcdClient(nil)
 	if err != nil || etcdClient == nil {
 		return "", err
 	}
-	
+
 	// Get the token from etcd
 	resp, err := etcdClient.Get(ctx, serviceAccountTokenKey)
 	if err != nil {
 		return "", err
 	}
-	
+
 	if len(resp.Kvs) == 0 {
 		return "", fmt.Errorf("service account token not found in etcd")
 	}
-	
+
 	return string(resp.Kvs[0].Value), nil
 }
 

@@ -171,30 +171,35 @@ install_all() {
   echo "Checking and creating required secrets for dashboard..."
   
   # Check if kubeconfig-mgmt-cluster secret exists
-  if kubectl get secret kubeconfig -n karmada-system &>/dev/null; then
+  if kubectl get secret kubeconfig -n ml-platform-system &>/dev/null; then
     echo "Secret 'kubeconfig' already exists. Skipping creation."
   else
     echo "Creating 'kubeconfig' secret..."
-    kubectl create secret generic kubeconfig --from-file=kubeconfig=$HOME/.kube/config -n karmada-system
+    kubectl create secret generic kubeconfig --from-file=kubeconfig=$HOME/.kube/config -n ml-platform-system
     echo "Management cluster config secret created."
   fi
   
   # Check if kubeconfig-karmada-apiserver secret exists
-  if kubectl get secret kubeconfig-karmada-apiserver -n karmada-system &>/dev/null; then
+  if kubectl get secret kubeconfig-karmada-apiserver -n ml-platform-system &>/dev/null; then
     echo "Secret 'kubeconfig-karmada-apiserver' already exists. Skipping creation."
   else
     echo "Creating 'kubeconfig-karmada-apiserver' secret..."
-    kubectl create secret generic kubeconfig-karmada-apiserver --from-file=kubeconfig=$HOME/.kube/karmada-apiserver.config -n karmada-system
+    kubectl create secret generic kubeconfig-karmada-apiserver --from-file=kubeconfig=$HOME/.kube/karmada-apiserver.config -n ml-platform-system
     echo "Karmada API server config secret created."
   fi
   echo ""
+
+  # Step 0: Create namespace ml-platform-system if it doesn't exist
+  echo "Step 0: Creating namespace ml-platform-system if it doesn't exist..."
+  kubectl create namespace ml-platform-system --dry-run=client -o yaml | kubectl apply -f -
+  echo "Namespace ml-platform-system created."
   
   # Step 1: Check and Install OpenFGA using Helm
   echo "Step 1: Checking if OpenFGA is already installed..."
   
   # Check if OpenFGA is already installed
   set +e  # Don't exit on error
-  openfga_check=$(kubectl get deployment openfga -n karmada-system 2>&1)
+  openfga_check=$(kubectl get deployment openfga -n ml-platform-system 2>&1)
   check_exit_code=$?
   set -e  # Re-enable exit on error
   
@@ -202,7 +207,7 @@ install_all() {
   echo "Debug: OpenFGA check output: $openfga_check"
   
   if [ $check_exit_code -eq 0 ]; then
-    echo "OpenFGA is already installed in the karmada-system namespace. Skipping installation."
+    echo "OpenFGA is already installed in the ml-platform-system namespace. Skipping installation."
   else
     echo "OpenFGA is not installed. Proceeding with installation..."
     
@@ -215,9 +220,9 @@ install_all() {
 
     # Install OpenFGA with Helm
     echo "Installing OpenFGA with PostgreSQL..."
-    helm install --namespace karmada-system openfga openfga/openfga \
+    helm install --namespace ml-platform-system openfga openfga/openfga \
       --set datastore.engine=postgres \
-      --set datastore.uri="postgres://postgres:password@openfga-postgresql.karmada-system.svc.cluster.local:5432/postgres?sslmode=disable" \
+      --set datastore.uri="postgres://postgres:password@openfga-postgresql.ml-platform-system.svc.cluster.local:5432/postgres?sslmode=disable" \
       --set postgresql.enabled=true \
       --set postgresql.auth.postgresPassword=password \
       --set postgresql.auth.database=postgres \
@@ -230,7 +235,7 @@ install_all() {
   # Check for OpenFGA installation status for later steps
   OPENFGA_INSTALLED=false
   set +e  # Don't exit on error
-  openfga_check=$(kubectl get deployment openfga -n karmada-system 2>&1)
+  openfga_check=$(kubectl get deployment openfga -n ml-platform-system 2>&1)
   check_exit_code=$?
   set -e  # Re-enable exit on error
   
@@ -253,7 +258,7 @@ install_all() {
     echo "Step 3: OpenFGA is already running. Skipping wait."
   else
     echo "Step 3: Waiting for OpenFGA deployment to become ready..."
-    kubectl -n karmada-system wait --for=condition=available --timeout=300s deployment/openfga
+    kubectl -n ml-platform-system wait --for=condition=available --timeout=300s deployment/openfga
     echo "OpenFGA deployment is ready."
   fi
   echo ""
@@ -271,13 +276,13 @@ install_all() {
 
   # Step 6: Wait for dashboard deployments to be ready
   echo "Step 6: Waiting for dashboard deployments to become ready..."
-  kubectl -n karmada-system wait --for=condition=available --timeout=300s deployment/karmada-dashboard-api
-  kubectl -n karmada-system wait --for=condition=available --timeout=300s deployment/karmada-dashboard-web
+  kubectl -n ml-platform-system wait --for=condition=available --timeout=300s deployment/ml-platform-admin-api
+  kubectl -n ml-platform-system wait --for=condition=available --timeout=300s deployment/ml-platform-admin-web
   echo "Dashboard deployments are ready."
   echo ""
 
   # Get NodePort for dashboard web
-  WEB_NODEPORT=$(kubectl get svc -n karmada-system karmada-dashboard-web -o jsonpath='{.spec.ports[0].nodePort}')
+  WEB_NODEPORT=$(kubectl get svc -n ml-platform-system admin-dashboard-web -o jsonpath='{.spec.ports[0].nodePort}')
 
   # Step 7: Switch to karmada-apiserver context
   echo "Step 7: Switching to karmada-apiserver context..."
@@ -331,7 +336,7 @@ uninstall_all() {
   
   # Step 3: Uninstall OpenFGA Helm release
   echo "Step 3: Uninstalling OpenFGA Helm release..."
-  helm uninstall -n karmada-system openfga --wait
+  helm uninstall -n ml-platform-system openfga --wait
   echo "OpenFGA Helm release uninstalled."
   echo ""
   

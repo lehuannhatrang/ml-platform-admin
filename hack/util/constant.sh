@@ -70,8 +70,8 @@ KARMADA_METRICS_ADAPTER_LABEL="karmada-metrics-adapter"
 
 KARMADA_GO_PACKAGE="github.com/karmada-io/dashboard"
 KARMADA_TARGET_SOURCE=(
-  karmada-dashboard-api=cmd/api
-  karmada-dashboard-web=cmd/web
+  ml-platform-admin-api=cmd/api
+  ml-platform-admin-web=cmd/web
 )
 
 

@@ -7,8 +7,8 @@ VERSION 				?= $(shell hack/version.sh)
 .DEFAULT_GOAL := all
 
 # Build targets
-TARGETS := karmada-dashboard-api \
-		   karmada-dashboard-web
+TARGETS := ml-platform-admin-api \
+		   ml-platform-admin-web
 
 # Docker image related variables
 REGISTRY				?= docker.io/karmada
@@ -96,7 +96,7 @@ ifndef KUBECONFIG
 	$(error KUBECONFIG is required. Please specify the path to karmada kubeconfig)
 endif
 	@echo "Starting API server..."
-	@_output/bin/$(GOOS)/$(GOARCH)/karmada-dashboard-api \
+	@_output/bin/$(GOOS)/$(GOARCH)/ml-platform-admin-api \
 		--karmada-kubeconfig=$(KUBECONFIG) \
 		--karmada-context=$(KARMADA_CTX) \
 		--kubeconfig=$(KUBECONFIG) \
@@ -113,7 +113,7 @@ run-api: build
 ifndef KUBECONFIG
 	$(error KUBECONFIG is required. Please specify the path to karmada kubeconfig)
 endif
-	_output/bin/$(GOOS)/$(GOARCH)/karmada-dashboard-api \
+	_output/bin/$(GOOS)/$(GOARCH)/ml-platform-admin-api \
 		--karmada-kubeconfig=$(KUBECONFIG) \
 		--karmada-context=$(KARMADA_CTX) \
 		--kubeconfig=$(KUBECONFIG) \
@@ -147,7 +147,7 @@ endif
 # Show help
 .PHONY: help
 help:
-	@echo "Karmada Dashboard Makefile"
+	@echo "ML Platform Admin Makefile"
 	@echo ""
 	@echo "Usage:"
 	@echo "  make                  - Build all binaries (same as 'make all')"

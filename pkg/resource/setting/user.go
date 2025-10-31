@@ -26,19 +26,19 @@ import (
 
 	v1 "github.com/karmada-io/dashboard/cmd/api/app/types/api/v1"
 	"github.com/karmada-io/dashboard/pkg/auth"
-	"github.com/karmada-io/dashboard/pkg/etcd"
 	"github.com/karmada-io/dashboard/pkg/auth/fga"
+	"github.com/karmada-io/dashboard/pkg/etcd"
 )
 
 const (
 	// UserSettingsNamespace is the namespace where user settings are stored
-	UserSettingsNamespace = "karmada-dashboard"
+	UserSettingsNamespace = "ml-platform-admin"
 
 	// UserSettingsLabelKey is the label key for user settings
 	UserSettingsLabelKey = "app.kubernetes.io/managed-by"
 
 	// UserSettingsLabelValue is the label value for user settings
-	UserSettingsLabelValue = "karmada-dashboard"
+	UserSettingsLabelValue = "ml-platform-admin"
 
 	// UserSettingsType is the type annotation for user settings
 	UserSettingsType = "user-settings"
@@ -103,14 +103,14 @@ func CreateUserSetting(ctx context.Context, userSetting v1.UserSetting) error {
 	// First, create the user in etcd
 	// Check for password
 	password := userSetting.Password
-	
+
 	// If password not in top level field, check preferences as fallback
 	if password == "" {
 		if pwd, ok := userSetting.Preferences["password"]; ok && pwd != "" {
 			password = pwd
 		}
 	}
-	
+
 	// Validate password
 	if password == "" {
 		return fmt.Errorf("password is required")
@@ -130,7 +130,7 @@ func CreateUserSetting(ctx context.Context, userSetting v1.UserSetting) error {
 	if displayName == "" {
 		displayName = userSetting.Username
 	}
-	
+
 	// Make sure the role is valid
 	if role != "admin" && role != "basic_user" {
 		return fmt.Errorf("invalid role: %s", role)
@@ -196,11 +196,11 @@ func CreateUserSetting(ctx context.Context, userSetting v1.UserSetting) error {
 			klog.V(4).InfoS("OpenFGA service not initialized, skipping cluster permissions", "username", userSetting.Username)
 		} else {
 			klog.InfoS("Setting up cluster permissions", "username", userSetting.Username, "permissions", userSetting.ClusterPermissions)
-			
+
 			// For each cluster permission
 			for _, clusterPerm := range userSetting.ClusterPermissions {
 				clusterName := clusterPerm.Cluster
-				
+
 				// For each role in the cluster
 				for _, roleName := range clusterPerm.Roles {
 					// Skip invalid roles
@@ -208,7 +208,7 @@ func CreateUserSetting(ctx context.Context, userSetting v1.UserSetting) error {
 						klog.V(4).InfoS("Invalid cluster role, skipping", "username", userSetting.Username, "cluster", clusterName, "role", roleName)
 						continue
 					}
-					
+
 					// Create the relationship in OpenFGA
 					err := fgaService.GetClient().WriteTuple(ctx, userSetting.Username, roleName, "cluster", clusterName)
 					if err != nil {
@@ -231,7 +231,7 @@ func CreateUserSetting(ctx context.Context, userSetting v1.UserSetting) error {
 		}
 	}
 	userSetting.Preferences = cleanedPreferences
-	
+
 	// Clear the password field so it's not stored
 	userSetting.Password = ""
 
@@ -267,30 +267,30 @@ func UpdateUserSetting(ctx context.Context, userSetting v1.UserSetting) error {
 
 	// Check if we need to update the user in etcd (password, role, email, etc.)
 	userManager := etcd.NewUserManager(etcdClient)
-	
+
 	// Get the user from etcd
 	user, err := userManager.GetUser(ctx, userSetting.Username)
 	if err != nil {
 		return fmt.Errorf("failed to get user from etcd: %w", err)
 	}
-	
+
 	// Check for password
 	password := userSetting.Password
-	
+
 	// If password not in top level field, check preferences as fallback
 	if password == "" {
 		if pwd, ok := userSetting.Preferences["password"]; ok && pwd != "" {
 			password = pwd
 		}
 	}
-	
+
 	// Extract relevant fields from preferences
 	role, hasRole := userSetting.Preferences["role"]
 	email, hasEmail := userSetting.Preferences["email"]
-	
+
 	// Check if we need to update any user fields
 	needsUpdate := false
-	
+
 	// Only update if we have the value and it's different
 	if hasRole && role != "" && role != user.Role {
 		// Make sure the role is valid
@@ -300,12 +300,12 @@ func UpdateUserSetting(ctx context.Context, userSetting v1.UserSetting) error {
 		user.Role = role
 		needsUpdate = true
 	}
-	
+
 	if hasEmail && email != user.Email {
 		user.Email = email
 		needsUpdate = true
 	}
-	
+
 	// If there's a password, update it
 	if password != "" {
 		err = userManager.UpdatePassword(ctx, userSetting.Username, password)
@@ -314,7 +314,7 @@ func UpdateUserSetting(ctx context.Context, userSetting v1.UserSetting) error {
 		}
 		klog.InfoS("Password updated for user", "username", userSetting.Username)
 	}
-	
+
 	// Update the user in etcd if needed
 	if needsUpdate {
 		err = userManager.UpdateUser(ctx, user)
@@ -332,11 +332,11 @@ func UpdateUserSetting(ctx context.Context, userSetting v1.UserSetting) error {
 			klog.V(4).InfoS("OpenFGA service not initialized, skipping cluster permissions", "username", userSetting.Username)
 		} else {
 			klog.InfoS("Updating cluster permissions", "username", userSetting.Username, "permissions", userSetting.ClusterPermissions)
-			
+
 			// For each cluster permission
 			for _, clusterPerm := range userSetting.ClusterPermissions {
 				clusterName := clusterPerm.Cluster
-				
+
 				// For each role in the cluster
 				for _, roleName := range clusterPerm.Roles {
 					// Skip invalid roles
@@ -344,7 +344,7 @@ func UpdateUserSetting(ctx context.Context, userSetting v1.UserSetting) error {
 						klog.V(4).InfoS("Invalid cluster role, skipping", "username", userSetting.Username, "cluster", clusterName, "role", roleName)
 						continue
 					}
-					
+
 					// Create the relationship in OpenFGA
 					err := fgaService.GetClient().WriteTuple(ctx, userSetting.Username, roleName, "cluster", clusterName)
 					if err != nil {
@@ -367,7 +367,7 @@ func UpdateUserSetting(ctx context.Context, userSetting v1.UserSetting) error {
 		}
 	}
 	userSetting.Preferences = cleanedPreferences
-	
+
 	// Clear the password field so it's not stored
 	userSetting.Password = ""
 
@@ -467,18 +467,18 @@ func GetAllUsers(ctx context.Context) ([]v1.UserSetting, error) {
 		if userSetting.Preferences == nil {
 			userSetting.Preferences = make(map[string]string)
 		}
-		
+
 		// Add role and email from etcd if available
 		userSetting.Preferences["role"] = etcdUser.Role
 		if etcdUser.Email != "" {
 			userSetting.Preferences["email"] = etcdUser.Email
 		}
-		
+
 		// Use email as display name if not already set
 		if userSetting.DisplayName == "" && etcdUser.Email != "" {
 			userSetting.DisplayName = etcdUser.Email
 		}
-		
+
 		userSettings = append(userSettings, *userSetting)
 	}
 

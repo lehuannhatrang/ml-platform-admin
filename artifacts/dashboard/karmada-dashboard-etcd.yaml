@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: karmada-dashboard-etcd
-  namespace: karmada-system
+  name: ml-platform-admin-etcd
+  namespace: ml-platform-system
   labels:
-    app: karmada-dashboard-etcd
+    app: ml-platform-admin-etcd
 spec:
   replicas: 1
-  serviceName: karmada-dashboard-etcd-headless
+  serviceName: ml-platform-admin-etcd-headless
   selector:
     matchLabels: 
-      app: karmada-dashboard-etcd
+      app: ml-platform-admin-etcd
   updateStrategy:
     type: RollingUpdate
   template:
     metadata:
       labels:
-        app: karmada-dashboard-etcd
+        app: ml-platform-admin-etcd
     spec:
       automountServiceAccountToken: false
       containers:
@@ -46,10 +46,10 @@ spec:
             - --listen-client-urls
             - http://0.0.0.0:2379
             - --advertise-client-urls
-            - http://karmada-dashboard-etcd.karmada-system.svc:2379
+            - http://ml-platform-admin-etcd.ml-platform-system.svc:2379
             - '--initial-cluster'
             - >-
-              etcd0=http://karmada-dashboard-etcd-0.karmada-dashboard-etcd-headless.karmada-system.svc:2380
+              etcd0=http://ml-platform-admin-etcd-0.ml-platform-admin-etcd-headless.ml-platform-system.svc:2380
             - --initial-cluster-state
             - new
             - --data-dir=/var/lib/etcd
@@ -82,13 +82,13 @@ spec:
       volumes:
         - name: etcd-data
           persistentVolumeClaim:
-            claimName: karmada-dashboard-etcd-data
+            claimName: ml-platform-admin-etcd-data
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: karmada-dashboard-etcd-data
-  namespace: karmada-system
+  name: ml-platform-admin-etcd-data
+  namespace: ml-platform-system
 spec:
   accessModes:
     - ReadWriteOnce
@@ -100,10 +100,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: karmada-dashboard-etcd
-  namespace: karmada-system
+  name: ml-platform-admin-etcd
+  namespace: ml-platform-system
   labels:
-    app: karmada-dashboard-etcd
+    app: ml-platform-admin-etcd
 spec:
   ports:
     - name: client
@@ -113,17 +113,17 @@ spec:
       port: 2380
       targetPort: 2380
   selector:
-    app: karmada-dashboard-etcd
+    app: ml-platform-admin-etcd
   type: ClusterIP
 ---
 # Headless service for etcd peer discovery
 apiVersion: v1
 kind: Service
 metadata:
-  name: karmada-dashboard-etcd-headless
-  namespace: karmada-system
+  name: ml-platform-admin-etcd-headless
+  namespace: ml-platform-system
   labels:
-    app: karmada-dashboard-etcd
+    app: ml-platform-admin-etcd
 spec:
   publishNotReadyAddresses: true
   ports:
@@ -134,5 +134,5 @@ spec:
       port: 2380
       targetPort: 2380
   selector:
-    app: karmada-dashboard-etcd
+    app: ml-platform-admin-etcd
   clusterIP: None

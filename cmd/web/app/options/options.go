@@ -51,7 +51,7 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&o.InsecurePort, "insecure-port", 8000, "port to listen to for incoming HTTP requests")
 	fs.StringVar(&o.StaticDir, "static-dir", "./static", "directory to serve static files")
 	fs.StringVar(&o.I18nDir, "i18n-dir", "./i18n", "directory to serve i18n files")
-	fs.BoolVar(&o.EnableAPIProxy, "enable-api-proxy", true, "whether enable proxy to karmada-dashboard-api, if set true, all requests with /api prefix will be proxyed to karmada-dashboard-api.karmada-system.svc.cluster.local")
-	fs.StringVar(&o.APIProxyEndpoint, "api-proxy-endpoint", "http://karmada-dashboard-api.karmada-system.svc.cluster.local:8000", "karmada-dashboard-api endpoint")
+	fs.BoolVar(&o.EnableAPIProxy, "enable-api-proxy", true, "whether enable proxy to ml-platform-admin-api, if set true, all requests with /api prefix will be proxyed to ml-platform-admin-api.ml-platform-system.svc.cluster.local")
+	fs.StringVar(&o.APIProxyEndpoint, "api-proxy-endpoint", "http://ml-platform-admin-api.ml-platform-system.svc.cluster.local:8000", "ml-platform-admin-api endpoint")
 	fs.StringVar(&o.DashboardConfigPath, "dashboard-config-path", "./config/dashboard-config.yaml", "path to dashboard config file")
 }

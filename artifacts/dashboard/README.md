@@ -1,3 +1,3 @@
 NOTE:
-workload including `karmada-dashboard-api` and `karmada-dashboard-web` should be installed into karmada-host cluster, however
-service account `karmada-dashboard-sa` should be installed into karmada-apiserver, don't make mistake.
+workload including `ml-platform-admin-api` and `ml-platform-admin-web` should be installed into karmada-host cluster, however
+service account ml-platform-admin` should be installed into ml-platform-apiserver, don't make mistake.

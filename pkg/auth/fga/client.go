@@ -81,7 +81,7 @@ func NewOpenFGAClient(apiURL string) (*OpenFGAClient, error) {
 	}
 
 	// Default store ID
-	storeID := "karmada-dashboard"
+	storeID := "ml-platform-admin"
 	authModelID := ""
 
 	c := &OpenFGAClient{

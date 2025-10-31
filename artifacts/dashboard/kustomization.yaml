@@ -11,13 +11,13 @@ resources:
 # Configuration for secrets that can be created at deploy time
 secretGenerator:
   # Secret for dashboard admin user
-  - name: karmada-dashboard-admin
+  - name: ml-platform-admin-inital-password
     type: Opaque
     literals:
       - password=admin123  # Default password, should be changed in production
 
   # Secret for JWT token signing
-  - name: karmada-dashboard-jwt
+  - name: ml-platform-admin-jwt
     type: Opaque
     literals:
-      - secret=karmada-dashboard-secret-key-change-me-in-production
+      - secret=ml-platform-admin-secret-key-change-me-in-production

@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "karmada-dashboard.name" . }}-api
-  namespace: {{ include "karmada-dashboard.namespace" . }}
+  name: {{ include "ml-platform-admin.name" . }}-api
+  namespace: {{ include "ml-platform-admin.namespace" . }}
   labels:
-    {{- include "karmada-dashboard.api.labels" . | nindent 4 }}
+    {{- include "ml-platform-admin.api.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.api.service.type }}
   ports:
@@ -13,4 +13,4 @@ spec:
       protocol: TCP
       name: http
   selector:
-    {{- include "karmada-dashboard.api.labels" . | nindent 4 }}
+    {{- include "ml-platform-admin.api.labels" . | nindent 4 }}

@@ -7,7 +7,7 @@ services:
     container_name: postgres
     command: postgres -c 'max_connections=100'
     networks:
-      - karmada-network
+      - ml-platform-network
     ports:
       - "5432:5432"
     environment:
@@ -33,7 +33,7 @@ services:
       - OPENFGA_DATASTORE_URI=postgres://postgres:password@postgres:5432/postgres?sslmode=disable
     command: migrate
     networks:
-      - karmada-network
+      - ml-platform-network
 
   # OpenFGA service
   openfga:
@@ -49,7 +49,7 @@ services:
       - OPENFGA_DATASTORE_MAX_OPEN_CONNS=100
       - OPENFGA_PLAYGROUND_ENABLED=true
     networks:
-      - karmada-network
+      - ml-platform-network
     ports:
       - "8080:8080" # http
       - "8081:8081" # grpc
@@ -60,10 +60,10 @@ services:
       timeout: 30s
       retries: 3
 
-  # etcd service for Karmada Dashboard
+  # etcd service for ml-platform-admin
   etcd:
     image: quay.io/coreos/etcd:v3.5.5
-    container_name: karmada-dashboard-etcd
+    container_name: ml-platform-admin-etcd
     command:
       - /usr/local/bin/etcd
       - --advertise-client-urls=http://0.0.0.0:2379
@@ -72,7 +72,7 @@ services:
     volumes:
       - etcd-data:/etcd-data
     networks:
-      - karmada-network
+      - ml-platform-network
     ports:
       - "2379:2379"
     healthcheck:
@@ -81,10 +81,10 @@ services:
       timeout: 5s
       retries: 5
 
-  # Karmada Dashboard API
-  karmada-dashboard-api:
+  # ml-platform-admin API
+  ml-platform-admin-api:
     image: lehuannhatrang/ml-platform-admin-api:v0.46
-    container_name: karmada-dashboard-api
+    container_name: ml-platform-admin-api
     depends_on:
       etcd:
         condition: service_healthy
@@ -93,7 +93,7 @@ services:
     volumes:
       - ./artifacts/kubeconfig:/etc/karmada/kubeconfig
     command:
-      - /bin/karmada-dashboard-api
+      - /bin/ml-platform-admin-api
       - --bind-address=0.0.0.0
       - --kubeconfig=/etc/karmada/kubeconfig/mgmt-cluster.config
       - --karmada-kubeconfig=/etc/karmada/kubeconfig/karmada-apiserver.config
@@ -102,35 +102,35 @@ services:
       - --openfga-api-url=http://openfga:8080
       - --insecure-bind-address=0.0.0.0
     networks:
-      - karmada-network
+      - ml-platform-network
     ports:
       - "8000:8000" # HTTP
       - "8001:8001" # HTTPS
 
-  # Karmada Dashboard Web
-  karmada-dashboard-web:
+  # ml-platform-admin Web
+  ml-platform-admin-web:
     image: lehuannhatrang/ml-platform-admin-web:v0.46
-    container_name: karmada-dashboard-web
+    container_name: ml-platform-admin-web
     depends_on:
-      - karmada-dashboard-api
+      - ml-platform-admin-api
     volumes:
       - ./artifacts/dashboard/karmada-dashboard-configmap.yaml:/etc/karmada/config/dashboard-configmap.yaml
     command:
-      - karmada-dashboard-web
+      - ml-platform-admin-web
       - --static-dir=/static
       - --insecure-bind-address=0.0.0.0
       - --bind-address=0.0.0.0
       - --dashboard-config-path=/etc/karmada/config/dashboard-configmap.yaml
-      - --api-proxy-endpoint=http://karmada-dashboard-api:8000
+      - --api-proxy-endpoint=http://ml-platform-admin-api:8000
     networks:
-      - karmada-network
+      - ml-platform-network
     ports:
       - "3800:8000"
     environment:
       - GIN_MODE=release
 
 networks:
-  karmada-network:
+  ml-platform-network:
     driver: bridge
 
 volumes:

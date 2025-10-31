@@ -6,8 +6,8 @@ resources:
   - ../../openfga
 
 configMapGenerator:
-  - name: karmada-dashboard-configmap
-    namespace: karmada-system
+  - name: ml-platform-admin-configmap
+    namespace: ml-platform-system
     behavior: replace
     files:
       - prod.yaml=dashboard-config.yaml
@@ -15,8 +15,8 @@ configMapGenerator:
 patches:
   - target:
       kind: Service
-      name: karmada-dashboard-web
-      namespace: karmada-system
+      name: ml-platform-admin-web
+      namespace: ml-platform-system
       version: v1
     patch: |-
       - op: replace
@@ -28,7 +28,7 @@ patches:
   - target:
       kind: Service
       name: openfga-api
-      namespace: karmada-system
+      namespace: ml-platform-system
       version: v1
     patch: |-
       - op: replace

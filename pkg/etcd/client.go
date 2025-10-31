@@ -35,25 +35,25 @@ const (
 	// DefaultRequestTimeout is the default request timeout for the etcd client
 	DefaultRequestTimeout = 5 * time.Second
 	// DefaultEndpoint is the default endpoint for the etcd client
-	DefaultEndpoint = "http://karmada-dashboard-etcd:2379"
+	DefaultEndpoint = "http://ml-platform-admin-etcd:2379"
 )
 
 var (
-	etcdClient     *clientv3.Client
-	etcdClientOnce sync.Once
+	etcdClient      *clientv3.Client
+	etcdClientOnce  sync.Once
 	etcdClientMutex sync.Mutex
 )
 
 // Options holds the etcd client configuration options
 type Options struct {
-	Endpoints       []string
-	DialTimeout     time.Duration
-	RequestTimeout  time.Duration
-	CertFile        string
-	KeyFile         string
-	TrustedCAFile   string
-	SkipTLSVerify   bool
-	UseTLS          bool
+	Endpoints      []string
+	DialTimeout    time.Duration
+	RequestTimeout time.Duration
+	CertFile       string
+	KeyFile        string
+	TrustedCAFile  string
+	SkipTLSVerify  bool
+	UseTLS         bool
 }
 
 // NewDefaultOptions returns a new Options with default values
@@ -104,25 +104,25 @@ func GetEtcdClient(opts *Options) (*clientv3.Client, error) {
 	// Protect access to the client
 	etcdClientMutex.Lock()
 	defer etcdClientMutex.Unlock()
-	
+
 	// Check if we already have a working client
 	if etcdClient != nil {
 		// Test if the existing client is still working
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
-		
+
 		_, err := etcdClient.Get(ctx, "connection_test")
 		if err == nil {
 			// Client is still working, return it
 			return etcdClient, nil
 		}
-		
+
 		// Client is not working, close it and create a new one
 		klog.ErrorS(err, "Existing etcd client is not working, creating a new one")
 		etcdClient.Close()
 		etcdClient = nil
 	}
-	
+
 	// Create a new client
 	var err error
 	etcdClient, err = newEtcdClient(opts)
@@ -139,15 +139,15 @@ func newEtcdClient(opts *Options) (*clientv3.Client, error) {
 	if len(opts.Endpoints) == 0 {
 		opts.Endpoints = []string{DefaultEndpoint}
 	}
-	
+
 	if opts.DialTimeout == 0 {
 		opts.DialTimeout = DefaultDialTimeout
 	}
-	
+
 	if opts.RequestTimeout == 0 {
 		opts.RequestTimeout = DefaultRequestTimeout
 	}
-	
+
 	klog.InfoS("Creating new etcd client", "endpoints", opts.Endpoints, "dialTimeout", opts.DialTimeout)
 
 	config := clientv3.Config{
@@ -171,14 +171,14 @@ func newEtcdClient(opts *Options) (*clientv3.Client, error) {
 	// Try to create client with retries
 	var client *clientv3.Client
 	var err error
-	
+
 	maxRetries := 3
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 		client, err = clientv3.New(config)
 		if err == nil {
 			break
 		}
-		
+
 		if attempt < maxRetries {
 			klog.ErrorS(err, "Failed to create etcd client, retrying", "attempt", attempt, "maxRetries", maxRetries)
 			time.Sleep(time.Duration(attempt) * 500 * time.Millisecond)
@@ -187,7 +187,7 @@ func newEtcdClient(opts *Options) (*clientv3.Client, error) {
 			return nil, fmt.Errorf("failed to create etcd client: %v", err)
 		}
 	}
-	
+
 	if client == nil {
 		return nil, fmt.Errorf("failed to create etcd client: unknown error")
 	}
@@ -195,7 +195,7 @@ func newEtcdClient(opts *Options) (*clientv3.Client, error) {
 	// Test connection with shorter timeout for quicker feedback
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	
+
 	_, err = client.Get(ctx, "test_connection")
 	if err != nil {
 		klog.ErrorS(err, "Failed to connect to etcd", "endpoints", opts.Endpoints)

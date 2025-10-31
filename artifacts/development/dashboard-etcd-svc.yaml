@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: karmada-dashboard-etcd-nodeport
-  namespace: karmada-system
+  name: ml-platform-admin-etcd-nodeport
+  namespace: ml-platform-system
   labels:
-    app: karmada-dashboard-etcd
+    app: ml-platform-admin-etcd
 spec:
   ports:
     - protocol: TCP
@@ -12,5 +12,5 @@ spec:
       targetPort: 2380
       nodePort: 32380
   selector:
-    app: karmada-dashboard-etcd
+    app: ml-platform-admin-etcd
   type: NodePort

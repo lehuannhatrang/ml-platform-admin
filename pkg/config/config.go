@@ -34,8 +34,8 @@ import (
 var dashboardConfig DashboardConfig
 
 const (
-	configName      = "karmada-dashboard-configmap"
-	configNamespace = "karmada-system"
+	configName      = "ml-platform-admin-configmap"
+	configNamespace = "ml-platform-system"
 	defaultEnvName  = "prod"
 )
 
