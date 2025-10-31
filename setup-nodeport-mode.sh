@@ -301,7 +301,7 @@ install_all() {
 
   # Step 9: Get JWT token
   echo "Step 9: Retrieving JWT token..."
-  JWT_TOKEN=$(kubectl -n karmada-system get secret/karmada-dashboard-secret -o go-template="{{.data.token | base64decode}}")
+  JWT_TOKEN=$(kubectl -n karmada-system get secret/ml-platform-admin-secret -o go-template="{{.data.token | base64decode}}")
   echo "JWT token retrieved."
   echo ""
 
