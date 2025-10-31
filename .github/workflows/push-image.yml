@@ -60,7 +60,7 @@ jobs:
       - name: Build ml-platform-admin-web binary
         run: make ml-platform-admin-web
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: dashboard_artifact
           path: _output/bin/${{ steps.misc.outputs.os }}/${{ steps.misc.outputs.arch }}/dist
