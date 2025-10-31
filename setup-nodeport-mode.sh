@@ -169,6 +169,12 @@ install_all() {
   
   # Create secrets for dashboard if they don't exist
   echo "Checking and creating required secrets for dashboard..."
+
+  
+  # Step 0: Create namespace ml-platform-system if it doesn't exist
+  echo "Step 0: Creating namespace ml-platform-system if it doesn't exist..."
+  kubectl create namespace ml-platform-system --dry-run=client -o yaml | kubectl apply -f -
+  echo "Namespace ml-platform-system created."
   
   # Check if kubeconfig-mgmt-cluster secret exists
   if kubectl get secret kubeconfig -n ml-platform-system &>/dev/null; then
@@ -188,11 +194,6 @@ install_all() {
     echo "Karmada API server config secret created."
   fi
   echo ""
-
-  # Step 0: Create namespace ml-platform-system if it doesn't exist
-  echo "Step 0: Creating namespace ml-platform-system if it doesn't exist..."
-  kubectl create namespace ml-platform-system --dry-run=client -o yaml | kubectl apply -f -
-  echo "Namespace ml-platform-system created."
   
   # Step 1: Check and Install OpenFGA using Helm
   echo "Step 1: Checking if OpenFGA is already installed..."
