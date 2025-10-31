@@ -7,7 +7,7 @@ ai_agent_chat_webhook: ''
 authorization:
   type: "openfga"
   openfga:
-    api_url: "http://openfga-api.karmada-system.svc.cluster.local:8080"
+    api_url: "http://openfga-api.ml-platform-system.svc.cluster.local:8080"
     store_id: ""  # This will need to be populated after creating a store
     authorization_model_id: ""  # This will need to be populated after creating an authorization model
 menu_configs:

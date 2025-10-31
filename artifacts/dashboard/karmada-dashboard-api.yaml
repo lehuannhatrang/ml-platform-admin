@@ -36,7 +36,7 @@ spec:
             - --porch-api=https://api.porch-system.svc.cluster.local:443
             - --skip-porch-tls-verify=true
           name: ml-platform-admin-api
-          image: lehuannhatrang/ml-platform-admin-api:v0.1
+          image: lehuannhatrang/ml-platform-admin-api:v0.2
           imagePullPolicy: IfNotPresent
           env:
             - name: GIN_MODE

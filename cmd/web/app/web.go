@@ -100,7 +100,7 @@ func serve(opts *options.Options) {
 		g := r.Group(pathPrefix)
 		g.StaticFS("/static", http.Dir(opts.StaticDir))
 		if opts.EnableAPIProxy {
-			//	https://karmada-apiserver.karmada-system.svc.cluster.local:5443
+			//	https://karmada-apiserver.ml-platform-system.svc.cluster.local:5443
 			g.Any("/api/*path", func(c *gin.Context) {
 				remote, _ := url.Parse(opts.APIProxyEndpoint)
 				proxy := httputil.NewSingleHostReverseProxy(remote)

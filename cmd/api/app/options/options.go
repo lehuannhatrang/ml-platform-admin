@@ -69,7 +69,7 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&o.OpenAPIEnabled, "openapi-enabled", false, "enables OpenAPI v2 endpoint under '/apidocs.json'")
 	fs.StringVar(&o.EtcdHost, "etcd-host", "ml-platform-admin-etcd.ml-platform-system.svc", "Hostname or IP address of the etcd server used for user authentication")
 	fs.IntVar(&o.EtcdPort, "etcd-port", 2379, "Port number for the etcd server used for user authentication")
-	fs.StringVar(&o.OpenFGAAPIURL, "openfga-api-url", "http://openfga.karmada-system.svc:8080", "The URL for the OpenFGA API server")
+	fs.StringVar(&o.OpenFGAAPIURL, "openfga-api-url", "http://openfga.ml-platform-system.svc:8080", "The URL for the OpenFGA API server")
 	fs.StringVar(&o.PorchAPIURL, "porch-api", "", "The URL for the Porch API server")
 	fs.BoolVar(&o.SkipPorchTLSVerify, "skip-porch-tls-verify", false, "Skip TLS certificate verification when connecting to the Porch API")
 }

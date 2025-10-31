@@ -5,7 +5,7 @@ set -e
 # It will just check the OpenFGA API status without creating any models
 
 # Try accessing OpenFGA through the internal Kubernetes service first
-INTERNAL_API_URL="http://openfga-api.karmada-system.svc.cluster.local:8080"
+INTERNAL_API_URL="http://openfga-api.ml-platform-system.svc.cluster.local:8080"
 NODEPORT_API_URL="http://localhost:30080"
 
 # Check OpenFGA health (internal first, then NodePort)
@@ -45,7 +45,7 @@ echo ""
 echo "authorization:"
 echo "  type: \"openfga\""
 echo "  openfga:"
-echo "    api_url: \"http://openfga-api.karmada-system.svc.cluster.local:8080\""
+echo "    api_url: \"http://openfga-api.ml-platform-system.svc.cluster.local:8080\""
 echo "    store_id: \"<your-store-id>\""
 echo "    authorization_model_id: \"<your-model-id>\""
 echo ""

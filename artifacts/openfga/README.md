@@ -13,7 +13,7 @@ OpenFGA should be installed in the `karmada-system` namespace using Helm:
 ```bash
 helm install --namespace karmada-system openfga openfga/openfga \
   --set datastore.engine=postgres \
-  --set datastore.uri="postgres://postgres:password@openfga-postgresql.karmada-system.svc.cluster.local:5432/postgres?sslmode=disable" \
+  --set datastore.uri="postgres://postgres:password@openfga-postgresql.ml-platform-system.svc.cluster.local:5432/postgres?sslmode=disable" \
   --set postgresql.enabled=true \
   --set postgresql.auth.postgresPassword=password \
   --set postgresql.auth.database=postgres
