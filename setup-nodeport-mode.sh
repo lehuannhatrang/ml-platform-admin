@@ -228,7 +228,9 @@ install_all() {
       --set postgresql.auth.postgresPassword=password \
       --set postgresql.auth.database=postgres \
       --set postgresql.image.repository=bitnamilegacy/postgresql \
-      --set postgresql.image.tag=15.4.0-debian-11-r45
+      --set postgresql.image.tag=15.4.0-debian-11-r45 \
+      --set postgresql.persistence.storageClass="" \
+      --set postgresql.persistence.volumeName=openfga-postgresql-pv
     echo "OpenFGA installed via Helm."
   fi
   echo ""
@@ -283,7 +285,7 @@ install_all() {
   echo ""
 
   # Get NodePort for dashboard web
-  WEB_NODEPORT=$(kubectl get svc -n ml-platform-system admin-dashboard-web -o jsonpath='{.spec.ports[0].nodePort}')
+  WEB_NODEPORT=$(kubectl get svc -n ml-platform-system ml-platform-admin-web -o jsonpath='{.spec.ports[0].nodePort}')
 
   # Step 7: Switch to karmada-apiserver context
   echo "Step 7: Switching to karmada-apiserver context..."
