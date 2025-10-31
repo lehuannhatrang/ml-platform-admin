@@ -90,6 +90,7 @@ metadata:
   name: ml-platform-admin-etcd-data
   namespace: ml-platform-system
 spec:
+  storageClass: ""
   accessModes:
     - ReadWriteOnce
   resources:
