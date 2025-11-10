@@ -29,7 +29,7 @@ const queryClient = new QueryClient();
 // Helmet configuration component
 const AppHelmet = () => (
   <Helmet>
-    <title>DCN Dashboard</title>
+    <title>ML Platform - Admin Portal</title>
     <link
       rel="apple-touch-icon"
       sizes="180x180"

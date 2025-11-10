@@ -41,7 +41,7 @@ export const initChat = async (webhookUrl: string, mode: 'window' | 'fullscreen'
     
     const chat = createChat({
       webhookUrl,
-      initialMessages: ['Hi there! I\'m the DCN Dashboard assistant. How can I help you today?'],
+      initialMessages: ['Hi there! I\'m the ML Platform assistant. How can I help you today?'],
       webhookConfig: {
         method: 'POST',
         headers: {}

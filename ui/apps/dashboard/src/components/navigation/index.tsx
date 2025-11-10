@@ -40,7 +40,7 @@ const Navigation: FC<INavigationProps> = (props) => {
   const {
     headerStyle = {},
     usePlaceholder = true,
-    brandText = 'DCN Dashboard',
+    brandText = 'Admin Portal',
     userInfo,
   } = props;
   

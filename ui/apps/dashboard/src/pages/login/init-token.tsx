@@ -86,7 +86,7 @@ const InitTokenPage = () => {
                 'bg-blue-500 text-white h-[56px] flex items-center px-[16px] text-xl rounded-t-[8px]'
               }
             >
-              DCN Dashboard
+              Admin Portal
             </div>
           }
         >

@@ -43,9 +43,5 @@ const (
 var Namespace = getNamespace()
 
 func getNamespace() string {
-	namespace := os.Getenv("KARMADA_SYSTEM_NAMESPACE")
-	if namespace == "" {
-		namespace = DefaultNamespace
-	}
-	return namespace
+	return "karmada-system"
 }

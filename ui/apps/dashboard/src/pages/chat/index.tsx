@@ -37,7 +37,7 @@ const ChatPage: React.FC = () => {
         try {
           createChat({
             webhookUrl,
-            initialMessages: ['Hi there! I\'m the DCN Dashboard assistant. How can I help you today?'],
+            initialMessages: ['Hi there! I\'m the ML Platform assistant. How can I help you today?'],
             webhookConfig: {
               method: 'POST',
               headers: {}

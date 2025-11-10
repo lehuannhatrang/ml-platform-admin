@@ -1,4 +1,4 @@
 #! /bin/bash
 cd ./ui
 
-sudo pnpm run dashboard:dev -- --host 192.168.40.248
+pnpm run dashboard:dev -- --host 192.168.40.248
