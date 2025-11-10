@@ -23,6 +23,7 @@ import (
 	
 	v1 "github.com/karmada-io/dashboard/cmd/api/app/types/api/v1"
 	"github.com/karmada-io/dashboard/pkg/auth"
+	"github.com/karmada-io/dashboard/pkg/auth/keycloak"
 	"github.com/karmada-io/dashboard/pkg/client"
 )
 
@@ -62,7 +63,19 @@ func GetAuthenticatedUser(c *gin.Context) string {
 	// Extract the token
 	tokenString := authHeader[len(prefix):]
 	
-	// Validate the token
+	// Try Keycloak authentication first if available
+	if kc := keycloak.GetClient(); kc != nil {
+		claims, err := kc.ValidateToken(c.Request.Context(), tokenString)
+		if err == nil {
+			username := claims.GetUsername()
+			client.SetCurrentUser(username)
+			// Store roles in context for authorization
+			c.Set("user_roles", claims.Roles)
+			return username
+		}
+	}
+	
+	// Fallback to JWT validation
 	claims, err := auth.ValidateToken(tokenString)
 	if err != nil {
 		return ""

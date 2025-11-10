@@ -60,6 +60,7 @@ import (
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/unstructured"       // Importing route packages forces route registration
 	"github.com/karmada-io/dashboard/pkg/auth"
 	"github.com/karmada-io/dashboard/pkg/auth/fga"
+	"github.com/karmada-io/dashboard/pkg/auth/keycloak"
 	"github.com/karmada-io/dashboard/pkg/client"
 	"github.com/karmada-io/dashboard/pkg/config"
 	"github.com/karmada-io/dashboard/pkg/environment"
@@ -122,15 +123,40 @@ func run(ctx context.Context, opts *options.Options) error {
 		client.WithInsecureTLSSkipVerify(opts.SkipKubeApiserverTLSVerify),
 	)
 
-	// Initialize OpenFGA service
-	if err := fga.InitFGAService(opts.OpenFGAAPIURL); err != nil {
-		klog.ErrorS(err, "Failed to initialize OpenFGA service")
-		return err
-	}
-	klog.InfoS("OpenFGA service initialized", "apiURL", opts.OpenFGAAPIURL)
+	// Initialize authentication and authorization
+	if opts.UseKeycloak {
+		klog.InfoS("Using Keycloak for authentication and authorization")
+		
+		// Set Keycloak configuration environment variables if provided via flags
+		if opts.KeycloakURL != "" {
+			os.Setenv("KEYCLOAK_URL", opts.KeycloakURL)
+		}
+		if opts.KeycloakRealm != "" {
+			os.Setenv("KEYCLOAK_REALM", opts.KeycloakRealm)
+		}
+		if opts.KeycloakClientID != "" {
+			os.Setenv("KEYCLOAK_CLIENT_ID", opts.KeycloakClientID)
+		}
+		
+		// Initialize Keycloak client
+		if err := keycloak.InitKeycloakClient(ctx); err != nil {
+			klog.ErrorS(err, "Failed to initialize Keycloak client")
+			return err
+		}
+		klog.InfoS("Keycloak client initialized successfully")
+	} else {
+		klog.InfoS("Using self-generated JWT and OpenFGA for authentication and authorization")
+		
+		// Initialize OpenFGA service
+		if err := fga.InitFGAService(opts.OpenFGAAPIURL); err != nil {
+			klog.ErrorS(err, "Failed to initialize OpenFGA service")
+			return err
+		}
+		klog.InfoS("OpenFGA service initialized", "apiURL", opts.OpenFGAAPIURL)
 
-	// Initialize etcd client for user management
-	initEtcdClient(ctx, opts)
+		// Initialize etcd client for user management
+		initEtcdClient(ctx, opts)
+	}
 
 	// Initialize Porch API options
 	if err := initPorchAPI(opts); err != nil {

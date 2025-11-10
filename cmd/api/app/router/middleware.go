@@ -19,11 +19,13 @@ package router
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/karmada-io/dashboard/cmd/api/app/types/common"
 	"github.com/karmada-io/dashboard/pkg/auth/fga"
+	"github.com/karmada-io/dashboard/pkg/auth/keycloak"
 	"github.com/karmada-io/dashboard/pkg/client"
 	utilauth "github.com/karmada-io/dashboard/pkg/util/utilauth"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,18 +62,54 @@ func EnsureMgmtAdminMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Check if OpenFGA service is available
-		if fga.FGAService == nil || fga.FGAService.GetClient() == nil {
-			klog.ErrorS(nil, "OpenFGA service not available for admin check")
-			c.AbortWithStatusJSON(http.StatusOK, common.BaseResponse{
-				Code: 500,
-				Msg:  "Authorization service unavailable",
-			})
-			return
+		var isAdmin bool
+		var err error
+
+		// Check if Keycloak is available
+		if kc := keycloak.GetClient(); kc != nil {
+			klog.V(4).InfoS("Using Keycloak for admin authorization", "username", username)
+			
+			// Get user roles from context (set by GetAuthenticatedUser)
+			rolesInterface, exists := c.Get("user_roles")
+			if exists {
+				if roles, ok := rolesInterface.([]string); ok {
+					// Check for admin or dashboard-admin role
+					for _, role := range roles {
+						if strings.EqualFold(role, "admin") || strings.EqualFold(role, "dashboard-admin") {
+							isAdmin = true
+							break
+						}
+					}
+				}
+			}
+			
+			if !isAdmin {
+				// Fallback: check token directly
+				token := client.GetBearerToken(c.Request)
+				if token != "" {
+					isAdmin, err = kc.HasRole(context.TODO(), token, "admin")
+					if err == nil && !isAdmin {
+						isAdmin, err = kc.HasRole(context.TODO(), token, "dashboard-admin")
+					}
+				}
+			}
+		} else {
+			// Use OpenFGA if Keycloak is not available
+			klog.V(4).InfoS("Using OpenFGA for admin authorization", "username", username)
+			
+			if fga.FGAService == nil || fga.FGAService.GetClient() == nil {
+				klog.ErrorS(nil, "Authorization service not available")
+				c.AbortWithStatusJSON(http.StatusOK, common.BaseResponse{
+					Code: 500,
+					Msg:  "Authorization service unavailable",
+				})
+				return
+			}
+
+			// Check if user is dashboard admin in OpenFGA
+			isAdmin, err = fga.FGAService.GetClient().Check(context.TODO(), username, "admin", "dashboard", "dashboard")
 		}
 
-		// Check if user is dashboard admin
-		isAdmin, err := fga.FGAService.GetClient().Check(context.TODO(), username, "admin", "dashboard", "dashboard")
 		if err != nil {
 			klog.ErrorS(err, "Failed to check if user is admin", "username", username)
 			c.AbortWithStatusJSON(http.StatusOK, common.BaseResponse{

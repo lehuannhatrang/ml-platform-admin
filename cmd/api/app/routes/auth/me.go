@@ -26,6 +26,7 @@ import (
 
 	v1 "github.com/karmada-io/dashboard/cmd/api/app/types/api/v1"
 	"github.com/karmada-io/dashboard/pkg/auth"
+	"github.com/karmada-io/dashboard/pkg/auth/keycloak"
 	"github.com/karmada-io/dashboard/pkg/client"
 	"github.com/karmada-io/dashboard/pkg/common/errors"
 )
@@ -40,30 +41,72 @@ func me(request *http.Request) (*v1.User, int, error) {
 		return nil, http.StatusUnauthorized, errors.NewUnauthorized("Missing authentication token")
 	}
 
-	claims, err := auth.ValidateToken(token)
-	if err != nil {
-		klog.ErrorS(err, "Invalid JWT token")
-		return nil, http.StatusUnauthorized, errors.NewUnauthorized("Invalid authentication token")
+	var user *v1.User
+	var username string
+	var userRole string
+
+	// Try Keycloak validation first if Keycloak is enabled
+	kc := keycloak.GetClient()
+	if kc != nil {
+		keycloakClaims, err := kc.ValidateToken(request.Context(), token)
+		if err == nil {
+			// Keycloak token is valid
+			klog.V(4).InfoS("Token validated via Keycloak", "username", keycloakClaims.GetUsername())
+			username = keycloakClaims.GetUsername()
+			
+			// Determine role from Keycloak roles
+			userRole = "basic_user"
+			for _, role := range keycloakClaims.Roles {
+				if role == "admin" || role == "dashboard-admin" {
+					userRole = "admin"
+					break
+				}
+			}
+			
+			user = &v1.User{
+				Name:          username,
+				Authenticated: true,
+				Role:          userRole,
+				InitToken:     true, // Keycloak users don't need SA token
+			}
+			
+			// For Keycloak users, we're done - return immediately
+			return user, http.StatusOK, nil
+		} else {
+			klog.V(4).InfoS("Token validation via Keycloak failed, trying legacy JWT", "error", err)
+			// Fall through to try legacy JWT validation
+		}
 	}
 
-	user := getUserFromToken(token)
-	
-	// Set role from the claims if available
-	if claims != nil && claims.Role != "" {
-		user.Role = claims.Role
-	} else if claims != nil && claims.Username != "" {
-		// Try to get user details from the user manager
-		userManager := auth.GetUserManager()
-		if userManager != nil {
-			etcdUser, err := userManager.GetUser(request.Context(), claims.Username)
-			if err == nil && etcdUser != nil {
-				user.Role = etcdUser.Role
-			} else {
-				klog.ErrorS(err, "Failed to get user details from etcd", "username", claims.Username)
+	// If Keycloak validation didn't work, try legacy JWT validation
+	if user == nil {
+		claims, err := auth.ValidateToken(token)
+		if err != nil {
+			klog.ErrorS(err, "Invalid JWT token (both Keycloak and legacy validation failed)")
+			return nil, http.StatusUnauthorized, errors.NewUnauthorized("Invalid authentication token")
+		}
+
+		user = getUserFromToken(token)
+		username = claims.Username
+		
+		// Set role from the claims if available
+		if claims != nil && claims.Role != "" {
+			user.Role = claims.Role
+		} else if claims != nil && claims.Username != "" {
+			// Try to get user details from the user manager
+			userManager := auth.GetUserManager()
+			if userManager != nil {
+				etcdUser, err := userManager.GetUser(request.Context(), claims.Username)
+				if err == nil && etcdUser != nil {
+					user.Role = etcdUser.Role
+				} else {
+					klog.ErrorS(err, "Failed to get user details from etcd", "username", claims.Username)
+				}
 			}
 		}
 	}
 
+	// For legacy JWT users, check service account token
 	saToken, err := client.GetServiceAccountTokenFromEtcd(request.Context())
 	if err != nil || saToken == "" {
 		klog.ErrorS(err, "Failed to get service account token from etcd")

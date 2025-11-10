@@ -42,6 +42,11 @@ type Options struct {
 	OpenFGAAPIURL                 string
 	PorchAPIURL                   string
 	SkipPorchTLSVerify            bool
+	// Keycloak authentication options
+	UseKeycloak      bool   // Enable Keycloak authentication
+	KeycloakURL      string // Keycloak server URL
+	KeycloakRealm    string // Keycloak realm
+	KeycloakClientID string // Keycloak client ID
 }
 
 // NewOptions returns initialized Options.
@@ -72,4 +77,9 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.OpenFGAAPIURL, "openfga-api-url", "http://openfga.ml-platform-system.svc:8080", "The URL for the OpenFGA API server")
 	fs.StringVar(&o.PorchAPIURL, "porch-api", "", "The URL for the Porch API server")
 	fs.BoolVar(&o.SkipPorchTLSVerify, "skip-porch-tls-verify", false, "Skip TLS certificate verification when connecting to the Porch API")
+	// Keycloak options
+	fs.BoolVar(&o.UseKeycloak, "use-keycloak", false, "Enable Keycloak for authentication and authorization (replaces self-signed JWT and OpenFGA)")
+	fs.StringVar(&o.KeycloakURL, "keycloak-url", "http://keycloak.ml-platform-system.svc:8080", "Keycloak server URL")
+	fs.StringVar(&o.KeycloakRealm, "keycloak-realm", "", "Keycloak realm name (defaults to ml-platform for prod, ml-platform-dev for dev)")
+	fs.StringVar(&o.KeycloakClientID, "keycloak-client-id", "ml-platform-admin", "Keycloak client ID")
 }

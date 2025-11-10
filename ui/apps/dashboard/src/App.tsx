@@ -23,6 +23,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AuthProvider from '@/components/auth';
 import { getAntdLocale } from '@/utils/i18n.tsx';
 import { ThemeProvider } from '@/contexts/theme-context';
+import { KeycloakProvider } from '@/contexts/keycloak-context';
 
 const queryClient = new QueryClient();
 
@@ -70,12 +71,14 @@ function App() {
       >
         <AntdApp>
           <QueryClientProvider client={queryClient}>
-            <AuthProvider>
-              <HelmetProvider>
-                <AppHelmet />
-                <Router />
-              </HelmetProvider>
-            </AuthProvider>
+            <KeycloakProvider>
+              <AuthProvider>
+                <HelmetProvider>
+                  <AppHelmet />
+                  <Router />
+                </HelmetProvider>
+              </AuthProvider>
+            </KeycloakProvider>
           </QueryClientProvider>
         </AntdApp>
       </ConfigProvider>

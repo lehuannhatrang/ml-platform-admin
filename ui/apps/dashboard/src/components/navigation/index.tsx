@@ -22,6 +22,8 @@ import { LogoutOutlined } from '@ant-design/icons';
 import ThemeToggle from '@/components/theme-toggle';
 import { useTheme } from '@/contexts/theme-context';
 import { cn } from '@/utils/cn.ts';
+import { useKeycloak } from '@/contexts/keycloak-context';
+import { getKeycloakConfig } from '@/services/keycloak';
 
 export interface IUserInfo {
   id: number;
@@ -45,6 +47,7 @@ const Navigation: FC<INavigationProps> = (props) => {
   } = props;
   
   const { theme } = useTheme();
+  const { keycloak, config } = useKeycloak();
   
   const themedHeaderStyle = useMemo(() => ({
     ...headerStyle,
@@ -56,8 +59,25 @@ const Navigation: FC<INavigationProps> = (props) => {
   }), [headerStyle, theme]);
   
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    window.location.href = '/login';
+    // Check if Keycloak is enabled and user is authenticated via Keycloak
+    const keycloakConfig = getKeycloakConfig();
+    
+    if (keycloakConfig?.enabled && keycloak) {
+      // Logout from Keycloak (ends SSO session)
+      const logoutUrl = `${keycloakConfig.url}/realms/${keycloakConfig.realm}/protocol/openid-connect/logout?` +
+        `client_id=${encodeURIComponent(keycloakConfig.clientId)}&` +
+        `post_logout_redirect_uri=${encodeURIComponent(keycloakConfig.logoutRedirectUri || window.location.origin + '/login')}`;
+      
+      // Clear local token
+      localStorage.removeItem('token');
+      
+      // Redirect to Keycloak logout
+      window.location.href = logoutUrl;
+    } else {
+      // Legacy logout - just clear local storage
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
   };
 
 

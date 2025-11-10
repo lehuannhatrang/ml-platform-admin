@@ -21,10 +21,12 @@ import {
   useMemo,
   useState,
   useCallback,
+  useEffect,
 } from 'react';
 import { Me, USER_ROLE } from '@/services/auth.ts';
 import { karmadaClient } from '@/services';
 import { useQuery } from '@tanstack/react-query';
+import { useKeycloak } from '@/contexts/keycloak-context';
 
 const AuthContext = createContext<{
   authenticated: boolean;
@@ -41,20 +43,43 @@ const AuthContext = createContext<{
 });
 
 const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const { keycloak, config, authenticated: keycloakAuthenticated, initialized: keycloakInitialized } = useKeycloak();
   const [token, setToken_] = useState(localStorage.getItem('token'));
+  
   const setToken = useCallback((newToken: string) => {
     localStorage.setItem('token', newToken);
     setToken_(newToken);
   }, []);
+
+  // Use Keycloak token if available
+  useEffect(() => {
+    if (keycloak?.authenticated && keycloak.token) {
+      setToken_(keycloak.token);
+      karmadaClient.defaults.headers.common['Authorization'] = `Bearer ${keycloak.token}`;
+    }
+  }, [keycloak?.authenticated, keycloak?.token]);
+
   const { data, isLoading } = useQuery({
-    queryKey: ['Me', token],
+    queryKey: ['Me', token, keycloakAuthenticated],
     queryFn: async () => {
-      if (token) {
+      const effectiveToken = keycloak?.token || token;
+      
+      if (effectiveToken) {
         karmadaClient.defaults.headers.common[
           'Authorization'
-        ] = `Bearer ${token}`;
-        const ret = await Me();
-        return ret.data;
+        ] = `Bearer ${effectiveToken}`;
+        
+        try {
+          const ret = await Me();
+          return ret.data;
+        } catch (error) {
+          console.error('Failed to fetch user info:', error);
+          return {
+            authenticated: false,
+            initToken: false,
+            role: undefined,
+          };
+        }
       } else {
         return {
           authenticated: false,
@@ -63,13 +88,18 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
       }
     },
+    enabled: keycloakInitialized, // Only run query after Keycloak is initialized
   });
+
   const ctxValue = useMemo(() => {
-    if (data && token) {
+    const effectiveToken = keycloak?.token || token;
+    const isAuthenticated = keycloakAuthenticated || (data?.authenticated && !!effectiveToken);
+    
+    if (isAuthenticated && effectiveToken) {
       return {
-        authenticated: !!data.authenticated,
-        initToken: data.initToken,
-        token,
+        authenticated: true,
+        initToken: data?.initToken ?? true, // Keycloak doesn't need init token
+        token: effectiveToken,
         role: data?.role,
         setToken,
       };
@@ -82,10 +112,13 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
         role: undefined,
       };
     }
-  }, [data, token, setToken]);
+  }, [data, token, setToken, keycloak?.token, keycloakAuthenticated]);
+
+  const loading = !keycloakInitialized || isLoading;
+
   return (
     <AuthContext.Provider value={ctxValue}>
-      {!isLoading && children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
