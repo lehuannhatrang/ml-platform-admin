@@ -32,7 +32,6 @@ import Panel from '@/components/panel';
 import i18nInstance from '@/utils/i18n';
 import { useQuery } from '@tanstack/react-query';
 import { GetClusters } from '@/services';
-import NodeTopologyGraph from './components/node-topology-graph';
 import { Icons } from '@/components/icons';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -54,7 +53,7 @@ const Overview = () => {
     },
     refetchInterval: 5000,
   });
-  
+
 
 
   const { data: metricsDashboards, refetch: refetchDashboards } = useQuery({
@@ -83,13 +82,14 @@ const Overview = () => {
       setSelectedDashboard(metricsDashboards?.[0] || null);
     }
   }, [metricsDashboards]);
-  
+
 
 
   const { allocatedCPU, totalCPU } = data?.memberClusterStatus?.cpuSummary || {};
   const { allocatedMemory, totalMemory } = data?.memberClusterStatus?.memorySummary || {};
   const allocatedMemoryGiB = allocatedMemory && allocatedMemory / (1024 * 1024 * 1024);
   const totalMemoryGiB = totalMemory && totalMemory / (1024 * 1024 * 1024);
+  const gpuSummary = data?.memberClusterStatus?.gpuSummary;
 
   const handleDeleteDashboard = async () => {
     if (!selectedDashboard) return;
@@ -124,7 +124,7 @@ const Overview = () => {
         {clusterOptions.length > 0 ? (
           <>
             <Card
-              title="Information"
+              title="Region Information"
               tabList={clusterOptions.map(option => ({
                 label: option.label,
                 key: option.value,
@@ -141,22 +141,14 @@ const Overview = () => {
               <Row gutter={32}>
                 <Col span={12}>
                   <Row gutter={32} className="mb-8">
-                    {selectedCluster.value === 'ALL' ? <Col span={8}>
+                    {selectedCluster.value === 'ALL' && <Col span={8}>
                       <InfoCard
-                        label={'Cluster'}
+                        label={'Regions'}
                         value={clusters?.clusters.length || '-'}
                         hoverable={true}
                         onClick={() => navigate('/cluster-manage')}
                       />
-                    </Col> : <Col span={8}>
-                      <InfoCard
-                        label='Namespace'
-                        value={data?.namespaceCount || '-'}
-                        hoverable={true}
-                        onClick={() => navigate('/namespace')}
-                      />
-                    </Col>
-                    }
+                    </Col>}
                     <Col span={8}>
                       <InfoCard
                         label={'Node'}
@@ -168,46 +160,22 @@ const Overview = () => {
                     </Col>
                     <Col span={8}>
                       <InfoCard
-                        label='Application'
-                        value={data?.argoMetrics?.applicationCount || '-'}
+                        label='Total GPUs'
+                        value={data?.memberClusterStatus?.gpuSummary?.totalGPU || '0'}
                         hoverable={true}
                         onClick={() => navigate('/continuous-delivery/application')}
                       />
                     </Col>
                   </Row>
                   <Row gutter={32}>
-                    <Col span={8}>
-                      <InfoCard
-                        label='Project'
-                        value={data?.argoMetrics?.projectCount || '-'}
-                        hoverable={true}
-                        onClick={() => navigate('/continuous-delivery/project')}
-                      />
-                    </Col>
-                    <Col span={8}>
-                      <InfoCard
-                        label={'Pod'}
-                        value={data?.memberClusterStatus?.podSummary?.allocatedPod || '-'}
-                        hoverable={true}
-                        onClick={() => navigate('/multicloud-resource-manage/pod')}
-                      />
-                    </Col>
-                    {selectedCluster.value === 'ALL' ? <Col span={8}>
-                      <InfoCard
-                        label={i18nInstance.t(
-                          '66e8579fa53a0cdf402e882a3574a380',
-                          'Karmada版本',
-                        )}
-                        value={data?.karmadaInfo.version.gitVersion || '-'}
-                      />
-                    </Col> : <Col span={8}>
-                      <InfoCard
-                        label='Deployment'
-                        value={data?.deploymentCount || '-'}
-                        hoverable={true}
-                        onClick={() => navigate('/multicloud-resource-manage/deployment')}
-                      />
-                    </Col>}
+                    {gpuSummary?.gpuPools?.map((pool, index) => (
+                      <Col span={8} key={index}>
+                        <InfoCard
+                          label={pool.model}
+                          value={pool.count}
+                        />
+                      </Col>
+                    ))}
                   </Row>
                 </Col>
                 <Col span={12}>
@@ -242,7 +210,7 @@ const Overview = () => {
                                   total ? `${(Number((target / total).toFixed(4)) * 100).toFixed(2)}%` : '-',
                               },
                             }}
-                            
+
                           />
                         )}
                       </Row>
@@ -282,11 +250,6 @@ const Overview = () => {
                       </Row>
                     </Col>
                   </Row>
-                </Col>
-              </Row>
-              <Row>
-                <Col span={24}>
-                  <NodeTopologyGraph selectedCluster={selectedCluster} />
                 </Col>
               </Row>
             </Card>

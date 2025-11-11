@@ -215,6 +215,9 @@ func GetMemberClusterStatus(clusterName string) (*v1.MemberClusterStatus, error)
 		PodSummary:    &v1.PodSummary{},
 		CPUSummary:    &v1.CPUSummary{},
 		MemorySummary: &v1.MemorySummary{},
+		GPUSummary: &v1.GPUSummary{
+			GPUPools: make([]v1.GPUPool, 0),
+		},
 	}
 
 	// Get and process node information
@@ -226,6 +229,10 @@ func GetMemberClusterStatus(clusterName string) (*v1.MemberClusterStatus, error)
 	var readyNodeCount int32
 	var totalCPU int64
 	var totalMemory int64
+	
+	// GPU tracking
+	gpuByModel := make(map[string]int64)
+	var totalGPUs int64
 
 	// Count nodes and sum resources
 	for _, node := range nodes.Items {
@@ -243,6 +250,22 @@ func GetMemberClusterStatus(clusterName string) (*v1.MemberClusterStatus, error)
 
 		totalCPU += cpuQuantity.MilliValue()
 		totalMemory += memoryQuantity.Value()
+		
+		// Collect GPU information
+		if gpuQuantity, exists := node.Status.Capacity["nvidia.com/gpu"]; exists {
+			gpuCount := gpuQuantity.Value()
+			
+			if gpuCount > 0 {
+				// Get GPU model from labels
+				gpuModel := "Unknown"
+				if model, labelExists := node.Labels["nvidia.com/gpu.product"]; labelExists && model != "" {
+					gpuModel = model
+				}
+				
+				gpuByModel[gpuModel] += gpuCount
+				totalGPUs += gpuCount
+			}
+		}
 	}
 
 	// Populate node summary
@@ -306,6 +329,21 @@ func GetMemberClusterStatus(clusterName string) (*v1.MemberClusterStatus, error)
 		memberClusterStatus.MemorySummary.TotalMemory = totalMemory
 		// AllocatedMemory calculated as a fraction of total capacity
 		memberClusterStatus.MemorySummary.AllocatedMemory = float64(totalMemory) * memoryFraction / 100
+	}
+	
+	// Populate GPU summary
+	if totalGPUs > 0 {
+		memberClusterStatus.GPUSummary.TotalGPU = totalGPUs
+		
+		// Convert map to GPUPool slice
+		gpuPools := make([]v1.GPUPool, 0, len(gpuByModel))
+		for model, count := range gpuByModel {
+			gpuPools = append(gpuPools, v1.GPUPool{
+				Model: model,
+				Count: count,
+			})
+		}
+		memberClusterStatus.GPUSummary.GPUPools = gpuPools
 	}
 
 	return memberClusterStatus, nil

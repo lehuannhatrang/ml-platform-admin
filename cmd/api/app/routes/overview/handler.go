@@ -72,6 +72,13 @@ func handleGetOverview(c *gin.Context) {
 		}
 	}
 
+	// Get GPU summary from all member clusters
+	clusterNames := GetClusterNames(dataSelect)
+	gpuSummary := GetGPUSummaryFromClusters(c, clusterNames)
+	if gpuSummary != nil && gpuSummary.TotalGPU > 0 {
+		memberClusterStatus.GPUSummary = gpuSummary
+	}
+
 	common.Success(c, v1.OverviewResponse{
 		KarmadaInfo:           karmadaInfo,
 		MemberClusterStatus:   memberClusterStatus,

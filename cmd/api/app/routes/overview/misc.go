@@ -177,6 +177,9 @@ func GetMemberClusterInfo(ds *dataselect.DataSelectQuery) (*v1.MemberClusterStat
 		CPUSummary:    &v1.CPUSummary{},
 		MemorySummary: &v1.MemorySummary{},
 		PodSummary:    &v1.PodSummary{},
+		GPUSummary:    &v1.GPUSummary{
+			GPUPools: make([]v1.GPUPool, 0),
+		},
 	}
 
 	// Get the current user for permission checks
@@ -363,4 +366,41 @@ func isClusterReady(cluster *clusterv1alpha1.Cluster) bool {
 		}
 	}
 	return false
+}
+
+// GetClusterNames returns a list of cluster names based on the data select query
+func GetClusterNames(ds *dataselect.DataSelectQuery) []string {
+	karmadaClient := client.InClusterKarmadaClient()
+	result, err := cluster.GetClusterList(karmadaClient, ds)
+	if err != nil {
+		klog.ErrorS(err, "Failed to get cluster list for GPU summary")
+		return []string{}
+	}
+
+	// Get the current user for permission checks
+	username := client.GetCurrentUser()
+	var fgaClient fga.Client
+	if username != "" && fga.FGAService != nil && fga.FGAService.GetClient() != nil {
+		fgaClient = fga.FGAService.GetClient()
+	}
+
+	clusterNames := make([]string, 0, len(result.Clusters))
+	for _, clusterItem := range result.Clusters {
+		// Check if user has access to this cluster
+		if username != "" && fgaClient != nil {
+			allowed, err := fga.HasClusterAccess(context.Background(), fgaClient, username, clusterItem.ObjectMeta.Name)
+			if err != nil {
+				klog.ErrorS(err, "Failed to check cluster access", "user", username, "cluster", clusterItem.ObjectMeta.Name)
+				continue
+			}
+			if !allowed {
+				klog.V(4).InfoS("Skipping cluster due to access restrictions", "user", username, "cluster", clusterItem.ObjectMeta.Name)
+				continue
+			}
+		}
+		
+		clusterNames = append(clusterNames, clusterItem.ObjectMeta.Name)
+	}
+
+	return clusterNames
 }

@@ -61,12 +61,25 @@ type PodSummary struct {
 	AllocatedPod int64 `json:"allocatedPod"`
 }
 
+// GPUSummary provides a summary of GPU statistics and types.
+type GPUSummary struct {
+	TotalGPU int64       `json:"totalGPU"`
+	GPUPools []GPUPool   `json:"gpuPools"`
+}
+
+// GPUPool represents a pool of GPUs of the same type.
+type GPUPool struct {
+	Model string `json:"model"` // GPU model name from nvidia.com/gpu.product label
+	Count int64  `json:"count"` // Number of GPUs of this model
+}
+
 // MemberClusterStatus represents the status of member clusters.
 type MemberClusterStatus struct {
 	NodeSummary   *NodeSummary   `json:"nodeSummary"`
 	CPUSummary    *CPUSummary    `json:"cpuSummary"`
 	MemorySummary *MemorySummary `json:"memorySummary"`
 	PodSummary    *PodSummary    `json:"podSummary"`
+	GPUSummary    *GPUSummary    `json:"gpuSummary,omitempty"`
 }
 
 // ClusterResourceStatus represents the status of various resources in the cluster.

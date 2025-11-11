@@ -35,6 +35,23 @@ const (
 	tokenServiceAccountKey = "serviceaccount"
 )
 
+// isKeycloakToken checks if a token is from Keycloak by examining its signing algorithm
+func isKeycloakToken(token string) bool {
+	// Parse token header without validation
+	parsed, _ := jwt.Parse(token, nil)
+	if parsed == nil {
+		return false
+	}
+	
+	// Keycloak tokens use RS256 (RSA signature)
+	// Legacy tokens use HS256 (HMAC signature)
+	if alg, ok := parsed.Header["alg"].(string); ok {
+		return alg == "RS256" || alg == "RS384" || alg == "RS512"
+	}
+	
+	return false
+}
+
 func me(request *http.Request) (*v1.User, int, error) {
 	token := client.GetBearerToken(request)
 	if token == "" {
@@ -73,8 +90,17 @@ func me(request *http.Request) (*v1.User, int, error) {
 			// For Keycloak users, we're done - return immediately
 			return user, http.StatusOK, nil
 		} else {
-			klog.V(4).InfoS("Token validation via Keycloak failed, trying legacy JWT", "error", err)
-			// Fall through to try legacy JWT validation
+			klog.V(4).InfoS("Token validation via Keycloak failed", "error", err)
+			
+			// Check if this is a Keycloak token (RS256 signature)
+			// If so, don't try legacy validation - just return unauthorized
+			if isKeycloakToken(token) {
+				klog.ErrorS(err, "Keycloak token validation failed (token may be expired or invalid)")
+				return nil, http.StatusUnauthorized, errors.NewUnauthorized("Token validation failed")
+			}
+			
+			// Not a Keycloak token, try legacy JWT validation
+			klog.V(4).InfoS("Not a Keycloak token, trying legacy JWT validation")
 		}
 	}
 

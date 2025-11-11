@@ -3,6 +3,7 @@
 # Set environment variables for dev
 export ENV_NAME=dev
 export FRONTEND_URL=http://192.168.40.248:5173
+export KEYCLOAK_CLIENT_SECRET="UguPzb0WkCp3FDrnQ3BwY48Epm3Xp1i5"
 
 _output/bin/linux/amd64/ml-platform-admin-api   \
     --karmada-kubeconfig=/home/ubuntu/config/huan_cluster/karmada-apiserver.txt --karmada-context=karmada-apiserver \

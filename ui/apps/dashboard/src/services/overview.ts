@@ -54,6 +54,7 @@ export interface MemberClusterStatus {
   cpuSummary: CpuSummary;
   memorySummary: MemorySummary;
   podSummary: PodSummary;
+  gpuSummary?: GPUSummary;
 }
 
 export interface NodeSummary {
@@ -76,6 +77,16 @@ export interface PodSummary {
   allocatedPod: number;
 }
 
+export interface GPUPool {
+  model: string;  // GPU model name from nvidia.com/gpu.product label
+  count: number;  // Number of GPUs of this model
+}
+
+export interface GPUSummary {
+  totalGPU: number;
+  gpuPools: GPUPool[];
+}
+
 export interface ClusterResourceStatus {
   propagationPolicyNum: number;
   overridePolicyNum: number;
@@ -86,7 +97,7 @@ export interface ClusterResourceStatus {
 }
 
 export async function GetOverview(cluster: ClusterOption) {
-  const url = getClusterApiPath(cluster.label, 'overview', false);
+  const url = getClusterApiPath(cluster.value, 'overview', false);
   const resp = await karmadaClient.get<IResponse<OverviewInfo>>(url);
   return resp.data;
 }

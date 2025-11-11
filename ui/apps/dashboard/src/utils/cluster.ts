@@ -19,7 +19,7 @@ export const getClusterColorByValue = (value: string) => {
 const mgmtClusterName = ['mgmt-cluster', 'management', 'mgmt'];
 
 export const getClusterApiPath = (clusterName: string, targetApi: string, useAggregatedApi = true) => {
-    if (clusterName === DEFAULT_CLUSTER_OPTION.label || !clusterName) return `${useAggregatedApi ? '/aggregated' : ''}/${targetApi}`;
+    if (clusterName === DEFAULT_CLUSTER_OPTION.value || !clusterName) return `${useAggregatedApi ? '/aggregated' : ''}/${targetApi}`;
     if (mgmtClusterName.includes(clusterName)) return `/mgmt-cluster/${targetApi}`;
     return `/member/${clusterName}/${targetApi}`;
 };

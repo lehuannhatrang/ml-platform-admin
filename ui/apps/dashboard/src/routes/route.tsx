@@ -27,6 +27,7 @@ import { Icons } from '@/components/icons';
 import InitTokenPage from '@/pages/login/init-token';
 import CallbackPage from '@/pages/callback';
 import SignOutPage from '@/pages/sign-out';
+import UsersManagement from '@/pages/users';
 
 export interface IRouteObjectHandle {
   icon?: ReactNode;
@@ -70,6 +71,15 @@ export function getRoutes() {
             sidebarKey: 'OVERVIEW',
             sidebarName: i18nInstance.t('86385379cf9cfbc2c554944f1c054a45'),
             icon: <Icons.overview {...IconStyles} />,
+          },
+        },
+        {
+          path: '/users',
+          element: <UsersManagement />,
+          handle: {
+            sidebarKey: 'USERS',
+            sidebarName: 'Users Management',
+            icon: <Icons.user {...IconStyles} />,
           },
         },
       ],

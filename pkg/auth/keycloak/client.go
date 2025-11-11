@@ -258,3 +258,42 @@ func (kc *KeycloakClient) GetConfig() *Config {
 	return kc.config
 }
 
+// GetAdminToken retrieves an admin token using client credentials
+// This is used for admin operations like user management
+func (kc *KeycloakClient) GetAdminToken(ctx context.Context) (string, error) {
+	// If client secret is not configured, return empty token
+	// The caller will need to use the user's token
+	if kc.config.ClientSecret == "" {
+		klog.InfoS("KEYCLOAK: Client secret not configured, admin operations will use user token. Set KEYCLOAK_CLIENT_SECRET environment variable.")
+		return "", nil
+	}
+
+	klog.InfoS("KEYCLOAK: Attempting to get admin token using client credentials", 
+		"clientID", kc.config.ClientID, 
+		"realm", kc.config.Realm,
+		"url", kc.config.URL)
+
+	// Login using client credentials
+	token, err := kc.client.LoginClient(
+		ctx,
+		kc.config.ClientID,
+		kc.config.ClientSecret,
+		kc.config.Realm,
+	)
+	
+	if err != nil {
+		klog.ErrorS(err, "KEYCLOAK: Failed to get admin token using client credentials", 
+			"clientID", kc.config.ClientID,
+			"realm", kc.config.Realm)
+		return "", fmt.Errorf("failed to get admin token: %w", err)
+	}
+
+	klog.InfoS("KEYCLOAK: Successfully obtained admin token via service account")
+	return token.AccessToken, nil
+}
+
+// GetClient returns the gocloak client instance
+func (kc *KeycloakClient) GetGocloakClient() *gocloak.GoCloak {
+	return kc.client
+}
+

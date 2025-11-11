@@ -39,7 +39,7 @@ export function installCryptoPolyfill() {
 
     // Polyfill randomUUID if it doesn't exist
     if (!window.crypto.randomUUID) {
-      window.crypto.randomUUID = generateUUID;
+      window.crypto.randomUUID = generateUUID as () => `${string}-${string}-${string}-${string}-${string}`;
     }
 
     // Polyfill getRandomValues if it doesn't exist

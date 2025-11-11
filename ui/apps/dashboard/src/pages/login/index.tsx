@@ -31,7 +31,7 @@ const LoginPage = () => {
   const { setToken } = useAuth();
   const [loginForm] = Form.useForm();
   const { theme } = useTheme();
-  const { config: keycloakConfig, keycloak } = useKeycloak();
+  const { config: keycloakConfig } = useKeycloak();
   const [loginMethod, setLoginMethod] = useState<'keycloak' | 'traditional'>('keycloak');
 
   // Auto-detect login method based on Keycloak availability

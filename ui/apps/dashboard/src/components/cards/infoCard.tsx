@@ -1,4 +1,4 @@
-import { Card, Flex } from 'antd';
+import { Card, Flex, Tooltip } from 'antd';
 import { CardProps } from 'antd/lib/card';
 import { useTheme } from '@/contexts/theme-context';
 
@@ -18,9 +18,14 @@ function InfoCard({ label, value, ...props }: InfoCardProps) {
           style={{
             fontSize: '14px',
             color: isDark ? 'rgba(255, 255, 255, 0.65)' : '#666',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
           }}
         >
-          {label}
+          <Tooltip title={label} placement="top">
+            {label}
+          </Tooltip>
         </p>
       </Flex>
 
