@@ -29,7 +29,7 @@ spec:
             - --bind-address=0.0.0.0
             - --dashboard-config-path=/config/dashboard-config.yaml
           name: ml-platform-admin-web
-          image: lehuannhatrang/ml-platform-admin-web:v0.3
+          image: lehuannhatrang/ml-platform-admin-web:v0.4
           imagePullPolicy: IfNotPresent
           env:
             - name: GIN_MODE

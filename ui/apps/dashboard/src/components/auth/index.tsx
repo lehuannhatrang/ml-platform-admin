@@ -43,7 +43,7 @@ const AuthContext = createContext<{
 });
 
 const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const { keycloak, config, authenticated: keycloakAuthenticated, initialized: keycloakInitialized } = useKeycloak();
+  const { keycloak, authenticated: keycloakAuthenticated, initialized: keycloakInitialized } = useKeycloak();
   const [token, setToken_] = useState(localStorage.getItem('token'));
   
   const setToken = useCallback((newToken: string) => {

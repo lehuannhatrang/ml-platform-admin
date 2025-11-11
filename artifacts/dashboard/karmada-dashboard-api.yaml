@@ -28,21 +28,28 @@ spec:
             - --karmada-kubeconfig=/etc/kubeconfig-karmada-apiserver
             - --karmada-context=karmada-apiserver
             - --kubeconfig=/etc/kubeconfig
-            - --context=karmada
+            - --context=mgmt-cluster
             - --insecure-bind-address=0.0.0.0
             - --bind-address=0.0.0.0
             - --etcd-host=ml-platform-admin-etcd.ml-platform-system.svc.cluster.local
             - --etcd-port=2379
-            - --porch-api=https://api.porch-system.svc.cluster.local:443
-            - --skip-porch-tls-verify=true
+            - --use-keycloak=true
+            - --keycloak-realm=ml-platform
+            - --keycloak-url=http://192.168.40.248:32008
           name: ml-platform-admin-api
-          image: lehuannhatrang/ml-platform-admin-api:v0.3
+          image: lehuannhatrang/ml-platform-admin-api:v0.4
           imagePullPolicy: IfNotPresent
           env:
+            - name: ENV_NAME
+              value: prod
             - name: GIN_MODE
               value: release
             # Optional environment variable for etcd endpoint - can be overridden by --etcd-host flag
             - name: ETCD_ENDPOINT
+              value: ""
+            - name: FRONTEND_URL
+              value: http://192.168.40.248:32000
+            - name: KEYCLOAK_CLIENT_SECRET
               value: ""
             # No need for TLS settings with our standalone non-TLS etcd
             # Default admin password (should be changed after first login)

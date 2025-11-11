@@ -24,7 +24,6 @@ import React, {
 import Keycloak from 'keycloak-js';
 import {
   initKeycloak,
-  getKeycloak,
   getKeycloakConfig,
   KeycloakConfig,
 } from '@/services/keycloak';

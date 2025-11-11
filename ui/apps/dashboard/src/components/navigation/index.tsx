@@ -47,7 +47,7 @@ const Navigation: FC<INavigationProps> = (props) => {
   } = props;
   
   const { theme } = useTheme();
-  const { keycloak, config } = useKeycloak();
+  const { keycloak } = useKeycloak();
   
   const themedHeaderStyle = useMemo(() => ({
     ...headerStyle,
