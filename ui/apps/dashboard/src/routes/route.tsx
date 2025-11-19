@@ -77,13 +77,22 @@ export function getRoutes() {
           },
         },
         {
-          path: '/users',
-          element: <UsersManagement />,
+          path: '/profile-manage',
           handle: {
-            sidebarKey: 'USERS',
-            sidebarName: 'Users Management',
+            sidebarKey: 'PROFILES-MANAGEMENT',
+            sidebarName: 'Profiles Management',
             icon: <Icons.user {...IconStyles} />,
           },
+          children: [
+            {
+              path: 'Users',
+              element: <UsersManagement />,
+              handle: {
+                sidebarKey: 'USERS',
+                sidebarName: 'Users Management',
+              },
+            }
+          ],
         },
         {
           path: '/infra-manage',

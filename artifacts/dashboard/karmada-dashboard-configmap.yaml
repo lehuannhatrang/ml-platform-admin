@@ -14,6 +14,13 @@ data:
       - path: /users
         enable: true
         sidebar_key: USERS
+      - path: /profile-manage
+        enable: true
+        sidebar_key: PROFILES-MANAGEMENT
+        children:
+          - path: /profile-manage/users
+            enable: true
+            sidebar_key: USERS
   prod.yaml: |-
     docker_registries: [ ]
     chart_registries: [ ]
@@ -34,6 +41,13 @@ data:
           - path: /infra-manage/cloud-credentials
             enable: true
             sidebar_key: CLOUD-CREDENTIALS
+      - path: /profile-manage
+        enable: true
+        sidebar_key: PROFILES-MANAGEMENT
+        children:
+          - path: /profile-manage/users
+            enable: true
+            sidebar_key: USERS
       - path: /basic-config
         enable: true
         sidebar_key: BASIC-CONFIG

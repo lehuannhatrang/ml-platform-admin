@@ -18,10 +18,17 @@ package users
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/gin-gonic/gin"
+	policyv1alpha1 "github.com/karmada-io/karmada/pkg/apis/policy/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/klog/v2"
 
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
@@ -281,6 +288,139 @@ func handleGetUser(c *gin.Context) {
 	})
 }
 
+// sanitizeEmailForK8sName converts an email to a valid Kubernetes resource name
+// Kubernetes names must be lowercase and follow DNS-1123 subdomain rules
+func sanitizeEmailForK8sName(email string) string {
+	// Convert to lowercase
+	name := strings.ToLower(email)
+	// Replace @ and . with hyphens
+	name = strings.ReplaceAll(name, "@", "-")
+	name = strings.ReplaceAll(name, ".", "-")
+	// Remove any other invalid characters (keep only alphanumeric and hyphens)
+	var result strings.Builder
+	for _, char := range name {
+		if (char >= 'a' && char <= 'z') || (char >= '0' && char <= '9') || char == '-' {
+			result.WriteRune(char)
+		}
+	}
+	return result.String()
+}
+
+// createKubeflowProfile creates a Kubeflow Profile for the user
+func createKubeflowProfile(ctx context.Context, userEmail string) error {
+	klog.InfoS("Creating Kubeflow Profile", "userEmail", userEmail)
+	
+	// Get dynamic client for karmada (not management cluster)
+	restConfig, _, err := client.GetKarmadaConfig()
+	if err != nil {
+		return fmt.Errorf("failed to get karmada config: %v", err)
+	}
+
+	dynamicClient, err := dynamic.NewForConfig(restConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create dynamic client: %v", err)
+	}
+
+	// Define the Profile GVR
+	profileGVR := schema.GroupVersionResource{
+		Group:    "kubeflow.org",
+		Version:  "v1",
+		Resource: "profiles",
+	}
+
+	// Sanitize email for use as a Kubernetes resource name
+	profileName := sanitizeEmailForK8sName(userEmail)
+
+	// Create the Profile object
+	profile := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "kubeflow.org/v1",
+			"kind":       "Profile",
+			"metadata": map[string]interface{}{
+				"name": profileName,
+			},
+			"spec": map[string]interface{}{
+				"owner": map[string]interface{}{
+					"kind": "User",
+					"name": userEmail,
+				},
+				"resourceQuotaSpec": map[string]interface{}{},
+			},
+		},
+	}
+
+	// Create the Profile in karmada
+	_, err = dynamicClient.Resource(profileGVR).Create(ctx, profile, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to create Kubeflow Profile: %v", err)
+	}
+
+	klog.InfoS("Kubeflow Profile created successfully", "userEmail", userEmail, "profileName", profileName)
+	return nil
+}
+
+// createProfilePropagationPolicy creates a ClusterPropagationPolicy to propagate the profile to all member clusters
+func createProfilePropagationPolicy(ctx context.Context, userEmail string) error {
+	klog.InfoS("Creating propagation policy for Kubeflow Profile", "userEmail", userEmail)
+	
+	// Get karmada client
+	karmadaClient := client.InClusterKarmadaClient()
+	if karmadaClient == nil {
+		return fmt.Errorf("failed to get karmada client")
+	}
+
+	// Get all member clusters
+	clusterList, err := karmadaClient.ClusterV1alpha1().Clusters().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to list clusters: %v", err)
+	}
+
+	// Extract cluster names
+	clusterNames := make([]string, 0, len(clusterList.Items))
+	for _, cluster := range clusterList.Items {
+		clusterNames = append(clusterNames, cluster.Name)
+	}
+
+	if len(clusterNames) == 0 {
+		klog.InfoS("No member clusters found, skipping propagation policy creation", "userEmail", userEmail)
+		return nil
+	}
+
+	// Sanitize email for use as a Kubernetes resource name
+	profileName := sanitizeEmailForK8sName(userEmail)
+	policyName := sanitizeEmailForK8sName(fmt.Sprintf("profile-%s", userEmail))
+
+	// Create ClusterPropagationPolicy
+	propagationPolicy := &policyv1alpha1.ClusterPropagationPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: policyName,
+		},
+		Spec: policyv1alpha1.PropagationSpec{
+			ResourceSelectors: []policyv1alpha1.ResourceSelector{
+				{
+					APIVersion: "kubeflow.org/v1",
+					Kind:       "Profile",
+					Name:       profileName,
+				},
+			},
+			Placement: policyv1alpha1.Placement{
+				ClusterAffinity: &policyv1alpha1.ClusterAffinity{
+					ClusterNames: clusterNames,
+				},
+			},
+		},
+	}
+
+	// Create the propagation policy
+	_, err = karmadaClient.PolicyV1alpha1().ClusterPropagationPolicies().Create(ctx, propagationPolicy, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to create propagation policy: %v", err)
+	}
+
+	klog.InfoS("Propagation policy created successfully", "userEmail", userEmail, "profileName", profileName, "policyName", policyName, "clusters", clusterNames)
+	return nil
+}
+
 // handleCreateUser creates a new user in Keycloak
 func handleCreateUser(c *gin.Context) {
 	var req CreateUserRequest
@@ -389,6 +529,19 @@ func handleCreateUser(c *gin.Context) {
 					klog.ErrorS(err, "Failed to assign roles to user", "userID", userID)
 				}
 			}
+		}
+	}
+
+	// Create Kubeflow Profile for the user
+	if err := createKubeflowProfile(ctx, req.Email); err != nil {
+		klog.ErrorS(err, "Failed to create Kubeflow Profile", "userEmail", req.Email)
+		// Don't fail the request, user is created but profile needs to be created manually
+		// Continue to create propagation policy anyway
+	} else {
+		// Create propagation policy to propagate the profile to all member clusters
+		if err := createProfilePropagationPolicy(ctx, req.Email); err != nil {
+			klog.ErrorS(err, "Failed to create propagation policy", "userEmail", req.Email)
+			// Don't fail the request, profile is created but policy needs to be created manually
 		}
 	}
 
@@ -636,6 +789,64 @@ func handleUpdatePassword(c *gin.Context) {
 	})
 }
 
+// deleteKubeflowProfile deletes the Kubeflow Profile for a user
+func deleteKubeflowProfile(ctx context.Context, userEmail string) error {
+	klog.InfoS("Deleting Kubeflow Profile", "userEmail", userEmail)
+	
+	// Get dynamic client for karmada (not management cluster)
+	restConfig, _, err := client.GetKarmadaConfig()
+	if err != nil {
+		return fmt.Errorf("failed to get karmada config: %v", err)
+	}
+
+	dynamicClient, err := dynamic.NewForConfig(restConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create dynamic client: %v", err)
+	}
+
+	// Define the Profile GVR
+	profileGVR := schema.GroupVersionResource{
+		Group:    "kubeflow.org",
+		Version:  "v1",
+		Resource: "profiles",
+	}
+
+	// Sanitize email for use as a Kubernetes resource name
+	profileName := sanitizeEmailForK8sName(userEmail)
+
+	// Delete the Profile from karmada
+	err = dynamicClient.Resource(profileGVR).Delete(ctx, profileName, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to delete Kubeflow Profile: %v", err)
+	}
+
+	klog.InfoS("Kubeflow Profile deleted successfully", "userEmail", userEmail, "profileName", profileName)
+	return nil
+}
+
+// deleteProfilePropagationPolicy deletes the ClusterPropagationPolicy for a user's profile
+func deleteProfilePropagationPolicy(ctx context.Context, userEmail string) error {
+	klog.InfoS("Deleting propagation policy for Kubeflow Profile", "userEmail", userEmail)
+	
+	// Get karmada client
+	karmadaClient := client.InClusterKarmadaClient()
+	if karmadaClient == nil {
+		return fmt.Errorf("failed to get karmada client")
+	}
+
+	// Sanitize email for use as a Kubernetes resource name
+	policyName := sanitizeEmailForK8sName(fmt.Sprintf("profile-%s", userEmail))
+
+	// Delete the propagation policy
+	err := karmadaClient.PolicyV1alpha1().ClusterPropagationPolicies().Delete(ctx, policyName, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to delete propagation policy: %v", err)
+	}
+
+	klog.InfoS("Propagation policy deleted successfully", "userEmail", userEmail, "policyName", policyName)
+	return nil
+}
+
 // handleDeleteUser deletes a user from Keycloak
 func handleDeleteUser(c *gin.Context) {
 	userID := c.Param("id")
@@ -685,6 +896,22 @@ func handleDeleteUser(c *gin.Context) {
 	}
 
 	gocloakClient := gocloak.NewClient(config.URL)
+	
+	// Get user details before deletion to retrieve the email
+	user, err := gocloakClient.GetUserByID(ctx, adminToken, config.Realm, userID)
+	if err != nil {
+		klog.ErrorS(err, "Failed to get user from Keycloak", "userID", userID)
+		c.JSON(http.StatusNotFound, common.BaseResponse{
+			Code: http.StatusNotFound,
+			Msg:  "User not found: " + err.Error(),
+			Data: nil,
+		})
+		return
+	}
+
+	userEmail := getStringValue(user.Email)
+	
+	// Delete user from Keycloak
 	err = gocloakClient.DeleteUser(ctx, adminToken, config.Realm, userID)
 	if err != nil {
 		klog.ErrorS(err, "Failed to delete user from Keycloak", "userID", userID)
@@ -694,6 +921,22 @@ func handleDeleteUser(c *gin.Context) {
 			Data: nil,
 		})
 		return
+	}
+
+	// Delete the propagation policy first (to stop propagation to member clusters)
+	if userEmail != "" {
+		if err := deleteProfilePropagationPolicy(ctx, userEmail); err != nil {
+			klog.ErrorS(err, "Failed to delete propagation policy", "userEmail", userEmail)
+			// Don't fail the request, continue to delete the profile
+		}
+
+		// Delete the Kubeflow Profile
+		if err := deleteKubeflowProfile(ctx, userEmail); err != nil {
+			klog.ErrorS(err, "Failed to delete Kubeflow Profile", "userEmail", userEmail)
+			// Don't fail the request, profile deletion can be done manually if needed
+		}
+	} else {
+		klog.InfoS("User email is empty, skipping Kubeflow Profile cleanup", "userID", userID)
 	}
 
 	c.JSON(http.StatusOK, common.BaseResponse{
