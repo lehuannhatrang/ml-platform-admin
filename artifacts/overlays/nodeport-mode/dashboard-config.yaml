@@ -3,13 +3,6 @@ chart_registries: []
 path_prefix: ''
 metrics_dashboards: []
 ai_agent_chat_webhook: ''
-# Add OpenFGA configuration
-authorization:
-  type: "openfga"
-  openfga:
-    api_url: "http://openfga-api.ml-platform-system.svc.cluster.local:8080"
-    store_id: ""  # This will need to be populated after creating a store
-    authorization_model_id: ""  # This will need to be populated after creating an authorization model
 menu_configs:
   - path: /overview
     enable: true

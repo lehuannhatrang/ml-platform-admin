@@ -3949,7 +3949,8 @@ prometheus:
 
     ## External labels to add to any time series or alerts when communicating with external systems
     ##
-    externalLabels: {}
+    externalLabels:
+      cluster: "mgmt-cluster"
 
     ## enable --web.enable-remote-write-receiver flag on prometheus-server
     ##
@@ -3973,7 +3974,7 @@ prometheus:
 
     ## External URL at which Prometheus will be reachable.
     ##
-    externalUrl: "http://192.168.28.249:31205"
+    externalUrl: "http://192.168.40.248:31205"
 
     ## Define which Nodes the Pods are scheduled on.
     ## ref: https://kubernetes.io/docs/user-guide/node-selection/
@@ -4264,23 +4265,23 @@ prometheus:
     ## The scrape configuration example below will find master nodes, provided they have the name .*mst.*, relabel the
     ## port to 2379 and allow etcd scraping provided it is running on all Kubernetes master nodes
     ##
-    #additionalScrapeConfigs:
-    #- job_name: federation
-    #  scrape_interval: 15s
-    #  honor_labels: false
-    #  metrics_path: '/federate'
-    #  params:
-    #    match[]:
-    #      - '{__name__=~".+"}' #get all metrics
-    #  static_configs:
-    #    - targets:
-    #      - "192.168.28.204:31205"  # External IP and port for workload-cluster-1
-    #      labels:
-    #        cluster: "workload-cluster-1"
-    #    - targets:
-    #      - "192.168.28.249:31205"
-    #      labels:
-    #        cluster: "workload-cluster-2"
+    additionalScrapeConfigs:
+    - job_name: federation
+      scrape_interval: 10s
+      honor_labels: true
+      metrics_path: '/federate'
+      params:
+        match[]:
+          - '{__name__=~".+"}' #get all metrics
+      static_configs:
+        - targets:
+          - "192.168.40.246:31205"  # External IP and port for member cluster
+          labels:
+            cluster: "cluster-gpu-1"
+        - targets:
+          - "192.168.40.248:31205"  # External IP and port for member cluster
+          labels:
+            cluster: "mgmt-cluster"
     
     # - job_name: kube-etcd
     #   kubernetes_sd_configs:

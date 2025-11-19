@@ -18,8 +18,8 @@ done
 
 # Function to install all components
 install_all() {
-  echo "=== DCN Dashboard NodePort Mode Setup ==="
-  echo "This script will install DCN Dashboard in NodePort mode and set up OpenFGA"
+  echo "=== ML Platform NodePort Mode Setup ==="
+  echo "This script will install ML Platform in NodePort mode and set up Keycloak"
   echo ""
   
   # Set the working directory to the script's directory
@@ -194,85 +194,9 @@ install_all() {
     echo "Karmada API server config secret created."
   fi
   echo ""
-  
-  # Step 1: Check and Install OpenFGA using Helm
-  echo "Step 1: Checking if OpenFGA is already installed..."
-  
-  # Check if OpenFGA is already installed
-  set +e  # Don't exit on error
-  openfga_check=$(kubectl get deployment openfga -n ml-platform-system 2>&1)
-  check_exit_code=$?
-  set -e  # Re-enable exit on error
-  
-  echo "Debug: OpenFGA check result: $check_exit_code"
-  echo "Debug: OpenFGA check output: $openfga_check"
-  
-  if [ $check_exit_code -eq 0 ]; then
-    echo "OpenFGA is already installed in the ml-platform-system namespace. Skipping installation."
-  else
-    echo "OpenFGA is not installed. Proceeding with installation..."
-    
-    # Add OpenFGA Helm repository if not already added
-    if ! helm repo list | grep -q "openfga"; then
-      echo "Adding OpenFGA Helm repository..."
-      helm repo add openfga https://openfga.github.io/helm-charts
-      helm repo update
-    fi
-
-    # Install OpenFGA with Helm
-    echo "Installing OpenFGA with PostgreSQL..."
-    helm install --namespace ml-platform-system openfga openfga/openfga \
-      --set datastore.engine=postgres \
-      --set datastore.uri="postgres://postgres:password@openfga-postgresql.ml-platform-system.svc.cluster.local:5432/postgres?sslmode=disable" \
-      --set postgresql.enabled=true \
-      --set postgresql.auth.postgresPassword=password \
-      --set postgresql.auth.database=postgres \
-      --set postgresql.image.repository=bitnamilegacy/postgresql \
-      --set postgresql.image.tag=15.4.0-debian-11-r45 \
-      --set postgresql.persistence.storageClass="" \
-      --set postgresql.persistence.volumeName=openfga-postgresql-pv
-    echo "OpenFGA installed via Helm."
-  fi
-  echo ""
-
-  # Check for OpenFGA installation status for later steps
-  OPENFGA_INSTALLED=false
-  set +e  # Don't exit on error
-  openfga_check=$(kubectl get deployment openfga -n ml-platform-system 2>&1)
-  check_exit_code=$?
-  set -e  # Re-enable exit on error
-  
-  if [ $check_exit_code -eq 0 ]; then
-    OPENFGA_INSTALLED=true
-  fi
-  
-  # Step 2: Apply the OpenFGA service configuration if OpenFGA was just installed
-  if [ "$OPENFGA_INSTALLED" = true ]; then
-    echo "Step 2: OpenFGA service configuration already exists. Skipping."
-  else
-    echo "Step 2: Applying OpenFGA service configuration..."
-    kubectl apply -k artifacts/openfga
-    echo "OpenFGA service configuration applied."
-  fi
-  echo ""
-
-  # Step 3: Wait for OpenFGA to be ready (only if we just installed it)
-  if [ "$OPENFGA_INSTALLED" = true ]; then
-    echo "Step 3: OpenFGA is already running. Skipping wait."
-  else
-    echo "Step 3: Waiting for OpenFGA deployment to become ready..."
-    kubectl -n ml-platform-system wait --for=condition=available --timeout=300s deployment/openfga
-    echo "OpenFGA deployment is ready."
-  fi
-  echo ""
-
-  # Step 4: Verify OpenFGA installation
-  echo "Step 4: Verifying OpenFGA installation..."
-  ./artifacts/openfga/setup-openfga.sh || echo "OpenFGA verification had issues but continuing with installation..."
-  echo ""
 
   # Step 5: Apply the NodePort overlay kustomization
-  echo "Step 5: Installing DCN Dashboard with NodePort configuration..."
+  echo "Step 1: Installing ML Platform with NodePort configuration..."
   kubectl apply -k artifacts/overlays/nodeport-mode
   echo "NodePort overlay applied successfully."
   echo ""
@@ -306,7 +230,7 @@ install_all() {
   echo ""
 
   echo ""
-  echo "=== DCN Dashboard Setup Complete ==="
+  echo "=== ML Platform Setup Complete ==="
   echo "Dashboard Web UI is available at: http://<node-ip>:${WEB_NODEPORT}"
   echo "Default credentials: admin / admin123"
   echo ""
@@ -318,32 +242,26 @@ install_all() {
 
 # Function to uninstall all components
 uninstall_all() {
-  echo "=== DCN Dashboard NodePort Mode Uninstall ==="
-  echo "This will uninstall DCN Dashboard in NodePort mode and OpenFGA"
+  echo "=== ML Platform NodePort Mode Uninstall ==="
+  echo "This will uninstall ML Platform in NodePort mode"
   echo ""
   
   # Set the working directory to the script's directory
   cd "$(dirname "$0")"
   
-  # Step 1: Uninstall DCN Dashboard NodePort overlay
-  echo "Step 1: Uninstalling DCN Dashboard NodePort configuration..."
+  # Step 1: Uninstall ML Platform NodePort overlay
+  echo "Step 1: Uninstalling ML Platform NodePort configuration..."
   kubectl delete -k artifacts/overlays/nodeport-mode --ignore-not-found=true
   echo "NodePort overlay removed."
   echo ""
   
-  # Step 2: Uninstall OpenFGA service configuration
-  echo "Step 2: Removing OpenFGA service configuration..."
-  kubectl delete -k artifacts/openfga --ignore-not-found=true
-  echo "OpenFGA service configuration removed."
+  # Step 2: Uninstall Keycloak service configuration
+  echo "Step 2: Removing Keycloak service configuration..."
+  kubectl delete -k artifacts/keycloak --ignore-not-found=true
+  echo "Keycloak service configuration removed."
   echo ""
   
-  # Step 3: Uninstall OpenFGA Helm release
-  echo "Step 3: Uninstalling OpenFGA Helm release..."
-  helm uninstall -n ml-platform-system openfga --wait
-  echo "OpenFGA Helm release uninstalled."
-  echo ""
-  
-  echo "=== DCN Dashboard Uninstall Complete ==="
+  echo "=== ML Platform Uninstall Complete ==="
   echo "All components have been successfully removed."
 }
 

@@ -3,7 +3,7 @@ kind: Kustomization
 
 resources:
   - ../../dashboard
-  - ../../openfga
+  - ../../keycloak
 
 configMapGenerator:
   - name: ml-platform-admin-configmap

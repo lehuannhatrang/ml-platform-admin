@@ -20,3 +20,4 @@ export { GetNodes } from './node.ts';
 export * from './karmada-config.ts';
 export * from './custom-resource.ts';
 export * from './users.ts';
+export * from './cloudcredentials.ts';

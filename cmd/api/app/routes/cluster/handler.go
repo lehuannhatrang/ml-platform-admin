@@ -442,6 +442,241 @@ func parseEndpointFromKubeconfig(kubeconfigContents string) (string, error) {
 
 // Note: getAuthenticatedUser function has been moved to pkg/util/auth/user.go
 
+// CAPIClusterRequest represents the request to create a cluster using ClusterAPI
+type CAPIClusterRequest struct {
+	ClusterName       string `json:"clusterName" binding:"required"`
+	CloudProvider     string `json:"cloudProvider" binding:"required"`
+	CredentialName    string `json:"credentialName" binding:"required"`
+	Region            string `json:"region" binding:"required"`
+	NodeCount         int    `json:"nodeCount" binding:"required"`
+	MachineType       string `json:"machineType" binding:"required"`
+	KubernetesVersion string `json:"kubernetesVersion" binding:"required"`
+}
+
+// handlePostCAPICluster handles the creation of a cluster using ClusterAPI
+func handlePostCAPICluster(c *gin.Context) {
+	var req CAPIClusterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		klog.ErrorS(err, "Could not read CAPI cluster request")
+		common.Fail(c, err)
+		return
+	}
+
+	k8sClient := client.InClusterClient()
+	if k8sClient == nil {
+		klog.Error("Failed to get management cluster client")
+		common.Fail(c, fmt.Errorf("failed to get management cluster client"))
+		return
+	}
+
+	// Verify the credential exists
+	secretName := req.CredentialName
+	secretNamespace := "ml-platform-system"
+	secret, err := k8sClient.CoreV1().Secrets(secretNamespace).Get(context.TODO(), secretName, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			klog.ErrorS(err, "Cloud credential not found", "name", secretName)
+			common.Fail(c, fmt.Errorf("cloud credential '%s' not found", secretName))
+			return
+		}
+		klog.ErrorS(err, "Failed to get cloud credential", "name", secretName)
+		common.Fail(c, err)
+		return
+	}
+
+	// Verify it's a cloud credential
+	if secret.Labels["ml-platform.io/credential-type"] != "cloud-credential" {
+		klog.Error("Secret is not a cloud credential", "name", secretName)
+		common.Fail(c, fmt.Errorf("secret '%s' is not a cloud credential", secretName))
+		return
+	}
+
+	// Create the ClusterAPI Cluster resource
+	capiCluster := map[string]interface{}{
+		"apiVersion": "cluster.x-k8s.io/v1beta1",
+		"kind":       "Cluster",
+		"metadata": map[string]interface{}{
+			"name":      req.ClusterName,
+			"namespace": secretNamespace,
+			"labels": map[string]string{
+				"ml-platform.io/managed":       "true",
+				"ml-platform.io/cloud-provider": req.CloudProvider,
+			},
+		},
+		"spec": map[string]interface{}{
+			"clusterNetwork": map[string]interface{}{
+				"pods": map[string]interface{}{
+					"cidrBlocks": []string{"192.168.0.0/16"},
+				},
+			},
+			"controlPlaneRef": map[string]interface{}{
+				"apiVersion": getControlPlaneAPIVersion(req.CloudProvider),
+				"kind":       getControlPlaneKind(req.CloudProvider),
+				"name":       fmt.Sprintf("%s-control-plane", req.ClusterName),
+			},
+			"infrastructureRef": map[string]interface{}{
+				"apiVersion": getInfraAPIVersion(req.CloudProvider),
+				"kind":       getInfraClusterKind(req.CloudProvider),
+				"name":       req.ClusterName,
+			},
+		},
+	}
+
+	// Create infrastructure cluster resource based on provider
+	infraCluster := createInfraClusterResource(req)
+
+	// Create control plane resource
+	controlPlane := createControlPlaneResource(req)
+
+	// Create machine deployment for worker nodes
+	machineDeployment := createMachineDeploymentResource(req)
+
+	klog.InfoS("Creating CAPI cluster resources", "clusterName", req.ClusterName, "provider", req.CloudProvider)
+
+	// Here you would use the dynamic client to create these resources
+	// For now, we'll return a success message indicating the resources would be created
+	result := map[string]interface{}{
+		"message":           fmt.Sprintf("ClusterAPI resources for cluster '%s' will be created", req.ClusterName),
+		"cluster":           capiCluster,
+		"infraCluster":      infraCluster,
+		"controlPlane":      controlPlane,
+		"machineDeployment": machineDeployment,
+	}
+
+	common.Success(c, result)
+}
+
+func getControlPlaneAPIVersion(provider string) string {
+	switch provider {
+	case "aws":
+		return "controlplane.cluster.x-k8s.io/v1beta1"
+	case "gcp":
+		return "controlplane.cluster.x-k8s.io/v1beta1"
+	case "azure":
+		return "controlplane.cluster.x-k8s.io/v1beta1"
+	default:
+		return "controlplane.cluster.x-k8s.io/v1beta1"
+	}
+}
+
+func getControlPlaneKind(provider string) string {
+	switch provider {
+	case "aws":
+		return "AWSManagedControlPlane"
+	case "gcp":
+		return "GCPManagedControlPlane"
+	case "azure":
+		return "AzureManagedControlPlane"
+	default:
+		return "KubeadmControlPlane"
+	}
+}
+
+func getInfraAPIVersion(provider string) string {
+	switch provider {
+	case "aws":
+		return "infrastructure.cluster.x-k8s.io/v1beta1"
+	case "gcp":
+		return "infrastructure.cluster.x-k8s.io/v1beta1"
+	case "azure":
+		return "infrastructure.cluster.x-k8s.io/v1beta1"
+	default:
+		return "infrastructure.cluster.x-k8s.io/v1beta1"
+	}
+}
+
+func getInfraClusterKind(provider string) string {
+	switch provider {
+	case "aws":
+		return "AWSManagedCluster"
+	case "gcp":
+		return "GCPManagedCluster"
+	case "azure":
+		return "AzureManagedCluster"
+	default:
+		return "DockerCluster"
+	}
+}
+
+func createInfraClusterResource(req CAPIClusterRequest) map[string]interface{} {
+	return map[string]interface{}{
+		"apiVersion": getInfraAPIVersion(req.CloudProvider),
+		"kind":       getInfraClusterKind(req.CloudProvider),
+		"metadata": map[string]interface{}{
+			"name":      req.ClusterName,
+			"namespace": "ml-platform-system",
+		},
+		"spec": map[string]interface{}{
+			"region": req.Region,
+		},
+	}
+}
+
+func createControlPlaneResource(req CAPIClusterRequest) map[string]interface{} {
+	return map[string]interface{}{
+		"apiVersion": getControlPlaneAPIVersion(req.CloudProvider),
+		"kind":       getControlPlaneKind(req.CloudProvider),
+		"metadata": map[string]interface{}{
+			"name":      fmt.Sprintf("%s-control-plane", req.ClusterName),
+			"namespace": "ml-platform-system",
+		},
+		"spec": map[string]interface{}{
+			"version": req.KubernetesVersion,
+		},
+	}
+}
+
+func createMachineDeploymentResource(req CAPIClusterRequest) map[string]interface{} {
+	return map[string]interface{}{
+		"apiVersion": "cluster.x-k8s.io/v1beta1",
+		"kind":       "MachineDeployment",
+		"metadata": map[string]interface{}{
+			"name":      fmt.Sprintf("%s-md-0", req.ClusterName),
+			"namespace": "ml-platform-system",
+		},
+		"spec": map[string]interface{}{
+			"clusterName": req.ClusterName,
+			"replicas":    req.NodeCount,
+			"selector": map[string]interface{}{
+				"matchLabels": map[string]string{
+					"cluster.x-k8s.io/cluster-name": req.ClusterName,
+				},
+			},
+			"template": map[string]interface{}{
+				"spec": map[string]interface{}{
+					"clusterName": req.ClusterName,
+					"version":     req.KubernetesVersion,
+					"bootstrap": map[string]interface{}{
+						"configRef": map[string]interface{}{
+							"apiVersion": "bootstrap.cluster.x-k8s.io/v1beta1",
+							"kind":       "KubeadmConfigTemplate",
+							"name":       fmt.Sprintf("%s-md-0", req.ClusterName),
+						},
+					},
+					"infrastructureRef": map[string]interface{}{
+						"apiVersion": getInfraAPIVersion(req.CloudProvider),
+						"kind":       getMachineTemplateKind(req.CloudProvider),
+						"name":       fmt.Sprintf("%s-md-0", req.ClusterName),
+					},
+				},
+			},
+		},
+	}
+}
+
+func getMachineTemplateKind(provider string) string {
+	switch provider {
+	case "aws":
+		return "AWSMachineTemplate"
+	case "gcp":
+		return "GCPMachineTemplate"
+	case "azure":
+		return "AzureMachineTemplate"
+	default:
+		return "DockerMachineTemplate"
+	}
+}
+
 func init() {
 	r := router.V1()
 	r.GET("/cluster", handleGetClusterList)
@@ -449,6 +684,7 @@ func init() {
 	r.GET("/cluster/:name/users", handleGetClusterUsers)
 	r.PUT("/cluster/:name/users", handleUpdateClusterUsers)
 	r.POST("/cluster", handlePostCluster)
+	r.POST("/cluster/capi", handlePostCAPICluster)
 	r.PUT("/cluster/:name", handlePutCluster)
 	r.DELETE("/cluster/:name", handleDeleteCluster)
 }

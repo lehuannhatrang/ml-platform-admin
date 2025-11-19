@@ -153,3 +153,19 @@ export async function UpdateClusterUsers(
   );
   return resp.data;
 }
+
+// Create cluster using ClusterAPI
+export interface CreateCAPIClusterRequest {
+  clusterName: string;
+  cloudProvider: string;
+  credentialName: string;
+  region: string;
+  nodeCount: number;
+  machineType: string;
+  kubernetesVersion: string;
+}
+
+export async function CreateCAPICluster(params: CreateCAPIClusterRequest) {
+  const resp = await karmadaClient.post<IResponse<string>>('/cluster/capi', params);
+  return resp.data;
+}

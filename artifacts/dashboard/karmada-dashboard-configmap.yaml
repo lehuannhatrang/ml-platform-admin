@@ -11,6 +11,9 @@ data:
       - path: /overview
         enable: true
         sidebar_key: OVERVIEW
+      - path: /users
+        enable: true
+        sidebar_key: USERS
   prod.yaml: |-
     docker_registries: [ ]
     chart_registries: [ ]
@@ -18,4 +21,24 @@ data:
       - path: /overview
         enable: true
         sidebar_key: OVERVIEW
+      - path: /users
+        enable: true
+        sidebar_key: USERS
+      - path: /infra-manage
+        enable: true
+        sidebar_key: INFRA-MANAGE
+        children:
+          - path: /infra-manage/clusters
+            enable: true
+            sidebar_key: CLUSTER-MANAGE
+          - path: /infra-manage/cloud-credentials
+            enable: true
+            sidebar_key: CLOUD-CREDENTIALS
+      - path: /basic-config
+        enable: true
+        sidebar_key: BASIC-CONFIG
+        children:
+          - path: monitoring-config
+            enable: true
+            sidebar_key: MONITORING-CONFIG
 

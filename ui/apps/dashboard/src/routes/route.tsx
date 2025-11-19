@@ -28,6 +28,9 @@ import InitTokenPage from '@/pages/login/init-token';
 import CallbackPage from '@/pages/callback';
 import SignOutPage from '@/pages/sign-out';
 import UsersManagement from '@/pages/users';
+import MonitoringConfig from '@/pages/basic-config/monitoring-config';
+import ClusterManage from '@/pages/cluster-manage';
+import CloudCredentials from '@/pages/cloud-credentials';
 
 export interface IRouteObjectHandle {
   icon?: ReactNode;
@@ -81,6 +84,51 @@ export function getRoutes() {
             sidebarName: 'Users Management',
             icon: <Icons.user {...IconStyles} />,
           },
+        },
+        {
+          path: '/infra-manage',
+          handle: {
+            sidebarKey: 'INFRA-MANAGE',
+            sidebarName: 'Infra Manage',
+            icon: <Icons.clusters {...IconStyles} />,
+          },
+          children: [
+            {
+              path: 'clusters',
+              element:<ClusterManage />,
+              handle: {
+                sidebarKey: 'CLUSTER-MANAGE',
+                sidebarName: 'Cluster Manage',
+              },
+            },
+            {
+              path: 'cloud-credentials',
+              element: <CloudCredentials />,
+              handle: {
+                sidebarKey: 'CLOUD-CREDENTIALS',
+                sidebarName: 'Cloud Credentials',
+              },
+            }
+          ]
+        },
+        {
+          path: '/basic-config',
+          handle: {
+            sidebarKey: 'BASIC-CONFIG',
+            sidebarName: i18nInstance.t('cba0d61936703636d3ab45914c9e754a'),
+            icon: <Icons.basicConfig {...IconStyles} />,
+            isPage: false,
+          },
+          children: [
+            {
+              path: 'monitoring-config',
+              element: <MonitoringConfig />,
+              handle: {
+                sidebarKey: 'MONITORING-CONFIG',
+                sidebarName: 'Monitoring Config',
+              },
+            }
+          ],
         },
       ],
     },

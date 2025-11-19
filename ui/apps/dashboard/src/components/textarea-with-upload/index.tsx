@@ -28,6 +28,7 @@ export type TextareaWithUploadProps = EditorProps & {
   value?: string;
   onChange?: (value: string) => void;
   hideUploadButton?: boolean;
+  uploadButtonText?: string;
 };
 
 function tryReadBlob(file: Blob): Promise<{
@@ -62,6 +63,7 @@ const TextareaWithUpload: FC<TextareaWithUploadProps> = (props) => {
     value: _value,
     onChange,
     hideUploadButton = false,
+    uploadButtonText = i18nInstance.t('aba41769112ffcc08cb563e29f460770'),
     ...restProps
   } = props;
   const triggerChange = (changedValue: string) => {
@@ -103,7 +105,7 @@ const TextareaWithUpload: FC<TextareaWithUploadProps> = (props) => {
             icon={<Icons.uploadFile width={16} height={16} />}
             className="flex flex-row items-center"
           >
-            {i18nInstance.t('aba41769112ffcc08cb563e29f460770')}
+            {uploadButtonText}
           </Button>
         </Upload>
       )}
