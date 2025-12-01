@@ -118,16 +118,19 @@ metadata:
     app.kubernetes.io/name: kueue-crd-propagation
     app.kubernetes.io/component: priority-management
 spec:
+  conflictResolution: Overwrite
   resourceSelectors:
     - apiVersion: apiextensions.k8s.io/v1
       kind: CustomResourceDefinition
       name: workloadpriorityclasses.kueue.x-k8s.io
   placement:
     clusterAffinity:
-      clusterNames: []  # Empty means propagate to all clusters
+      labelSelector: {}
+    replicaScheduling:
+      replicaSchedulingType: Duplicated
 ---
 # WorkloadPriorityClass: Low Priority
-apiVersion: kueue.x-k8s.io/v1beta1
+apiVersion: kueue.x-k8s.io/v1beta2
 kind: WorkloadPriorityClass
 metadata:
   name: low-priority-training
@@ -135,7 +138,7 @@ value: 25
 description: "Low priority workloads for training jobs"
 ---
 # WorkloadPriorityClass: Standard/Medium Priority
-apiVersion: kueue.x-k8s.io/v1beta1
+apiVersion: kueue.x-k8s.io/v1beta2
 kind: WorkloadPriorityClass
 metadata:
   name: standard-priority-training
@@ -143,7 +146,7 @@ value: 50
 description: "Standard/medium priority workloads for training jobs"
 ---
 # WorkloadPriorityClass: High Priority
-apiVersion: kueue.x-k8s.io/v1beta1
+apiVersion: kueue.x-k8s.io/v1beta2
 kind: WorkloadPriorityClass
 metadata:
   name: high-priority-training
@@ -175,18 +178,20 @@ metadata:
     app.kubernetes.io/component: priority-management
 spec:
   resourceSelectors:
-    - apiVersion: kueue.x-k8s.io/v1beta1
+    - apiVersion: kueue.x-k8s.io/v1beta2
       kind: WorkloadPriorityClass
       name: low-priority-training
-    - apiVersion: kueue.x-k8s.io/v1beta1
+    - apiVersion: kueue.x-k8s.io/v1beta2
       kind: WorkloadPriorityClass
       name: standard-priority-training
-    - apiVersion: kueue.x-k8s.io/v1beta1
+    - apiVersion: kueue.x-k8s.io/v1beta2
       kind: WorkloadPriorityClass
       name: high-priority-training
   placement:
     clusterAffinity:
-      clusterNames: []  # Empty means propagate to all clusters
+      labelSelector: {}
+    replicaScheduling:
+      replicaSchedulingType: Duplicated
 ---
 # ClusterPropagationPolicy: ConfigMap Propagation
 apiVersion: policy.karmada.io/v1alpha1
@@ -204,4 +209,6 @@ spec:
       namespace: ml-platform-system
   placement:
     clusterAffinity:
-      clusterNames: []  # Empty means propagate to all clusters
+      labelSelector: {}
+    replicaScheduling:
+      replicaSchedulingType: Duplicated

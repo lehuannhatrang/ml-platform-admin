@@ -7,16 +7,18 @@ metadata:
     app.kubernetes.io/component: priority-management
 spec:
   resourceSelectors:
-    - apiVersion: kueue.x-k8s.io/v1beta1
+    - apiVersion: kueue.x-k8s.io/v1beta2
       kind: WorkloadPriorityClass
       name: low-priority-training
-    - apiVersion: kueue.x-k8s.io/v1beta1
+    - apiVersion: kueue.x-k8s.io/v1beta2
       kind: WorkloadPriorityClass
       name: standard-priority-training
-    - apiVersion: kueue.x-k8s.io/v1beta1
+    - apiVersion: kueue.x-k8s.io/v1beta2
       kind: WorkloadPriorityClass
       name: high-priority-training
   placement:
     clusterAffinity:
-      clusterNames: []  # Empty means propagate to all clusters
+      labelSelector: {}
+    replicaScheduling:
+      replicaSchedulingType: Duplicated
 

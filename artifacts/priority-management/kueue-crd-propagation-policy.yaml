@@ -6,11 +6,14 @@ metadata:
     app.kubernetes.io/name: kueue-crd-propagation
     app.kubernetes.io/component: priority-management
 spec:
+  conflictResolution: Overwrite
   resourceSelectors:
     - apiVersion: apiextensions.k8s.io/v1
       kind: CustomResourceDefinition
       name: workloadpriorityclasses.kueue.x-k8s.io
   placement:
     clusterAffinity:
-      clusterNames: []  # Empty means propagate to all clusters
+      labelSelector: {}
+    replicaScheduling:
+      replicaSchedulingType: Duplicated
 

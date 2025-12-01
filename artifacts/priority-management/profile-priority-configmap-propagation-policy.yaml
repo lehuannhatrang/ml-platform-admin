@@ -13,5 +13,7 @@ spec:
       namespace: ml-platform-system
   placement:
     clusterAffinity:
-      clusterNames: []  # Empty means propagate to all clusters
+      labelSelector: {}
+    replicaScheduling:
+      replicaSchedulingType: Duplicated
 
