@@ -1,0 +1,17 @@
+apiVersion: policy.karmada.io/v1alpha1
+kind: ClusterPropagationPolicy
+metadata:
+  name: profile-priority-configmap-propagation
+  labels:
+    app.kubernetes.io/name: profile-priority-configmap-propagation
+    app.kubernetes.io/component: priority-management
+spec:
+  resourceSelectors:
+    - apiVersion: v1
+      kind: ConfigMap
+      name: profile-priority
+      namespace: ml-platform-system
+  placement:
+    clusterAffinity:
+      clusterNames: []  # Empty means propagate to all clusters
+

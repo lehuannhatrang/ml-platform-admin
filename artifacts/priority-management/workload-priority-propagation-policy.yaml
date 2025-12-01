@@ -1,0 +1,22 @@
+apiVersion: policy.karmada.io/v1alpha1
+kind: ClusterPropagationPolicy
+metadata:
+  name: workload-priority-classes-propagation
+  labels:
+    app.kubernetes.io/name: workload-priority-classes-propagation
+    app.kubernetes.io/component: priority-management
+spec:
+  resourceSelectors:
+    - apiVersion: kueue.x-k8s.io/v1beta1
+      kind: WorkloadPriorityClass
+      name: low-priority-training
+    - apiVersion: kueue.x-k8s.io/v1beta1
+      kind: WorkloadPriorityClass
+      name: standard-priority-training
+    - apiVersion: kueue.x-k8s.io/v1beta1
+      kind: WorkloadPriorityClass
+      name: high-priority-training
+  placement:
+    clusterAffinity:
+      clusterNames: []  # Empty means propagate to all clusters
+

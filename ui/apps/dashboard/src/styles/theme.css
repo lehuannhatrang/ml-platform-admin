@@ -77,6 +77,14 @@ body {
   background-color: var(--sidebar-trigger-bg-color);
 }
 
+.light .ant-layout-sider-trigger {
+  background-color: #f0f2f5;
+}
+
+.light .ant-layout-sider-trigger span {
+  color: #000000;
+}
+
 .dark .ant-card {
   background-color: var(--card-bg-color);
   border-color: var(--border-color);

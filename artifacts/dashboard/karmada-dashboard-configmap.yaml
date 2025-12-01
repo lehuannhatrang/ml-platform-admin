@@ -21,6 +21,9 @@ data:
           - path: /profile-manage/users
             enable: true
             sidebar_key: USERS
+          - path: /profile-manage/priority
+            enable: true
+            sidebar_key: PRIORITY
   prod.yaml: |-
     docker_registries: [ ]
     chart_registries: [ ]
@@ -48,6 +51,9 @@ data:
           - path: /profile-manage/users
             enable: true
             sidebar_key: USERS
+          - path: /profile-manage/priority
+            enable: true
+            sidebar_key: PRIORITY
       - path: /basic-config
         enable: true
         sidebar_key: BASIC-CONFIG

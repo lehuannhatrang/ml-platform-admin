@@ -28,6 +28,7 @@ import InitTokenPage from '@/pages/login/init-token';
 import CallbackPage from '@/pages/callback';
 import SignOutPage from '@/pages/sign-out';
 import UsersManagement from '@/pages/users';
+import PriorityManagement from '@/pages/priority';
 import MonitoringConfig from '@/pages/basic-config/monitoring-config';
 import ClusterManage from '@/pages/cluster-manage';
 import CloudCredentials from '@/pages/cloud-credentials';
@@ -89,7 +90,15 @@ export function getRoutes() {
               element: <UsersManagement />,
               handle: {
                 sidebarKey: 'USERS',
-                sidebarName: 'Users Management',
+                sidebarName: 'Users',
+              },
+            },
+            {
+              path: 'Priority',
+              element: <PriorityManagement />,
+              handle: {
+                sidebarKey: 'PRIORITY',
+                sidebarName: 'Priority',
               },
             }
           ],

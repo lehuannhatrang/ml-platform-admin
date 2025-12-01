@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: profile-priority
+  namespace: ml-platform-system
+  labels:
+    app.kubernetes.io/name: profile-priority
+    app.kubernetes.io/component: priority-management
+    app.kubernetes.io/managed-by: ml-platform-admin
+data:
+  # Example entries - these will be managed by the API
+  # "user-example": "high-priority-training"
+  # "user1": "standard-priority-training"
+

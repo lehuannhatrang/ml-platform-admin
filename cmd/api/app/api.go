@@ -51,6 +51,7 @@ import (
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/namespace"          // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/overridepolicy"     // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/overview"           // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/priority"           // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/propagationpolicy"  // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/secret"             // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/service"            // Importing route packages forces route registration
