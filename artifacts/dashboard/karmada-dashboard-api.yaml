@@ -37,7 +37,7 @@ spec:
             - --keycloak-realm=ml-platform
             - --keycloak-url=http://192.168.40.248:32008
           name: ml-platform-admin-api
-          image: lehuannhatrang/ml-platform-admin-api:v0.4
+          image: lehuannhatrang/ml-platform-admin-api:v0.9
           imagePullPolicy: IfNotPresent
           env:
             - name: ENV_NAME

@@ -3,6 +3,7 @@ package overview
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"
@@ -20,28 +21,11 @@ import (
 // HandleGetMemberOverview returns overview data for a specific member cluster
 func HandleGetMemberOverview(c *gin.Context) {
 	clusterName := c.Param("clustername")
-
 	// Get the global overview first
 	karmadaInfo, err := routesoverview.GetControllerManagerInfo()
 	if err != nil {
 		common.Fail(c, err)
 		return
-	}
-
-	// Get the ArgoCD metrics
-	argoMetrics, err := GetMemberArgoMetrics(c, clusterName)
-	if err != nil {
-		// Don't fail if we can't get ArgoCD metrics
-		argoMetrics = &v1.ArgoMetrics{
-			ApplicationCount: 0,
-			ProjectCount:     0,
-		}
-	}
-
-	// Get deployment count for this member cluster
-	deploymentCount, err := GetMemberDeploymentCount(clusterName)
-	if err != nil {
-		deploymentCount = 0
 	}
 
 	// Get member cluster resource status information
@@ -68,13 +52,28 @@ func HandleGetMemberOverview(c *gin.Context) {
 		}
 	}
 
+	// Get the ArgoCD metrics
+	argoMetrics, err := GetMemberArgoMetrics(c, clusterName)
+	if err != nil {
+		// Don't fail if we can't get ArgoCD metrics
+		argoMetrics = &v1.ArgoMetrics{
+			ApplicationCount: 0,
+			ProjectCount:     0,
+		}
+	}
+	
+	// Get deployment count for this member cluster
+	deploymentCount, err := GetMemberDeploymentCount(clusterName)
+	if err != nil {
+		deploymentCount = 0
+	}
+
 	// Get metrics dashboards
 	metricsDashboards, err := GetMetricsDashboards()
 	if err != nil {
 		// Don't fail if we can't get metrics dashboards
 		metricsDashboards = []v1.MetricsDashboard{}
 	}
-	
 	// Get namespace count
 	namespaceCount, err := GetMemberNamespaceCount(clusterName)
 	if err != nil {
@@ -98,7 +97,6 @@ func HandleGetMemberOverview(c *gin.Context) {
 // GetMemberArgoMetrics retrieves ArgoCD application and project counts from a specific member cluster
 func GetMemberArgoMetrics(c *gin.Context, clusterName string) (*v1.ArgoMetrics, error) {
 	ctx := context.TODO()
-
 	// Define the GVRs for ArgoCD resources
 	applicationGVR := schema.GroupVersionResource{
 		Group:    "argoproj.io",
@@ -219,7 +217,6 @@ func GetMemberClusterStatus(clusterName string) (*v1.MemberClusterStatus, error)
 			GPUPools: make([]v1.GPUPool, 0),
 		},
 	}
-
 	// Get and process node information
 	nodes, err := memberClient.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -343,6 +340,12 @@ func GetMemberClusterStatus(clusterName string) (*v1.MemberClusterStatus, error)
 				Count: count,
 			})
 		}
+		
+		// Sort GPU pools by count (descending order)
+		sort.Slice(gpuPools, func(i, j int) bool {
+			return gpuPools[i].Count > gpuPools[j].Count
+		})
+		
 		memberClusterStatus.GPUSummary.GPUPools = gpuPools
 	}
 

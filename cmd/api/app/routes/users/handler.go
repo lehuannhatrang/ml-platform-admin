@@ -48,6 +48,7 @@ type User struct {
 	EmailVerified bool     `json:"emailVerified"`
 	Roles         []string `json:"roles"`
 	CreatedAt     int64    `json:"createdTimestamp"`
+	Profile       string   `json:"profile"` // Kubeflow Profile name (sanitized)
 }
 
 // CreateUserRequest represents the request to create a user
@@ -157,6 +158,9 @@ func handleListUsers(c *gin.Context) {
 		return
 	}
 
+	// Get all Kubeflow Profiles to map email -> profile name
+	profileMap := getProfileMap(ctx)
+
 	// Convert to our User type
 	result := make([]User, 0, len(users))
 	for _, u := range users {
@@ -177,16 +181,27 @@ func handleListUsers(c *gin.Context) {
 			}
 		}
 
+		email := getStringValue(u.Email)
+		profileName := ""
+		
+		// Look up profile name from the profile map
+		if email != "" {
+			if profile, exists := profileMap[email]; exists {
+				profileName = profile
+			}
+		}
+
 		user := User{
 			ID:            getStringValue(u.ID),
 			Username:      getStringValue(u.Username),
-			Email:         getStringValue(u.Email),
+			Email:         email,
 			FirstName:     getStringValue(u.FirstName),
 			LastName:      getStringValue(u.LastName),
 			Enabled:       getBoolValue(u.Enabled),
 			EmailVerified: getBoolValue(u.EmailVerified),
 			Roles:         roles,
 			CreatedAt:     getInt64Value(u.CreatedTimestamp),
+			Profile:       profileName,
 		}
 		result = append(result, user)
 	}
@@ -1085,6 +1100,65 @@ func getInt64Value(ptr *int64) int64 {
 		return *ptr
 	}
 	return 0
+}
+
+// getProfileMap fetches all Kubeflow Profile CRs and creates a map of email -> profile name
+func getProfileMap(ctx context.Context) map[string]string {
+	profileMap := make(map[string]string)
+
+	// Get Karmada config and create dynamic client
+	karmadaConfig, _, err := client.GetKarmadaConfig()
+	if err != nil {
+		klog.InfoS("Failed to get Karmada config, profile mapping unavailable", "error", err)
+		return profileMap
+	}
+
+	dynamicClient, err := dynamic.NewForConfig(karmadaConfig)
+	if err != nil {
+		klog.InfoS("Failed to create dynamic client, profile mapping unavailable", "error", err)
+		return profileMap
+	}
+
+	// Define the Kubeflow Profile GVR
+	profileGVR := schema.GroupVersionResource{
+		Group:    "kubeflow.org",
+		Version:  "v1",
+		Resource: "profiles",
+	}
+
+	// List all Profile CRs
+	profiles, err := dynamicClient.Resource(profileGVR).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		klog.InfoS("Failed to list Kubeflow Profiles", "error", err)
+		return profileMap
+	}
+
+	// Build map from email to profile name
+	for _, profile := range profiles.Items {
+		profileName := profile.GetName()
+		
+		// Get owner email from spec.owner.name
+		spec, found, err := unstructured.NestedMap(profile.Object, "spec")
+		if !found || err != nil {
+			continue
+		}
+
+		owner, found, err := unstructured.NestedMap(spec, "owner")
+		if !found || err != nil {
+			continue
+		}
+
+		ownerName, found, err := unstructured.NestedString(owner, "name")
+		if !found || err != nil {
+			continue
+		}
+
+		// Map email to profile name
+		profileMap[ownerName] = profileName
+	}
+
+	klog.V(4).InfoS("Built profile map", "count", len(profileMap))
+	return profileMap
 }
 
 func init() {

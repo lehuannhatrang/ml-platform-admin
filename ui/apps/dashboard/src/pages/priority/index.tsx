@@ -182,8 +182,9 @@ const PriorityManagement = () => {
     );
     
     return usersData
+      .filter((user: User) => user.profile) // Only include users with profiles
       .map((user: User) => ({
-        value: user.username,
+        value: user.profile,
         label: `${user.username} (${user.email})`,
         email: user.email,
       }))
@@ -194,20 +195,24 @@ const PriorityManagement = () => {
 
   const columns = [
     {
-      title: 'Profile',
-      dataIndex: 'profile',
-      key: 'profile',
-      fixed: 'left' as const,
-      width: 250,
-      render: (profile: string) => (
-        <Typography.Text strong>{profile}</Typography.Text>
-      ),
+      title: 'Username',
+      dataIndex: 'username',
+      key: 'username',
+      width: 150,
+      render: (username: string) => username || '-',
+    },
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email',
+      width: 220,
+      render: (email: string) => email || '-',
     },
     {
       title: 'Priority',
       dataIndex: 'priorityClass',
       key: 'priorityClass',
-      width: 200,
+      width: 150,
       render: (priorityClass: string) => (
         <Tag color={getPriorityColor(priorityClass)} style={{ fontSize: '14px', padding: '4px 12px' }}>
           {getPriorityLabel(priorityClass)}

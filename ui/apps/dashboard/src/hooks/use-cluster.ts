@@ -22,11 +22,13 @@ import { DataSelectQuery } from '@/services/base.ts';
 export type ClusterOption = {
     label: string;
     value: string;
+    ready?: boolean;
 }
 
 export const DEFAULT_CLUSTER_OPTION: ClusterOption = {
     label: 'All Regions',
     value: 'ALL',
+    ready: true,
 };
 
 const SELECTED_CLUSTER_KEY = 'selectedCluster';
@@ -77,6 +79,7 @@ const useCluster = (props: { clusterFilter?: DataSelectQuery, allowSelectAll?: b
             ...clusterData.clusters.map((item) => ({
                 label: item.objectMeta.labels?.region ? `${item.objectMeta.labels.region}` : item.objectMeta.name,
                 value: item.objectMeta.name,
+                ready: item?.ready === "True",
             })),
         ];
     }, [clusterData, allowSelectAll]);

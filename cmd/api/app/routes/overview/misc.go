@@ -239,14 +239,12 @@ func GetClusterResourceStatus() (*v1.ClusterResourceStatus, error) {
 		return nil, err
 	}
 	clusterResourceStatus.PropagationPolicyNum += len(ppRet.Items)
-
 	// handle op num
 	clusterOPRet, err := karmadaClient.PolicyV1alpha1().ClusterOverridePolicies().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 	clusterResourceStatus.OverridePolicyNum += len(clusterOPRet.Items)
-
 	opRet, err := karmadaClient.PolicyV1alpha1().OverridePolicies("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -269,7 +267,6 @@ func GetClusterResourceStatus() (*v1.ClusterResourceStatus, error) {
 		return nil, err
 	}
 	clusterResourceStatus.WorkloadNum += len(deploymentRet.Items)
-
 	// handle configmap & secret num
 	secretRet, err := kubeClient.CoreV1().Secrets("").List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -293,7 +290,6 @@ func GetClusterResourceStatus() (*v1.ClusterResourceStatus, error) {
 		return nil, err
 	}
 	clusterResourceStatus.ServiceNum += len(ingressRet.Items)
-
 	return clusterResourceStatus, nil
 }
 

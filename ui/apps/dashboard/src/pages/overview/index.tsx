@@ -35,7 +35,7 @@ import { GetClusters } from '@/services';
 import { Icons } from '@/components/icons';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PlusOutlined, SettingOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, DisconnectOutlined, PlusOutlined, SettingOutlined } from '@ant-design/icons';
 import NewDashboardModal from './new-dashboard-modal';
 import { DeleteMonitoringDashboard } from '@/services/monitoring-config';
 import { useCluster } from '@/hooks';
@@ -128,6 +128,8 @@ const Overview = () => {
               tabList={clusterOptions.map(option => ({
                 label: option.label,
                 key: option.value,
+                disabled: !option.ready,
+                ...(option.value !== "ALL" ? { icon: option.ready ? <CheckCircleOutlined /> : <DisconnectOutlined /> } : {}),
               }))}
               activeTabKey={selectedCluster.value}
               onTabChange={(key) => {
@@ -161,7 +163,7 @@ const Overview = () => {
                     <Col span={8}>
                       <InfoCard
                         label='Total GPUs'
-                        value={data?.memberClusterStatus?.gpuSummary?.totalGPU || '0'}
+                        value={gpuSummary?.totalGPU || '0'}
                         hoverable={true}
                         onClick={() => navigate('/continuous-delivery/application')}
                       />
@@ -185,7 +187,7 @@ const Overview = () => {
                         <b style={{ fontSize: 16 }}>
                           {i18nInstance.t(
                             'a1dacced95ddca3603110bdb1ae46af1',
-                            'CPU使用情况',
+                            '',
                           )} (Core)
                         </b>
                       </Row>

@@ -24,6 +24,9 @@ import (
 	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/klog/v2"
 
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
@@ -41,6 +44,8 @@ const (
 type PriorityAssignment struct {
 	Profile       string `json:"profile"`
 	PriorityClass string `json:"priorityClass"`
+	Username      string `json:"username,omitempty"`
+	Email         string `json:"email,omitempty"`
 }
 
 // PriorityAssignmentRequest represents a request to set/update priority
@@ -110,12 +115,23 @@ func handleGetPriorities(c *gin.Context) {
 		return
 	}
 
+	// Get profile to user info mapping
+	profileUserMap := getProfileUserMap(ctx)
+
 	assignments := make([]PriorityAssignment, 0, len(configMap.Data))
 	for profile, priorityClass := range configMap.Data {
-		assignments = append(assignments, PriorityAssignment{
+		assignment := PriorityAssignment{
 			Profile:       profile,
 			PriorityClass: priorityClass,
-		})
+		}
+		
+		// Add username and email if available
+		if userInfo, exists := profileUserMap[profile]; exists {
+			assignment.Username = userInfo.Username
+			assignment.Email = userInfo.Email
+		}
+		
+		assignments = append(assignments, assignment)
 	}
 
 	response := PriorityListResponse{
@@ -152,6 +168,13 @@ func handleGetPriority(c *gin.Context) {
 	assignment := PriorityAssignment{
 		Profile:       profile,
 		PriorityClass: priorityClass,
+	}
+
+	// Get profile to user info mapping and add username/email if available
+	profileUserMap := getProfileUserMap(ctx)
+	if userInfo, exists := profileUserMap[profile]; exists {
+		assignment.Username = userInfo.Username
+		assignment.Email = userInfo.Email
 	}
 
 	common.Success(c, assignment)
@@ -245,6 +268,79 @@ func handleDeletePriority(c *gin.Context) {
 
 	klog.InfoS("Priority assignment deleted", "profile", profile)
 	common.Success(c, gin.H{"message": "Priority assignment deleted successfully"})
+}
+
+// ProfileUserInfo holds user information for a profile
+type ProfileUserInfo struct {
+	Username string
+	Email    string
+}
+
+// getProfileUserMap fetches all Kubeflow Profile CRs and creates a map of profile name -> user info
+func getProfileUserMap(ctx context.Context) map[string]ProfileUserInfo {
+	profileUserMap := make(map[string]ProfileUserInfo)
+
+	// Get Karmada config and create dynamic client
+	karmadaConfig, _, err := client.GetKarmadaConfig()
+	if err != nil {
+		klog.V(4).InfoS("Failed to get Karmada config, profile user mapping unavailable", "error", err)
+		return profileUserMap
+	}
+
+	dynamicClient, err := dynamic.NewForConfig(karmadaConfig)
+	if err != nil {
+		klog.V(4).InfoS("Failed to create dynamic client, profile user mapping unavailable", "error", err)
+		return profileUserMap
+	}
+
+	// Define the Kubeflow Profile GVR
+	profileGVR := schema.GroupVersionResource{
+		Group:    "kubeflow.org",
+		Version:  "v1",
+		Resource: "profiles",
+	}
+
+	// List all Profile CRs
+	profiles, err := dynamicClient.Resource(profileGVR).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		klog.V(4).InfoS("Failed to list Kubeflow Profiles", "error", err)
+		return profileUserMap
+	}
+
+	// Build map from profile name to user info
+	for _, profile := range profiles.Items {
+		profileName := profile.GetName()
+		
+		// Get owner email from spec.owner.name
+		spec, found, err := unstructured.NestedMap(profile.Object, "spec")
+		if !found || err != nil {
+			continue
+		}
+
+		owner, found, err := unstructured.NestedMap(spec, "owner")
+		if !found || err != nil {
+			continue
+		}
+
+		ownerEmail, found, err := unstructured.NestedString(owner, "name")
+		if !found || err != nil {
+			continue
+		}
+
+		// Extract username from email (part before @)
+		username := ownerEmail
+		if atIndex := strings.Index(ownerEmail, "@"); atIndex > 0 {
+			username = ownerEmail[:atIndex]
+		}
+
+		profileUserMap[profileName] = ProfileUserInfo{
+			Username: username,
+			Email:    ownerEmail,
+		}
+	}
+
+	klog.V(4).InfoS("Built profile user map", "count", len(profileUserMap))
+	return profileUserMap
 }
 
 func init() {

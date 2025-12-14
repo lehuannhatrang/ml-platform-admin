@@ -34,6 +34,14 @@ func (c ClusterCell) GetProperty(name dataselect.PropertyName) dataselect.Compar
 		return dataselect.StdComparableTime(c.ObjectMeta.CreationTimestamp.Time)
 	case dataselect.NamespaceProperty:
 		return dataselect.StdComparableString(c.ObjectMeta.Namespace)
+	case "ready":
+		// Get cluster ready status from conditions
+		for _, condition := range c.Status.Conditions {
+			if condition.Type == "Ready" {
+				return dataselect.StdComparableString(string(condition.Status))
+			}
+		}
+		return dataselect.StdComparableString("Unknown")
 	default:
 		// if name is not supported then just return a constant dummy value, sort will have no effect.
 		return nil

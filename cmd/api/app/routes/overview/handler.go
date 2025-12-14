@@ -26,6 +26,7 @@ import (
 	"github.com/karmada-io/dashboard/cmd/api/app/types/common"
 	"github.com/karmada-io/dashboard/pkg/client"
 	"github.com/karmada-io/dashboard/pkg/config"
+	"github.com/karmada-io/dashboard/pkg/dataselect"
 )
 
 func getMetricsDashboards() []v1.MetricsDashboard {
@@ -44,6 +45,17 @@ func getMetricsDashboards() []v1.MetricsDashboard {
 
 func handleGetOverview(c *gin.Context) {
 	dataSelect := common.ParseDataSelectPathParameter(c)
+	
+	// Add filter to only include ready clusters
+	if dataSelect.FilterQuery == nil {
+		dataSelect.FilterQuery = dataselect.NewFilterQuery([]string{"ready", "True"})
+	} else {
+		dataSelect.FilterQuery.FilterByList = append(dataSelect.FilterQuery.FilterByList, dataselect.FilterBy{
+			Property: dataselect.PropertyName("ready"),
+			Value:    dataselect.StdComparableString("True"),
+		})
+	}
+	
 	karmadaInfo, err := GetControllerManagerInfo()
 	if err != nil {
 		common.Fail(c, err)
@@ -54,13 +66,11 @@ func handleGetOverview(c *gin.Context) {
 		common.Fail(c, err)
 		return
 	}
-
 	clusterResourceStatus, err := GetClusterResourceStatus()
 	if err != nil {
 		common.Fail(c, err)
 		return
 	}
-
 	metricsDashboards := getMetricsDashboards()
 
 	// Get ArgoCD metrics from all member clusters

@@ -33,6 +33,7 @@ import (
 	"github.com/karmada-io/dashboard/pkg/common/helpers"
 	"github.com/karmada-io/dashboard/pkg/common/types"
 	"github.com/karmada-io/dashboard/pkg/dataselect"
+	clusterv1alpha1 "github.com/karmada-io/karmada/pkg/apis/cluster/v1alpha1"
 )
 
 // Cluster the definition of a cluster.
@@ -61,7 +62,6 @@ func GetClusterList(client karmadaclientset.Interface, dsQuery *dataselect.DataS
 	if client == nil {
 		return nil, fmt.Errorf("karmada client is nil")
 	}
-
 	// Get all clusters first
 	clusters, err := client.ClusterV1alpha1().Clusters().List(context.TODO(), helpers.ListEverything)
 	nonCriticalErrors, criticalError := errors.ExtractErrors(err)
@@ -223,7 +223,7 @@ func toCluster(cluster *v1alpha1.Cluster) Cluster {
 	return Cluster{
 		ObjectMeta:         types.NewObjectMeta(cluster.ObjectMeta),
 		TypeMeta:           types.NewTypeMeta(types.ResourceKindCluster),
-		Ready:              getClusterConditionStatus(cluster, metav1.ConditionTrue),
+		Ready:              getClusterConditionStatus(cluster, clusterv1alpha1.ClusterConditionReady),
 		KubernetesVersion:  cluster.Status.KubernetesVersion,
 		AllocatedResources: allocatedResources,
 		SyncMode:           cluster.Spec.SyncMode,
@@ -233,7 +233,7 @@ func toCluster(cluster *v1alpha1.Cluster) Cluster {
 
 func getClusterConditionStatus(cluster *v1alpha1.Cluster, conditionType metav1.ConditionStatus) metav1.ConditionStatus {
 	for _, condition := range cluster.Status.Conditions {
-		if condition.Status == conditionType {
+		if condition.Type == string(conditionType) {
 			return condition.Status
 		}
 	}

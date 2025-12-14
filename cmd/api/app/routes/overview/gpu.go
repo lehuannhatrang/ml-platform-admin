@@ -19,6 +19,7 @@ package overview
 import (
 	"context"
 	"strconv"
+	"sort"
 
 	"github.com/gin-gonic/gin"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -68,28 +69,19 @@ func GetGPUSummaryFromClusters(c *gin.Context, clusterNames []string) *v1.GPUSum
 			// Get GPU count from status.capacity["nvidia.com/gpu"]
 			if gpuQuantity, exists := node.Status.Capacity[GPUResourceKey]; exists {
 				gpuCount := gpuQuantity.Value()
-				
 				if gpuCount > 0 {
 					// Get GPU model from labels["nvidia.com/gpu.product"]
 					gpuModel := "Unknown"
 					if model, labelExists := node.Labels[GPUProductLabel]; labelExists && model != "" {
 						gpuModel = model
 					}
-
 					// Add to the map
 					gpuByModel[gpuModel] += gpuCount
 					totalGPUs += gpuCount
-					
-					klog.V(4).InfoS("Found GPU in node",
-						"cluster", clusterName,
-						"node", node.Name,
-						"model", gpuModel,
-						"count", gpuCount)
 				}
 			}
 		}
 	}
-
 	// Convert map to GPUPool slice
 	gpuPools := make([]v1.GPUPool, 0, len(gpuByModel))
 	for model, count := range gpuByModel {
@@ -98,6 +90,11 @@ func GetGPUSummaryFromClusters(c *gin.Context, clusterNames []string) *v1.GPUSum
 			Count: count,
 		})
 	}
+	// Sort GPU pools by count (descending order)
+	sort.Slice(gpuPools, func(i, j int) bool {
+		return gpuPools[i].Count > gpuPools[j].Count
+	})
+	
 
 	return &v1.GPUSummary{
 		TotalGPU: totalGPUs,

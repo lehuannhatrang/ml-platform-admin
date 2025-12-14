@@ -19,6 +19,8 @@ import { IResponse, karmadaClient } from './base';
 export interface PriorityAssignment {
   profile: string;
   priorityClass: string;
+  username?: string;
+  email?: string;
 }
 
 export interface PriorityListResponse {

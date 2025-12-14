@@ -26,6 +26,7 @@ export interface User {
   emailVerified: boolean;
   roles: string[];
   createdTimestamp: number;
+  profile: string; // Kubeflow Profile name
 }
 
 export interface CreateUserRequest {
