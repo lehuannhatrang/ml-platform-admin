@@ -39,11 +39,18 @@ export interface menuConfig {
   children: menuConfig[];
 }
 
-interface DashboardConfig {
+export interface GPUConfig {
+  total_vram_gib: number;  // Total VRAM per GPU in GiB (default: 24)
+  slice_size_gib: number;  // Size of each GPU slice in GiB (default: 4)
+  default_slices: number;  // Default number of slices for new users (default: 1)
+}
+
+export interface DashboardConfig {
   docker_registries: dockerRegistry[];
   chart_registries: chartRegistry[];
   menu_configs: menuConfig[];
   ai_agent_chat_webhook: string;
+  gpu_config: GPUConfig;
 }
 
 export async function GetDashboardConfig() {

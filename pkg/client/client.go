@@ -17,6 +17,7 @@ limitations under the License.
 package client
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -229,6 +230,31 @@ func GetDynamicClientForMember(ctx *gin.Context, clusterName string) (dynamic.In
 		}
 	}
 
+	memberConfig, err := GetMemberConfig()
+	if err != nil {
+		klog.ErrorS(err, "Failed to get member config")
+		return nil, fmt.Errorf("failed to get member config: %w", err)
+	}
+
+	// If a cluster name is provided, configure the client to use the Karmada proxy
+	if clusterName != "" {
+		karmadaConfig, _, err := GetKarmadaConfig()
+		if err != nil {
+			klog.ErrorS(err, "Failed to get karmada config")
+			return nil, fmt.Errorf("failed to get karmada config: %w", err)
+		}
+
+		memberConfig.Host = karmadaConfig.Host + fmt.Sprintf("/apis/cluster.karmada.io/v1alpha1/clusters/%s/proxy/", clusterName)
+		klog.V(4).InfoS("Using member config with proxy", "host", memberConfig.Host)
+	}
+
+	return dynamic.NewForConfig(memberConfig)
+}
+
+// GetDynamicClientForMemberByContext returns a dynamic client for a member cluster using context.Context.
+// This is a simplified version that doesn't perform user authentication checks,
+// suitable for background operations or when authentication is handled elsewhere.
+func GetDynamicClientForMemberByContext(ctx context.Context, clusterName string) (dynamic.Interface, error) {
 	memberConfig, err := GetMemberConfig()
 	if err != nil {
 		klog.ErrorS(err, "Failed to get member config")

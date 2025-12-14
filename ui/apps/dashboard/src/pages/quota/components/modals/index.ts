@@ -14,15 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1
+export { default as CreateQuotaModal } from './CreateQuotaModal';
+export { default as EditQuotaModal } from './EditQuotaModal';
+export { default as ScanAllModal } from './ScanAllModal';
 
-import "github.com/karmada-io/dashboard/pkg/config"
-
-// SetDashboardConfigRequest is the request for setting dashboard config
-type SetDashboardConfigRequest struct {
-	DockerRegistries   []config.DockerRegistry `json:"docker_registries"`
-	ChartRegistries    []config.ChartRegistry  `json:"chart_registries"`
-	MenuConfigs        []config.MenuConfig     `json:"menu_configs"`
-	AIAgentChatWebHook string                  `json:"ai_agent_chat_webhook"`
-	GPUConfig          *config.GPUConfig       `json:"gpu_config,omitempty"`
-}

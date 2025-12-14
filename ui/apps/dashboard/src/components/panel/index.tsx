@@ -30,6 +30,7 @@ import { cn } from '@/utils/cn.ts';
 interface IPanelProps {
   children: ReactNode;
   showSelectCluster?: boolean;
+  allowSelectAllCluster?: boolean;
   whiteBackground?: boolean;
 }
 
@@ -42,9 +43,9 @@ interface MenuItem {
 }
 
 const Panel: FC<IPanelProps> = (props) => {
-  const { children, showSelectCluster = true, whiteBackground = true } = props;
+  const { children, showSelectCluster = true, allowSelectAllCluster = true, whiteBackground = true } = props;
   const matches = useMatches();
-  const { clusterOptions, isClusterDataLoading, selectedCluster, setSelectedCluster } = useCluster({});
+  const { clusterOptions, isClusterDataLoading, selectedCluster, setSelectedCluster } = useCluster({allowSelectAll: allowSelectAllCluster});
   const breadcrumbs = useMemo(() => {
     if (!matches || matches.length === 0) return [] as MenuItem[];
     const filteredMatches = matches.filter((m) => Boolean(m.handle));

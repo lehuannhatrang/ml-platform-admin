@@ -252,7 +252,7 @@ const PriorityManagement = () => {
   ];
 
   return (
-    <Panel>
+    <Panel showSelectCluster={false}>
       <Card>
         <Row justify="space-between" align="middle">
             <div style={{ marginBottom: 24 }}>

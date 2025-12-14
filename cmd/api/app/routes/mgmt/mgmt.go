@@ -30,7 +30,8 @@ import (
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/mgmt/overview" // Importing mgmt route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/mgmt/package"
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/mgmt/persistentvolume"
-	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/mgmt/pod" // Importing mgmt route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/mgmt/pod"   // Importing mgmt route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/mgmt/quota" // Importing mgmt route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/mgmt/replicaset"
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/mgmt/secret"
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/mgmt/service"

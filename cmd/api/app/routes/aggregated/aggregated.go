@@ -29,6 +29,7 @@ import (
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/node"             // Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/persistentvolume" // Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/pod"              // Importing member route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/quota"            // Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/replicaset"       // Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/secret"           // Importing member route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/aggregated/service"          // Importing member route packages forces route registration

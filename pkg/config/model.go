@@ -47,6 +47,22 @@ type MetricsDashboard struct {
 	URL  string `yaml:"url" json:"url"`
 }
 
+// GPUConfig represents GPU-related configuration for quota management
+type GPUConfig struct {
+	TotalVRAMGiB  int `yaml:"total_vram_gib" json:"total_vram_gib"`   // Total VRAM per GPU in GiB (default: 24)
+	SliceSizeGiB  int `yaml:"slice_size_gib" json:"slice_size_gib"`   // Size of each GPU slice in GiB (default: 4)
+	DefaultSlices int `yaml:"default_slices" json:"default_slices"`   // Default number of slices for new users (default: 1)
+}
+
+// GetDefaultGPUConfig returns the default GPU configuration
+func GetDefaultGPUConfig() GPUConfig {
+	return GPUConfig{
+		TotalVRAMGiB:  24,
+		SliceSizeGiB:  4,
+		DefaultSlices: 1,
+	}
+}
+
 // DashboardConfig represents the configuration structure for the Karmada dashboard.
 type DashboardConfig struct {
 	DockerRegistries   []DockerRegistry   `yaml:"docker_registries" json:"docker_registries"`
@@ -55,4 +71,5 @@ type DashboardConfig struct {
 	PathPrefix         string             `yaml:"path_prefix" json:"path_prefix"`
 	MetricsDashboards  []MetricsDashboard `yaml:"metrics_dashboards" json:"metrics_dashboards"`
 	AIAgentChatWebHook string             `yaml:"ai_agent_chat_webhook" json:"ai_agent_chat_webhook"`
+	GPUConfig          GPUConfig          `yaml:"gpu_config" json:"gpu_config"`
 }

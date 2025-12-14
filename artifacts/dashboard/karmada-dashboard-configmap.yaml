@@ -7,6 +7,10 @@ data:
   dev.yaml: |-
     docker_registries: []
     chart_registries: []
+    gpu_config:
+      total_vram_gib: 24
+      slice_size_gib: 4
+      default_slices: 1
     menu_configs:
       - path: /overview
         enable: true
@@ -24,9 +28,16 @@ data:
           - path: /profile-manage/priority
             enable: true
             sidebar_key: PRIORITY
+          - path: /profile-manage/quota
+            enable: true
+            sidebar_key: QUOTA
   prod.yaml: |-
     docker_registries: [ ]
     chart_registries: [ ]
+    gpu_config:
+      total_vram_gib: 24
+      slice_size_gib: 4
+      default_slices: 1
     menu_configs:
       - path: /overview
         enable: true
@@ -54,6 +65,9 @@ data:
           - path: /profile-manage/priority
             enable: true
             sidebar_key: PRIORITY
+          - path: /profile-manage/quota
+            enable: true
+            sidebar_key: QUOTA
       - path: /basic-config
         enable: true
         sidebar_key: BASIC-CONFIG

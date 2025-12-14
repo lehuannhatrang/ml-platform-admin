@@ -29,6 +29,7 @@ import CallbackPage from '@/pages/callback';
 import SignOutPage from '@/pages/sign-out';
 import UsersManagement from '@/pages/users';
 import PriorityManagement from '@/pages/priority';
+import QuotaManagement from '@/pages/quota';
 import MonitoringConfig from '@/pages/basic-config/monitoring-config';
 import ClusterManage from '@/pages/cluster-manage';
 import CloudCredentials from '@/pages/cloud-credentials';
@@ -99,6 +100,14 @@ export function getRoutes() {
               handle: {
                 sidebarKey: 'PRIORITY',
                 sidebarName: 'Priority',
+              },
+            },
+            {
+              path: 'Quota',
+              element: <QuotaManagement />,
+              handle: {
+                sidebarKey: 'QUOTA',
+                sidebarName: 'Quota',
               },
             }
           ],

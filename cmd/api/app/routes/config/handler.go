@@ -55,6 +55,9 @@ func SetDashboardConfig(c *gin.Context) {
 	if setDashboardConfigRequest.AIAgentChatWebHook != "" {
 		dashboardConfig.AIAgentChatWebHook = setDashboardConfigRequest.AIAgentChatWebHook
 	}
+	if setDashboardConfigRequest.GPUConfig != nil {
+		dashboardConfig.GPUConfig = *setDashboardConfigRequest.GPUConfig
+	}
 	k8sClient := client.InClusterClient()
 	err := config.UpdateDashboardConfig(k8sClient, dashboardConfig)
 	if err != nil {

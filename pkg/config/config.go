@@ -113,6 +113,18 @@ func InitDashboardConfig(k8sClient kubernetes.Interface, stopper <-chan struct{}
 
 // GetDashboardConfig returns a copy of the current dashboard configuration.
 func GetDashboardConfig() DashboardConfig {
+	// Ensure GPU config has default values if not set
+	gpuConfig := dashboardConfig.GPUConfig
+	if gpuConfig.TotalVRAMGiB == 0 {
+		gpuConfig.TotalVRAMGiB = 24
+	}
+	if gpuConfig.SliceSizeGiB == 0 {
+		gpuConfig.SliceSizeGiB = 4
+	}
+	if gpuConfig.DefaultSlices == 0 {
+		gpuConfig.DefaultSlices = 1
+	}
+
 	return DashboardConfig{
 		DockerRegistries:   dashboardConfig.DockerRegistries,
 		ChartRegistries:    dashboardConfig.ChartRegistries,
@@ -120,6 +132,7 @@ func GetDashboardConfig() DashboardConfig {
 		PathPrefix:         dashboardConfig.PathPrefix,
 		MetricsDashboards:  dashboardConfig.MetricsDashboards,
 		AIAgentChatWebHook: dashboardConfig.AIAgentChatWebHook,
+		GPUConfig:          gpuConfig,
 	}
 }
 

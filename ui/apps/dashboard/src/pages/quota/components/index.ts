@@ -14,15 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1
+export { default as GPUUsageDisplay } from './GPUUsageDisplay';
+export { default as GPUSlicingTab } from './GPUSlicingTab';
+export { default as QuotaManagementTab } from './QuotaManagementTab';
+export * from './modals';
 
-import "github.com/karmada-io/dashboard/pkg/config"
-
-// SetDashboardConfigRequest is the request for setting dashboard config
-type SetDashboardConfigRequest struct {
-	DockerRegistries   []config.DockerRegistry `json:"docker_registries"`
-	ChartRegistries    []config.ChartRegistry  `json:"chart_registries"`
-	MenuConfigs        []config.MenuConfig     `json:"menu_configs"`
-	AIAgentChatWebHook string                  `json:"ai_agent_chat_webhook"`
-	GPUConfig          *config.GPUConfig       `json:"gpu_config,omitempty"`
-}
