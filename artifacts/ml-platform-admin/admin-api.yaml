@@ -91,18 +91,12 @@ spec:
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           volumeMounts:
-            - name: kubeconfig-karmada-apiserver
-              subPath: kubeconfig
-              mountPath: /etc/kubeconfig-karmada-apiserver
             - name: kubeconfig-mgmt-cluster
               subPath: kubeconfig
               mountPath: /etc/kubeconfig
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
       volumes:
-        - name: kubeconfig-karmada-apiserver
-          secret:
-            secretName: kubeconfig-karmada-apiserver
         - name: kubeconfig-mgmt-cluster
           secret:
             secretName: kubeconfig
