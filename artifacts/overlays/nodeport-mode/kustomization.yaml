@@ -3,7 +3,7 @@ kind: Kustomization
 
 resources:
   - ../../ml-platform-admin
-  - ../../keycloak
+  # - ../../keycloak
 
 configMapGenerator:
   - name: ml-platform-admin-configmap
