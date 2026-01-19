@@ -1,10 +1,62 @@
 docker_registries: []
+ai_agent_chat_webhook: ""
 chart_registries: []
-path_prefix: ''
-metrics_dashboards: []
-ai_agent_chat_webhook: ''
+path_prefix: ""
+local_cluster_name: local-cluster
 menu_configs:
-  - path: /overview
-    enable: true
-    sidebar_key: OVERVIEW
-  
+    - path: /overview
+      enable: true
+      sidebar_key: OVERVIEW
+      children: []
+    - path: /profile-manage
+      enable: true
+      sidebar_key: PROFILES-MANAGEMENT
+      children:
+        - path: /profile-manage/users
+          enable: true
+          sidebar_key: USERS
+          children: []
+        - path: /profile-manage/priority
+          enable: true
+          sidebar_key: PRIORITY
+          children: []
+        - path: /profile-manage/quota
+          enable: true
+          sidebar_key: QUOTA
+          children: []
+    - path: /basic-config
+      enable: true
+      sidebar_key: BASIC-CONFIG
+      children:
+        - path: monitoring-config
+          enable: true
+          sidebar_key: MONITORING-CONFIG
+          children: []
+    - path: /infra-manage
+      enable: true
+      sidebar_key: INFRA-MANAGE
+      children:
+        - path: /infra-manage/clusters
+          enable: true
+          sidebar_key: CLUSTER-MANAGE
+          children: []
+        - path: /infra-manage/cloud-credentials
+          enable: true
+          sidebar_key: CLOUD-CREDENTIALS
+          children: []
+
+metrics_dashboards:
+    - name: GPU Usage
+      url: http://192.168.40.248:30099/d/Oxed_c6Wz/nvidia-dcgm-exporter-dashboard
+    - name: GPU usage 2
+      url: http://192.168.40.248:30099/d/dcn-lab-2025/nvidia-dcgm-exporter-dashboard-v2
+gpu_config:
+    total_vram_gib: 24
+    slice_size_gib: 4
+    default_slices: 1
+monitoring: |
+  Monitorings:
+  - Endpoint: http://192.168.40.248:30099
+    Name: Grafana Federation
+    Token: grafana-token-h1bu33ll9weqidnt
+    Type: grafana

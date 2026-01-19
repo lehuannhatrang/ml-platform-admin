@@ -47,8 +47,6 @@ spec:
             # Optional environment variable for etcd endpoint - can be overridden by --etcd-host flag
             - name: ETCD_ENDPOINT
               value: ""
-            - name: FRONTEND_URL
-              value: http://192.168.40.248:32000
             - name: KEYCLOAK_CLIENT_SECRET
               value: ""
             # No need for TLS settings with our standalone non-TLS etcd
