@@ -55,3 +55,15 @@ patches:
         value:
           name: FRONTEND_URL
           value: http://192.168.40.246:32000
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: docker.io/lehuannhatrang/ml-platform-admin-api:v0.15
+  - target:
+      kind: Deployment
+      name: ml-platform-admin-web
+      namespace: ml-platform-system
+      version: v1
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: docker.io/lehuannhatrang/ml-platform-admin-web:v0.15
