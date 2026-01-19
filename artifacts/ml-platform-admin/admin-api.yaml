@@ -1,0 +1,125 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-platform-admin-api
+  namespace: ml-platform-system
+  labels:
+    app: ml-platform-admin-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ml-platform-admin-api
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: ml-platform-admin-api
+    spec:
+      serviceAccountName: ml-platform-admin
+      automountServiceAccountToken: true
+      containers:
+        - command:
+            - ml-platform-admin-api
+            - --karmada-kubeconfig=/etc/kubeconfig-karmada-apiserver
+            - --karmada-context=karmada-apiserver
+            - --kubeconfig=/etc/kubeconfig
+            - --context=mgmt-cluster
+            - --insecure-bind-address=0.0.0.0
+            - --bind-address=0.0.0.0
+            - --etcd-host=ml-platform-admin-etcd.ml-platform-system.svc.cluster.local
+            - --etcd-port=2379
+            - --use-keycloak=true
+            - --keycloak-realm=ml-platform
+            - --keycloak-url=http://192.168.40.248:32008
+          name: ml-platform-admin-api
+          image: lehuannhatrang/ml-platform-admin-api:v0.9
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ENV_NAME
+              value: prod
+            - name: GIN_MODE
+              value: release
+            # Optional environment variable for etcd endpoint - can be overridden by --etcd-host flag
+            - name: ETCD_ENDPOINT
+              value: ""
+            - name: FRONTEND_URL
+              value: http://192.168.40.248:32000
+            - name: KEYCLOAK_CLIENT_SECRET
+              value: ""
+            # No need for TLS settings with our standalone non-TLS etcd
+            # Default admin password (should be changed after first login)
+            - name: KARMADA_DASHBOARD_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ml-platform-admin-inital-password
+                  key: password
+                  optional: true
+            # JWT Secret for token signing
+            - name: KARMADA_DASHBOARD_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ml-platform-admin-jwt
+                  key: secret
+                  optional: true
+          livenessProbe:
+            failureThreshold: 8
+            httpGet:
+              path: /livez
+              port: 8000
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 15
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /readyz
+              port: 8000
+              scheme: HTTP
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 15
+          resources:
+            requests:
+              cpu: 250m
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - name: kubeconfig-karmada-apiserver
+              subPath: kubeconfig
+              mountPath: /etc/kubeconfig-karmada-apiserver
+            - name: kubeconfig-mgmt-cluster
+              subPath: kubeconfig
+              mountPath: /etc/kubeconfig
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: kubeconfig-karmada-apiserver
+          secret:
+            secretName: kubeconfig-karmada-apiserver
+        - name: kubeconfig-mgmt-cluster
+          secret:
+            secretName: kubeconfig
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ml-platform-admin-api
+  namespace: ml-platform-system
+  labels:
+    app: ml-platform-admin-api
+spec:
+  ports:
+    - name: ml-platform-admin-api
+      port: 8000
+      protocol: TCP
+      targetPort: 8000
+  selector:
+    app: ml-platform-admin-api
+  type: ClusterIP

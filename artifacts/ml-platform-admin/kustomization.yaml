@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - admin-sa.yaml
+  - admin-web.yaml
+  - admin-api.yaml
+  - admin-configmap.yaml
+  - admin-etcd.yaml
+
+# Configuration for secrets that can be created at deploy time
+secretGenerator:
+  # Secret for dashboard admin user
+  - name: ml-platform-admin-inital-password
+    type: Opaque
+    literals:
+      - password=admin123  # Default password, should be changed in production
+
+  # Secret for JWT token signing
+  - name: ml-platform-admin-jwt
+    type: Opaque
+    literals:
+      - secret=ml-platform-admin-secret-key-change-me-in-production

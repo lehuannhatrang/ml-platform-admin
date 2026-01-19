@@ -2,7 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - ../../dashboard
+  - ../../ml-platform-admin
   - ../../keycloak
 
 configMapGenerator:
@@ -10,7 +10,7 @@ configMapGenerator:
     namespace: ml-platform-system
     behavior: replace
     files:
-      - prod.yaml=dashboard-config.yaml
+      - prod.yaml=admin-config.yaml
 
 patches:
   - target:
