@@ -111,19 +111,24 @@ func GetProfileFromQueueName(queueName string) string {
 	return queueName
 }
 
-// getDynamicClient returns the dynamic client for the Karmada API server
+// getDynamicClient returns the dynamic client for the API server
+// When Karmada is enabled, it uses the Karmada API server
+// When Karmada is not enabled, it uses the local Kubernetes cluster
 func getDynamicClient() (dynamic.Interface, error) {
-	karmadaConfig, _, err := client.GetKarmadaConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Karmada config: %v", err)
+	if client.IsKarmadaEnabled() {
+		karmadaConfig, _, err := client.GetKarmadaConfig()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get Karmada config: %v", err)
+		}
+		dynamicClient, err := dynamic.NewForConfig(karmadaConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create dynamic client: %v", err)
+		}
+		return dynamicClient, nil
 	}
-
-	dynamicClient, err := dynamic.NewForConfig(karmadaConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create dynamic client: %v", err)
-	}
-
-	return dynamicClient, nil
+	
+	// Use local cluster when Karmada is not enabled
+	return client.GetDynamicClient()
 }
 
 // getProfileUserMap fetches all Kubeflow Profile CRs and creates a map of profile name -> user info

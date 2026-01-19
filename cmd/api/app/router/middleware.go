@@ -32,11 +32,68 @@ import (
 	"k8s.io/klog/v2"
 )
 
+// ResolveClusterName resolves a cluster name to the actual cluster name.
+// This handles:
+// - Single-cluster mode: maps any cluster name to local-cluster (or configured name)
+// - Aliased names: maps "mgmt-cluster" and other local aliases appropriately
+// - Returns the resolved cluster name and whether it's the local cluster
+func ResolveClusterName(clusterName string) (resolvedName string, isLocalCluster bool, err error) {
+	// Get the effective local cluster name (may be configured)
+	localName := client.GetLocalClusterName()
+	
+	// If Karmada is not enabled, all requests go to the local cluster
+	if !client.IsKarmadaEnabled() {
+		// In single-cluster mode, accept any cluster name but route to local cluster
+		// This allows flexibility for users to use any name in URLs
+		return localName, true, nil
+	}
+	
+	// When Karmada is enabled, check for local cluster aliases
+	if client.IsLocalClusterName(clusterName) {
+		return localName, true, nil
+	}
+	
+	// Return the original cluster name for Karmada member clusters
+	return clusterName, false, nil
+}
+
 // EnsureMemberClusterMiddleware ensures that the member cluster exists.
+// It also resolves cluster name aliases and handles single-cluster mode.
 func EnsureMemberClusterMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		requestedCluster := c.Param("clustername")
+		
+		// Resolve the cluster name (handles aliasing and single-cluster mode)
+		resolvedCluster, isLocalCluster, err := ResolveClusterName(requestedCluster)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusOK, common.BaseResponse{
+				Code: 500,
+				Msg:  err.Error(),
+			})
+			return
+		}
+		
+		// Store the resolved cluster name in the context for use by handlers
+		c.Set("resolvedClusterName", resolvedCluster)
+		c.Set("isLocalCluster", isLocalCluster)
+		
+		// If it's a local cluster, no need to verify with Karmada
+		if isLocalCluster {
+			c.Next()
+			return
+		}
+		
+		// If Karmada is enabled and it's a member cluster, verify it exists
 		karmadaClient := client.InClusterKarmadaClient()
-		_, err := karmadaClient.ClusterV1alpha1().Clusters().Get(context.TODO(), c.Param("clustername"), metav1.GetOptions{})
+		if karmadaClient == nil {
+			c.AbortWithStatusJSON(http.StatusOK, common.BaseResponse{
+				Code: 500,
+				Msg:  "Karmada client not available",
+			})
+			return
+		}
+		
+		_, err = karmadaClient.ClusterV1alpha1().Clusters().Get(context.TODO(), resolvedCluster, metav1.GetOptions{})
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusOK, common.BaseResponse{
 				Code: 500,

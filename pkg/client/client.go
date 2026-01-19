@@ -155,9 +155,21 @@ func GetDynamicClient() (dynamic.Interface, error) {
 
 // GetDynamicClientForMember returns a dynamic client for a member cluster.
 //
-// If clusterName is provided, it will configure the client to use the Karmada proxy to access the member cluster.
-// If clusterName is empty, it will return a regular dynamic client for the member cluster.
+// If Karmada is enabled and clusterName is provided, it will configure the client to use the Karmada proxy.
+// If Karmada is not enabled, it returns a client for the local cluster.
+// If clusterName is empty or equals LocalClusterName (or custom name), it returns a regular dynamic client for the local cluster.
 func GetDynamicClientForMember(ctx *gin.Context, clusterName string) (dynamic.Interface, error) {
+	// If Karmada is not enabled, always use the local cluster client
+	if !IsKarmadaEnabled() {
+		klog.V(4).InfoS("Karmada not enabled, using local cluster client", "requestedCluster", clusterName)
+		return GetDynamicClient()
+	}
+	
+	// Handle local cluster or empty cluster name - use local kubernetes client
+	if IsLocalClusterName(clusterName) {
+		return GetDynamicClient()
+	}
+
 	// Get the authenticated username using a comprehensive approach that checks:
 	// 1. User object in context (set by middleware)
 	// 2. JWT claims in context
@@ -236,17 +248,15 @@ func GetDynamicClientForMember(ctx *gin.Context, clusterName string) (dynamic.In
 		return nil, fmt.Errorf("failed to get member config: %w", err)
 	}
 
-	// If a cluster name is provided, configure the client to use the Karmada proxy
-	if clusterName != "" {
-		karmadaConfig, _, err := GetKarmadaConfig()
-		if err != nil {
-			klog.ErrorS(err, "Failed to get karmada config")
-			return nil, fmt.Errorf("failed to get karmada config: %w", err)
-		}
-
-		memberConfig.Host = karmadaConfig.Host + fmt.Sprintf("/apis/cluster.karmada.io/v1alpha1/clusters/%s/proxy/", clusterName)
-		klog.V(4).InfoS("Using member config with proxy", "host", memberConfig.Host)
+	// Configure the client to use the Karmada proxy for member cluster access
+	karmadaConfig, _, err := GetKarmadaConfig()
+	if err != nil {
+		klog.ErrorS(err, "Failed to get karmada config")
+		return nil, fmt.Errorf("failed to get karmada config: %w", err)
 	}
+
+	memberConfig.Host = karmadaConfig.Host + fmt.Sprintf("/apis/cluster.karmada.io/v1alpha1/clusters/%s/proxy/", clusterName)
+	klog.V(4).InfoS("Using member config with proxy", "host", memberConfig.Host)
 
 	return dynamic.NewForConfig(memberConfig)
 }
@@ -254,24 +264,34 @@ func GetDynamicClientForMember(ctx *gin.Context, clusterName string) (dynamic.In
 // GetDynamicClientForMemberByContext returns a dynamic client for a member cluster using context.Context.
 // This is a simplified version that doesn't perform user authentication checks,
 // suitable for background operations or when authentication is handled elsewhere.
+// When Karmada is not enabled, it returns a client for the local cluster.
 func GetDynamicClientForMemberByContext(ctx context.Context, clusterName string) (dynamic.Interface, error) {
+	// If Karmada is not enabled, always use the local cluster client
+	if !IsKarmadaEnabled() {
+		klog.V(4).InfoS("Karmada not enabled, using local cluster client", "requestedCluster", clusterName)
+		return GetDynamicClient()
+	}
+	
+	// Handle local cluster or empty cluster name - use local kubernetes client
+	if IsLocalClusterName(clusterName) {
+		return GetDynamicClient()
+	}
+
 	memberConfig, err := GetMemberConfig()
 	if err != nil {
 		klog.ErrorS(err, "Failed to get member config")
 		return nil, fmt.Errorf("failed to get member config: %w", err)
 	}
 
-	// If a cluster name is provided, configure the client to use the Karmada proxy
-	if clusterName != "" {
-		karmadaConfig, _, err := GetKarmadaConfig()
-		if err != nil {
-			klog.ErrorS(err, "Failed to get karmada config")
-			return nil, fmt.Errorf("failed to get karmada config: %w", err)
-		}
-
-		memberConfig.Host = karmadaConfig.Host + fmt.Sprintf("/apis/cluster.karmada.io/v1alpha1/clusters/%s/proxy/", clusterName)
-		klog.V(4).InfoS("Using member config with proxy", "host", memberConfig.Host)
+	// Configure the client to use the Karmada proxy for member cluster access
+	karmadaConfig, _, err := GetKarmadaConfig()
+	if err != nil {
+		klog.ErrorS(err, "Failed to get karmada config")
+		return nil, fmt.Errorf("failed to get karmada config: %w", err)
 	}
+
+	memberConfig.Host = karmadaConfig.Host + fmt.Sprintf("/apis/cluster.karmada.io/v1alpha1/clusters/%s/proxy/", clusterName)
+	klog.V(4).InfoS("Using member config with proxy", "host", memberConfig.Host)
 
 	return dynamic.NewForConfig(memberConfig)
 }

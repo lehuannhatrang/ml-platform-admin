@@ -27,11 +27,48 @@ import (
 	karmadaclientset "github.com/karmada-io/karmada/pkg/generated/clientset/versioned"
 	kubeclient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/klog/v2"
 )
 
 const proxyURL = "/apis/cluster.karmada.io/v1alpha1/clusters/%s/proxy/"
+
+// LocalClusterName is the default cluster name when Karmada is not enabled
+const LocalClusterName = "local-cluster"
+
+// localClusterNameOverride holds a custom local cluster name if set
+var localClusterNameOverride string
+
+// SetLocalClusterName sets a custom name for the local cluster
+// This allows users to customize the cluster name via configuration
+func SetLocalClusterName(name string) {
+	if name != "" {
+		localClusterNameOverride = name
+		klog.InfoS("Local cluster name set", "name", name)
+	}
+}
+
+// GetLocalClusterName returns the effective local cluster name
+// It returns the configured name if set, otherwise the default "local-cluster"
+func GetLocalClusterName() string {
+	if localClusterNameOverride != "" {
+		return localClusterNameOverride
+	}
+	return LocalClusterName
+}
+
+// IsLocalClusterName checks if a given cluster name refers to the local cluster
+// This handles both the default name and any configured alias
+func IsLocalClusterName(clusterName string) bool {
+	if clusterName == "" || clusterName == LocalClusterName || clusterName == "mgmt-cluster" {
+		return true
+	}
+	if localClusterNameOverride != "" && clusterName == localClusterNameOverride {
+		return true
+	}
+	return false
+}
 
 var (
 	kubernetesRestConfig               *rest.Config
@@ -48,6 +85,10 @@ var (
 	CurrentUser string
 	// CurrentUserMutex protects concurrent access to CurrentUser
 	CurrentUserMutex sync.RWMutex
+	// karmadaEnabled tracks whether Karmada integration is enabled
+	karmadaEnabled bool
+	// karmadaEnabledMutex protects concurrent access to karmadaEnabled
+	karmadaEnabledMutex sync.RWMutex
 )
 
 type configBuilder struct {
@@ -138,34 +179,77 @@ func isKubeInitialized() bool {
 	return true
 }
 
+// GetCurrentContextFromKubeconfig reads a kubeconfig file and returns the current context name.
+// If the file cannot be read or has no current context, it returns an empty string.
+func GetCurrentContextFromKubeconfig(kubeconfigPath string) string {
+	if kubeconfigPath == "" {
+		return ""
+	}
+	
+	loader := &clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath}
+	loadedConfig, err := loader.Load()
+	if err != nil {
+		klog.V(4).InfoS("Could not load kubeconfig to get current context", "path", kubeconfigPath, "error", err)
+		return ""
+	}
+	
+	return loadedConfig.CurrentContext
+}
+
 // InitKubeConfig initializes the kubernetes client config.
+// If context is not specified, it will use the current context from the kubeconfig file.
+// The context name will also be used as the local cluster name if not already set.
 func InitKubeConfig(options ...Option) {
 	builder := newConfigBuilder(options...)
+	
 	// prefer InClusterConfig, if something wrong, use explicit kubeconfig path
 	restConfig, err := rest.InClusterConfig()
 	if err == nil {
-		klog.Infof("InitKubeConfig by InClusterConfig method")
+		klog.Infof("InitKubeConfig by InClusterConfig method (running inside cluster)")
 		restConfig.UserAgent = DefaultUserAgent + "/" + builder.userAgent
 		restConfig.TLSClientConfig.Insecure = builder.insecure
 		kubernetesRestConfig = restConfig
 
 		apiConfig := ConvertRestConfigToAPIConfig(restConfig)
 		kubernetesAPIConfig = apiConfig
+		
+		// When running in-cluster, use the default local cluster name
+		klog.InfoS("Running in-cluster, using default local cluster name", "name", GetLocalClusterName())
 	} else {
-		klog.Infof("InClusterConfig error: %+v", err)
-		klog.Infof("InitKubeConfig by explicit kubeconfig path")
+		klog.V(4).Infof("InClusterConfig not available: %+v", err)
+		klog.Infof("InitKubeConfig using explicit kubeconfig path")
+		
+		// Auto-detect context from kubeconfig if not provided
+		effectiveContext := builder.kubeContext
+		if effectiveContext == "" {
+			effectiveContext = GetCurrentContextFromKubeconfig(builder.kubeconfigPath)
+			klog.InfoS("Auto-detected current context from kubeconfig", "context", effectiveContext)
+		} else {
+			klog.InfoS("Using specified context", "context", effectiveContext)
+		}
+		
+		// Update builder with the effective context for buildRestConfig/buildAPIConfig
+		builder.kubeContext = effectiveContext
+		
 		restConfig, err = builder.buildRestConfig()
 		if err != nil {
 			klog.Errorf("Could not init client config: %s", err)
 			os.Exit(1)
 		}
 		kubernetesRestConfig = restConfig
+		
 		apiConfig, err := builder.buildAPIConfig()
 		if err != nil {
 			klog.Errorf("Could not init api config: %s", err)
 			os.Exit(1)
 		}
 		kubernetesAPIConfig = apiConfig
+		
+		// Use the context name as the local cluster name if not already customized
+		if effectiveContext != "" && localClusterNameOverride == "" {
+			SetLocalClusterName(effectiveContext)
+			klog.InfoS("Local cluster name set from kubeconfig context", "name", effectiveContext)
+		}
 	}
 }
 
@@ -200,39 +284,77 @@ func GetKubeConfig() (*rest.Config, *clientcmdapi.Config, error) {
 
 func isKarmadaInitialized() bool {
 	if karmadaRestConfig == nil || karmadaAPIConfig == nil {
-		klog.Errorf(`karmada/karmada-dashboard/client' package has not been initialized properly. Run 'client.InitKarmadaConfig(...)' to initialize it. `)
+		klog.V(4).Infof("Karmada client is not initialized")
 		return false
 	}
 	return true
 }
 
+// IsKarmadaEnabled returns whether Karmada integration is enabled
+func IsKarmadaEnabled() bool {
+	karmadaEnabledMutex.RLock()
+	defer karmadaEnabledMutex.RUnlock()
+	return karmadaEnabled
+}
+
+// SetKarmadaEnabled explicitly sets whether Karmada is enabled
+func SetKarmadaEnabled(enabled bool) {
+	karmadaEnabledMutex.Lock()
+	defer karmadaEnabledMutex.Unlock()
+	karmadaEnabled = enabled
+	klog.InfoS("Karmada integration status", "enabled", enabled)
+}
+
 // InitKarmadaConfig initializes the karmada client config.
-func InitKarmadaConfig(options ...Option) {
+// If kubeconfig is not provided or invalid, Karmada will be disabled and
+// the platform will operate in single-cluster mode using the local cluster.
+func InitKarmadaConfig(options ...Option) error {
 	builder := newConfigBuilder(options...)
+	
+	// If no kubeconfig path is provided, disable Karmada
+	if builder.kubeconfigPath == "" {
+		klog.InfoS("No Karmada kubeconfig provided, running in single-cluster mode")
+		SetKarmadaEnabled(false)
+		return nil
+	}
+	
 	restConfig, err := builder.buildRestConfig()
 	if err != nil {
-		klog.Errorf("Could not init client config: %s", err)
-		os.Exit(1)
+		klog.InfoS("Could not init Karmada client config, running in single-cluster mode", "error", err)
+		SetKarmadaEnabled(false)
+		return nil
 	}
 	karmadaRestConfig = restConfig
 
 	apiConfig, err := builder.buildAPIConfig()
 	if err != nil {
-		klog.Errorf("Could not init api config: %s", err)
-		os.Exit(1)
+		klog.InfoS("Could not init Karmada API config, running in single-cluster mode", "error", err)
+		SetKarmadaEnabled(false)
+		return nil
 	}
 	karmadaAPIConfig = apiConfig
 
 	memberConfig, err := builder.buildRestConfig()
 	if err != nil {
-		klog.Errorf("Could not init member config: %s", err)
-		os.Exit(1)
+		klog.InfoS("Could not init Karmada member config, running in single-cluster mode", "error", err)
+		SetKarmadaEnabled(false)
+		return nil
 	}
 	karmadaMemberConfig = memberConfig
+	
+	// Karmada is successfully initialized
+	SetKarmadaEnabled(true)
+	klog.InfoS("Karmada client initialized successfully")
+	return nil
 }
 
 // InClusterKarmadaClient returns a karmada client.
+// Returns nil if Karmada is not enabled.
 func InClusterKarmadaClient() karmadaclientset.Interface {
+	if !IsKarmadaEnabled() {
+		klog.V(4).InfoS("Karmada client requested but Karmada is not enabled")
+		return nil
+	}
 	if !isKarmadaInitialized() {
 		return nil
 	}
@@ -243,7 +365,7 @@ func InClusterKarmadaClient() karmadaclientset.Interface {
 	c, err := karmadaclientset.NewForConfig(karmadaRestConfig)
 	if err != nil {
 		klog.ErrorS(err, "Could not init karmada in-cluster client")
-		os.Exit(1)
+		return nil
 	}
 	// initialize in-memory client
 	inClusterKarmadaClient = c
@@ -251,17 +373,31 @@ func InClusterKarmadaClient() karmadaclientset.Interface {
 }
 
 // GetKarmadaConfig returns the karmada client config.
+// Returns an error if Karmada is not enabled.
 func GetKarmadaConfig() (*rest.Config, *clientcmdapi.Config, error) {
+	if !IsKarmadaEnabled() {
+		return nil, nil, fmt.Errorf("Karmada is not enabled")
+	}
 	if !isKarmadaInitialized() {
-		return nil, nil, fmt.Errorf("client package not initialized")
+		return nil, nil, fmt.Errorf("Karmada client package not initialized")
 	}
 	return karmadaRestConfig, karmadaAPIConfig, nil
 }
 
 // GetMemberConfig returns the member client config.
+// When Karmada is not enabled, returns the local cluster config.
 func GetMemberConfig() (*rest.Config, error) {
+	if !IsKarmadaEnabled() {
+		// In single-cluster mode, use the local kubernetes config
+		if !isKubeInitialized() {
+			return nil, fmt.Errorf("kubernetes client package not initialized")
+		}
+		// Return a copy of the local cluster config
+		configCopy := *kubernetesRestConfig
+		return &configCopy, nil
+	}
 	if !isKarmadaInitialized() {
-		return nil, fmt.Errorf("client package not initialized")
+		return nil, fmt.Errorf("Karmada client package not initialized")
 	}
 	return karmadaMemberConfig, nil
 }
@@ -289,14 +425,23 @@ func InClusterClientForKarmadaAPIServer() kubeclient.Interface {
 }
 
 // InClusterClientForMemberCluster returns a kubernetes client for member apiserver.
+// When Karmada is not enabled, always returns the local cluster client.
+// When Karmada is enabled but requesting local cluster, returns the direct client.
 func InClusterClientForMemberCluster(clusterName string) kubeclient.Interface {
-	if !isKarmadaInitialized() {
-		return nil
+	// If Karmada is not enabled, always use the local cluster client
+	// This handles the single-cluster mode where all requests go to local cluster
+	if !IsKarmadaEnabled() {
+		klog.V(4).InfoS("Karmada not enabled, using local cluster client", "requestedCluster", clusterName)
+		return InClusterClient()
+	}
+	
+	// If requesting the local cluster or management cluster, return the direct client
+	if IsLocalClusterName(clusterName) {
+		return InClusterClient()
 	}
 
-	// If requesting the management cluster, return the direct client
-	if clusterName == "mgmt-cluster" {
-		return InClusterClient()
+	if !isKarmadaInitialized() {
+		return nil
 	}
 
 	// Check permissions if we have a cluster name and a current user

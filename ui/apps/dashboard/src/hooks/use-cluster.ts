@@ -18,6 +18,7 @@ import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GetClusters } from '@/services';
 import { DataSelectQuery } from '@/services/base.ts';
+import { GetDashboardConfig } from '@/services/dashboard-config';
 
 export type ClusterOption = {
     label: string;
@@ -28,6 +29,23 @@ export type ClusterOption = {
 export const DEFAULT_CLUSTER_OPTION: ClusterOption = {
     label: 'All Regions',
     value: 'ALL',
+    ready: true,
+};
+
+// Default local cluster option - actual name comes from config
+export const DEFAULT_LOCAL_CLUSTER_NAME = 'local-cluster';
+
+// Helper to create local cluster option with the configured name
+export const createLocalClusterOption = (name?: string): ClusterOption => ({
+    label: 'Local Cluster',
+    value: name || DEFAULT_LOCAL_CLUSTER_NAME,
+    ready: true,
+});
+
+// Legacy export for compatibility
+export const LOCAL_CLUSTER_OPTION: ClusterOption = {
+    label: 'Local Cluster',
+    value: DEFAULT_LOCAL_CLUSTER_NAME,
     ready: true,
 };
 
@@ -54,6 +72,19 @@ const useCluster = (props: { clusterFilter?: DataSelectQuery, allowSelectAll?: b
     const { clusterFilter = {}, allowSelectAll = true } = props;
     const queryClient = useQueryClient();
 
+    // Fetch dashboard config to get the local cluster name and karmada status
+    const { data: configData } = useQuery({
+        queryKey: ['dashboardConfigForCluster'],
+        queryFn: async () => {
+            const response = await GetDashboardConfig();
+            return response.data;
+        },
+        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    });
+
+    const localClusterName = configData?.local_cluster_name || DEFAULT_LOCAL_CLUSTER_NAME;
+    const karmadaEnabled = configData?.karmada_enabled ?? true;
+
     const {
         data: clusterData,
         isLoading,
@@ -74,15 +105,22 @@ const useCluster = (props: { clusterFilter?: DataSelectQuery, allowSelectAll?: b
 
     const clusterOptions: ClusterOption[] = useMemo(() => {
         if (!clusterData?.clusters) return [];
+        
+        // Map clusters to options
+        const clusters = clusterData.clusters.map((item) => ({
+            label: item.objectMeta.labels?.region ? `${item.objectMeta.labels.region}` : item.objectMeta.name,
+            value: item.objectMeta.name,
+            ready: item?.ready === "True",
+        }));
+        
+        // Only show "All Regions" if Karmada is enabled and there's more than one cluster
+        const showAllOption = allowSelectAll && karmadaEnabled && clusters.length > 1;
+        
         return [
-            ...(allowSelectAll && clusterData.clusters.length > 1 ? [DEFAULT_CLUSTER_OPTION] : []),
-            ...clusterData.clusters.map((item) => ({
-                label: item.objectMeta.labels?.region ? `${item.objectMeta.labels.region}` : item.objectMeta.name,
-                value: item.objectMeta.name,
-                ready: item?.ready === "True",
-            })),
+            ...(showAllOption ? [DEFAULT_CLUSTER_OPTION] : []),
+            ...clusters,
         ];
-    }, [clusterData, allowSelectAll]);
+    }, [clusterData, allowSelectAll, karmadaEnabled]);
     
     const setSelectedCluster = (cluster: ClusterOption) => {
         setStoredCluster(cluster);
@@ -95,6 +133,8 @@ const useCluster = (props: { clusterFilter?: DataSelectQuery, allowSelectAll?: b
         selectedCluster,
         setSelectedCluster,
         refetchClusterData: refetch,
+        localClusterName,
+        karmadaEnabled,
     };
 };
 

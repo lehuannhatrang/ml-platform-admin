@@ -110,21 +110,31 @@ func NewAPICommand(ctx context.Context) *cobra.Command {
 }
 
 func run(ctx context.Context, opts *options.Options) error {
-	klog.InfoS("Starting Karmada Dashboard API", "version", environment.Version)
+	klog.InfoS("Starting ML Platform Admin API", "version", environment.Version)
 
-	client.InitKarmadaConfig(
-		client.WithUserAgent(environment.UserAgent()),
-		client.WithKubeconfig(opts.KarmadaKubeConfig),
-		client.WithKubeContext(opts.KarmadaContext),
-		client.WithInsecureTLSSkipVerify(opts.SkipKarmadaApiserverTLSVerify),
-	)
-
+	// Initialize the local cluster kubeconfig first (required)
 	client.InitKubeConfig(
 		client.WithUserAgent(environment.UserAgent()),
 		client.WithKubeconfig(opts.KubeConfig),
 		client.WithKubeContext(opts.KubeContext),
 		client.WithInsecureTLSSkipVerify(opts.SkipKubeApiserverTLSVerify),
 	)
+
+	// Initialize Karmada config (optional - if not provided, runs in single-cluster mode)
+	if opts.KarmadaKubeConfig != "" {
+		err := client.InitKarmadaConfig(
+			client.WithUserAgent(environment.UserAgent()),
+			client.WithKubeconfig(opts.KarmadaKubeConfig),
+			client.WithKubeContext(opts.KarmadaContext),
+			client.WithInsecureTLSSkipVerify(opts.SkipKarmadaApiserverTLSVerify),
+		)
+		if err != nil {
+			klog.InfoS("Karmada initialization failed, running in single-cluster mode", "error", err)
+		}
+	} else {
+		klog.InfoS("No Karmada kubeconfig provided, running in single-cluster mode")
+		client.SetKarmadaEnabled(false)
+	}
 
 	// Initialize authentication and authorization
 	if opts.UseKeycloak {
@@ -314,13 +324,24 @@ func ensureAPIServerConnectionOrDie() {
 	}
 	klog.InfoS("Successful initial request to the Kubernetes apiserver", "version", versionInfo.String())
 
-	karmadaVersionInfo, err := client.InClusterKarmadaClient().Discovery().ServerVersion()
-	if err != nil {
-		klog.Fatalf("Error while initializing connection to Karmada apiserver. "+
-			"This most likely means that the cluster is misconfigured. Reason: %s\n", err)
-		os.Exit(1)
+	// Only check Karmada connection if Karmada is enabled
+	if client.IsKarmadaEnabled() {
+		karmadaClient := client.InClusterKarmadaClient()
+		if karmadaClient == nil {
+			klog.InfoS("Karmada client not available, running in single-cluster mode")
+			client.SetKarmadaEnabled(false)
+			return
+		}
+		karmadaVersionInfo, err := karmadaClient.Discovery().ServerVersion()
+		if err != nil {
+			klog.InfoS("Could not connect to Karmada apiserver, disabling Karmada integration", "error", err)
+			client.SetKarmadaEnabled(false)
+			return
+		}
+		klog.InfoS("Successful initial request to the Karmada apiserver", "version", karmadaVersionInfo.String())
+	} else {
+		klog.InfoS("Running in single-cluster mode (Karmada not configured)")
 	}
-	klog.InfoS("Successful initial request to the Karmada apiserver", "version", karmadaVersionInfo.String())
 }
 
 func serve(opts *options.Options) {

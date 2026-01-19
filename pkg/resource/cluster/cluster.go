@@ -18,7 +18,6 @@ package cluster
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/karmada-io/karmada/pkg/apis/cluster/v1alpha1"
@@ -29,6 +28,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/karmada-io/dashboard/pkg/auth/fga"
+	"github.com/karmada-io/dashboard/pkg/client"
 	"github.com/karmada-io/dashboard/pkg/common/errors"
 	"github.com/karmada-io/dashboard/pkg/common/helpers"
 	"github.com/karmada-io/dashboard/pkg/common/types"
@@ -57,10 +57,11 @@ type ClusterList struct {
 
 // GetClusterList returns a list of clusters that the user has permission to access.
 // If username is empty, all clusters are returned.
+// When Karmada is not enabled (client is nil), returns only the local cluster.
 func GetClusterList(client karmadaclientset.Interface, dsQuery *dataselect.DataSelectQuery, username ...string) (*ClusterList, error) {
-	// Handle nil client to prevent panic
+	// Handle nil client - return local cluster only (single-cluster mode)
 	if client == nil {
-		return nil, fmt.Errorf("karmada client is nil")
+		return getLocalClusterList(dsQuery)
 	}
 	// Get all clusters first
 	clusters, err := client.ClusterV1alpha1().Clusters().List(context.TODO(), helpers.ListEverything)
@@ -238,4 +239,67 @@ func getClusterConditionStatus(cluster *v1alpha1.Cluster, conditionType metav1.C
 		}
 	}
 	return metav1.ConditionUnknown
+}
+
+// LocalClusterName is the default name for the local cluster when Karmada is not enabled
+// getLocalClusterList returns a cluster list containing only the local cluster
+// This is used when Karmada is not enabled (single-cluster mode)
+func getLocalClusterList(dsQuery *dataselect.DataSelectQuery) (*ClusterList, error) {
+	// Create a local cluster entry with reasonable defaults
+	// The actual metrics would be fetched from the local kubernetes cluster
+	nodeCount := int32(1)
+	readyNodeCount := int32(1)
+	cpuCapacity := int64(4000)                      // 4 cores in millicores
+	cpuFraction := float64(0)                       // Unknown utilization
+	memoryCapacity := int64(8 * 1024 * 1024 * 1024) // 8GB in bytes
+	memoryFraction := float64(0)                    // Unknown utilization
+	podCapacity := int64(110)                       // Default pod capacity
+	allocatedPods := int64(0)                       // Unknown allocated pods
+
+	// Get the effective local cluster name (may be customized via config)
+	localClusterName := client.GetLocalClusterName()
+
+	localCluster := v1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              localClusterName,
+			CreationTimestamp: metav1.Now(),
+			Labels: map[string]string{
+				"ml-platform.io/local": "true",
+			},
+		},
+		Spec: v1alpha1.ClusterSpec{
+			SyncMode: v1alpha1.Push,
+		},
+		Status: v1alpha1.ClusterStatus{
+			KubernetesVersion: "v1.27.0", // Will be updated with actual version
+			Conditions: []metav1.Condition{
+				{
+					Type:               "Ready",
+					Status:             metav1.ConditionTrue,
+					LastTransitionTime: metav1.Now(),
+					Reason:             "LocalClusterReady",
+					Message:            "Local cluster is ready",
+				},
+			},
+			NodeSummary: &v1alpha1.NodeSummary{
+				TotalNum: nodeCount,
+				ReadyNum: readyNodeCount,
+			},
+			ResourceSummary: &v1alpha1.ResourceSummary{
+				Allocatable: corev1.ResourceList{
+					corev1.ResourceCPU:    *resource.NewMilliQuantity(cpuCapacity, resource.DecimalSI),
+					corev1.ResourceMemory: *resource.NewQuantity(memoryCapacity, resource.BinarySI),
+					corev1.ResourcePods:   *resource.NewQuantity(podCapacity, resource.DecimalSI),
+				},
+				Allocated: corev1.ResourceList{
+					corev1.ResourceCPU:    *resource.NewMilliQuantity(int64(float64(cpuCapacity)*cpuFraction/100), resource.DecimalSI),
+					corev1.ResourceMemory: *resource.NewQuantity(int64(float64(memoryCapacity)*memoryFraction/100), resource.BinarySI),
+					corev1.ResourcePods:   *resource.NewQuantity(allocatedPods, resource.DecimalSI),
+				},
+			},
+		},
+	}
+
+	clusters := []v1alpha1.Cluster{localCluster}
+	return toClusterList(nil, clusters, nil, dsQuery), nil
 }
