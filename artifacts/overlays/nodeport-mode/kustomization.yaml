@@ -11,6 +11,7 @@ configMapGenerator:
     behavior: replace
     files:
       - prod.yaml=admin-config.yaml
+      - dev.yaml=admin-config.yaml
 
 patches:
   - target:

@@ -141,13 +141,19 @@ func newConfigBuilder(options ...Option) *configBuilder {
 
 func (in *configBuilder) buildRestConfig() (*rest.Config, error) {
 	if len(in.kubeconfigPath) == 0 {
-		return nil, errors.New("must specify kubeconfig")
+		return nil, errors.New("must specify kubeconfig path (--kubeconfig flag)")
 	}
-	klog.InfoS("Using kubeconfig", "kubeconfig", in.kubeconfigPath)
+	
+	// Check if kubeconfig file exists
+	if _, err := os.Stat(in.kubeconfigPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("kubeconfig file not found at %s - ensure the file exists or the secret is mounted correctly", in.kubeconfigPath)
+	}
+	
+	klog.InfoS("Using kubeconfig", "path", in.kubeconfigPath, "context", in.kubeContext)
 
 	restConfig, err := LoadRestConfig(in.kubeconfigPath, in.kubeContext)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load kubeconfig from %s: %w", in.kubeconfigPath, err)
 	}
 
 	restConfig.QPS = DefaultQPS
@@ -161,9 +167,15 @@ func (in *configBuilder) buildRestConfig() (*rest.Config, error) {
 
 func (in *configBuilder) buildAPIConfig() (*clientcmdapi.Config, error) {
 	if len(in.kubeconfigPath) == 0 {
-		return nil, errors.New("must specify kubeconfig")
+		return nil, errors.New("must specify kubeconfig path (--kubeconfig flag)")
 	}
-	klog.InfoS("Using kubeconfig", "kubeconfig", in.kubeconfigPath)
+	
+	// Check if kubeconfig file exists
+	if _, err := os.Stat(in.kubeconfigPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("kubeconfig file not found at %s", in.kubeconfigPath)
+	}
+	
+	klog.InfoS("Loading API config from kubeconfig", "path", in.kubeconfigPath)
 	apiConfig, err := LoadAPIConfig(in.kubeconfigPath, in.kubeContext)
 	if err != nil {
 		return nil, err
@@ -199,58 +211,93 @@ func GetCurrentContextFromKubeconfig(kubeconfigPath string) string {
 // InitKubeConfig initializes the kubernetes client config.
 // If context is not specified, it will use the current context from the kubeconfig file.
 // The context name will also be used as the local cluster name if not already set.
+//
+// Configuration priority:
+// 1. If running in-cluster (service account available), use InClusterConfig
+// 2. If --kubeconfig is specified and file exists, use that kubeconfig
+// 3. If neither works, exit with error
 func InitKubeConfig(options ...Option) {
 	builder := newConfigBuilder(options...)
 	
-	// prefer InClusterConfig, if something wrong, use explicit kubeconfig path
-	restConfig, err := rest.InClusterConfig()
-	if err == nil {
-		klog.Infof("InitKubeConfig by InClusterConfig method (running inside cluster)")
-		restConfig.UserAgent = DefaultUserAgent + "/" + builder.userAgent
-		restConfig.TLSClientConfig.Insecure = builder.insecure
-		kubernetesRestConfig = restConfig
+	// Check if explicit kubeconfig is provided and exists
+	hasExplicitKubeconfig := builder.kubeconfigPath != "" && fileExists(builder.kubeconfigPath)
+	
+	// Try InClusterConfig first (unless explicit kubeconfig is provided)
+	if !hasExplicitKubeconfig {
+		restConfig, err := rest.InClusterConfig()
+		if err == nil {
+			klog.InfoS("InitKubeConfig using InClusterConfig (running inside Kubernetes cluster)")
+			restConfig.UserAgent = DefaultUserAgent + "/" + builder.userAgent
+			restConfig.TLSClientConfig.Insecure = builder.insecure
+			kubernetesRestConfig = restConfig
 
-		apiConfig := ConvertRestConfigToAPIConfig(restConfig)
-		kubernetesAPIConfig = apiConfig
-		
-		// When running in-cluster, use the default local cluster name
-		klog.InfoS("Running in-cluster, using default local cluster name", "name", GetLocalClusterName())
-	} else {
-		klog.V(4).Infof("InClusterConfig not available: %+v", err)
-		klog.Infof("InitKubeConfig using explicit kubeconfig path")
-		
-		// Auto-detect context from kubeconfig if not provided
-		effectiveContext := builder.kubeContext
-		if effectiveContext == "" {
-			effectiveContext = GetCurrentContextFromKubeconfig(builder.kubeconfigPath)
-			klog.InfoS("Auto-detected current context from kubeconfig", "context", effectiveContext)
-		} else {
-			klog.InfoS("Using specified context", "context", effectiveContext)
+			apiConfig := ConvertRestConfigToAPIConfig(restConfig)
+			kubernetesAPIConfig = apiConfig
+			
+			// When running in-cluster, use the default local cluster name
+			klog.InfoS("Running in-cluster mode", "localClusterName", GetLocalClusterName())
+			return
 		}
-		
-		// Update builder with the effective context for buildRestConfig/buildAPIConfig
-		builder.kubeContext = effectiveContext
-		
-		restConfig, err = builder.buildRestConfig()
-		if err != nil {
-			klog.Errorf("Could not init client config: %s", err)
-			os.Exit(1)
-		}
-		kubernetesRestConfig = restConfig
-		
-		apiConfig, err := builder.buildAPIConfig()
-		if err != nil {
-			klog.Errorf("Could not init api config: %s", err)
-			os.Exit(1)
-		}
-		kubernetesAPIConfig = apiConfig
-		
-		// Use the context name as the local cluster name if not already customized
-		if effectiveContext != "" && localClusterNameOverride == "" {
-			SetLocalClusterName(effectiveContext)
-			klog.InfoS("Local cluster name set from kubeconfig context", "name", effectiveContext)
-		}
+		klog.InfoS("InClusterConfig not available", "error", err.Error())
 	}
+	
+	// Fall back to explicit kubeconfig
+	if builder.kubeconfigPath == "" {
+		klog.ErrorS(nil, "No kubeconfig available. Either run inside a Kubernetes cluster or provide --kubeconfig flag")
+		klog.InfoS("Hint: Create a kubeconfig secret and mount it, or ensure the service account token is mounted")
+		os.Exit(1)
+	}
+	
+	if !fileExists(builder.kubeconfigPath) {
+		klog.ErrorS(nil, "Kubeconfig file not found", "path", builder.kubeconfigPath)
+		klog.InfoS("Hint: Ensure the kubeconfig secret is created and mounted correctly")
+		klog.InfoS("Create secret with: kubectl create secret generic kubeconfig --from-file=kubeconfig=~/.kube/config -n ml-platform-system")
+		os.Exit(1)
+	}
+	
+	klog.InfoS("InitKubeConfig using explicit kubeconfig file", "path", builder.kubeconfigPath)
+	
+	// Auto-detect context from kubeconfig if not provided
+	effectiveContext := builder.kubeContext
+	if effectiveContext == "" {
+		effectiveContext = GetCurrentContextFromKubeconfig(builder.kubeconfigPath)
+		if effectiveContext != "" {
+			klog.InfoS("Using current-context from kubeconfig", "context", effectiveContext)
+		} else {
+			klog.InfoS("No context specified and no current-context in kubeconfig")
+		}
+	} else {
+		klog.InfoS("Using specified context", "context", effectiveContext)
+	}
+	
+	// Update builder with the effective context for buildRestConfig/buildAPIConfig
+	builder.kubeContext = effectiveContext
+	
+	restConfig, err := builder.buildRestConfig()
+	if err != nil {
+		klog.ErrorS(err, "Could not initialize client config")
+		os.Exit(1)
+	}
+	kubernetesRestConfig = restConfig
+	
+	apiConfig, err := builder.buildAPIConfig()
+	if err != nil {
+		klog.ErrorS(err, "Could not initialize API config")
+		os.Exit(1)
+	}
+	kubernetesAPIConfig = apiConfig
+	
+	// Use the context name as the local cluster name if not already customized
+	if effectiveContext != "" && localClusterNameOverride == "" {
+		SetLocalClusterName(effectiveContext)
+		klog.InfoS("Local cluster name set from kubeconfig context", "name", effectiveContext)
+	}
+}
+
+// fileExists checks if a file exists at the given path
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 // InClusterClient returns a kubernetes client.
