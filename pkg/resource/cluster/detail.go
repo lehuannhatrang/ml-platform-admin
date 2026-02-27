@@ -20,6 +20,7 @@ import (
 	"context"
 	"log"
 
+	"github.com/karmada-io/dashboard/pkg/client"
 	"github.com/karmada-io/karmada/pkg/apis/cluster/v1alpha1"
 	karmadaclientset "github.com/karmada-io/karmada/pkg/generated/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
@@ -102,5 +103,64 @@ func GetClusterDetail(client karmadaclientset.Interface, clusterName string) (*C
 	return &ClusterDetail{
 		Cluster: toCluster(cluster),
 		Taints:  cluster.Spec.Taints,
+	}, nil
+}
+
+// GetLocalClusterDetail returns the details of the local cluster
+// This is used when Karmada is not enabled (single-cluster mode)
+func GetLocalClusterDetail() (*ClusterDetail, error) {
+	log.Printf("Getting details of local cluster")
+	
+	// Create a local cluster entry with reasonable defaults
+	nodeCount := int32(1)
+	readyNodeCount := int32(1)
+	cpuCapacity := int64(4000)                      // 4 cores in millicores
+	memoryCapacity := int64(8 * 1024 * 1024 * 1024) // 8GB in bytes
+	podCapacity := int64(110)                       // Default pod capacity
+
+	localCluster := v1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              client.GetLocalClusterName(),
+			CreationTimestamp: metav1.Now(),
+			Labels: map[string]string{
+				"ml-platform.io/local": "true",
+			},
+		},
+		Spec: v1alpha1.ClusterSpec{
+			SyncMode: v1alpha1.Push,
+		},
+		Status: v1alpha1.ClusterStatus{
+			KubernetesVersion: "v1.27.0",
+			Conditions: []metav1.Condition{
+				{
+					Type:               "Ready",
+					Status:             metav1.ConditionTrue,
+					LastTransitionTime: metav1.Now(),
+					Reason:             "LocalClusterReady",
+					Message:            "Local cluster is ready",
+				},
+			},
+			NodeSummary: &v1alpha1.NodeSummary{
+				TotalNum: nodeCount,
+				ReadyNum: readyNodeCount,
+			},
+			ResourceSummary: &v1alpha1.ResourceSummary{
+				Allocatable: corev1.ResourceList{
+					corev1.ResourceCPU:    *resource.NewMilliQuantity(cpuCapacity, resource.DecimalSI),
+					corev1.ResourceMemory: *resource.NewQuantity(memoryCapacity, resource.BinarySI),
+					corev1.ResourcePods:   *resource.NewQuantity(podCapacity, resource.DecimalSI),
+				},
+				Allocated: corev1.ResourceList{
+					corev1.ResourceCPU:    *resource.NewMilliQuantity(0, resource.DecimalSI),
+					corev1.ResourceMemory: *resource.NewQuantity(0, resource.BinarySI),
+					corev1.ResourcePods:   *resource.NewQuantity(0, resource.DecimalSI),
+				},
+			},
+		},
+	}
+
+	return &ClusterDetail{
+		Cluster: toCluster(&localCluster),
+		Taints:  nil,
 	}, nil
 }

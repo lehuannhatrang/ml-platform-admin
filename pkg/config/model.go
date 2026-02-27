@@ -72,4 +72,5 @@ type DashboardConfig struct {
 	MetricsDashboards  []MetricsDashboard `yaml:"metrics_dashboards" json:"metrics_dashboards"`
 	AIAgentChatWebHook string             `yaml:"ai_agent_chat_webhook" json:"ai_agent_chat_webhook"`
 	GPUConfig          GPUConfig          `yaml:"gpu_config" json:"gpu_config"`
+	LocalClusterName   string             `yaml:"local_cluster_name" json:"local_cluster_name"` // Custom name for local cluster (default: "local-cluster")
 }

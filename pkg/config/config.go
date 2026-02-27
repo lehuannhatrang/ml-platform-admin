@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/karmada-io/dashboard/pkg/client"
 	"github.com/karmada-io/karmada/pkg/util/fedinformer"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
@@ -89,6 +90,7 @@ func InitDashboardConfig(k8sClient kubernetes.Interface, stopper <-chan struct{}
 			klog.Errorf("Failed to unmarshal ConfigMap %s: %v", configMap.Name, err)
 		} else {
 			dashboardConfig = tmpConfig
+			applyLocalClusterNameFromConfig(tmpConfig)
 		}
 	}
 	onUpdate := func(_, newObj interface{}) {
@@ -99,6 +101,7 @@ func InitDashboardConfig(k8sClient kubernetes.Interface, stopper <-chan struct{}
 			klog.Errorf("Failed to unmarshal ConfigMap %s: %v", newConfigMap.Name, err)
 		} else {
 			dashboardConfig = tmpConfig
+			applyLocalClusterNameFromConfig(tmpConfig)
 		}
 	}
 	evtHandler := fedinformer.NewFilteringHandlerOnAllEvents(filterFunc, onAdd, onUpdate, nil)
@@ -109,6 +112,14 @@ func InitDashboardConfig(k8sClient kubernetes.Interface, stopper <-chan struct{}
 	}
 	factory.Start(stopper)
 	klog.Infof("ConfigMap informer started, waiting for ConfigMap events...")
+}
+
+// applyLocalClusterNameFromConfig sets the local cluster name from config if specified
+func applyLocalClusterNameFromConfig(cfg DashboardConfig) {
+	if cfg.LocalClusterName != "" {
+		client.SetLocalClusterName(cfg.LocalClusterName)
+		klog.Infof("Local cluster name set from config: %s", cfg.LocalClusterName)
+	}
 }
 
 // GetDashboardConfig returns a copy of the current dashboard configuration.
@@ -125,6 +136,12 @@ func GetDashboardConfig() DashboardConfig {
 		gpuConfig.DefaultSlices = 1
 	}
 
+	// Get the effective local cluster name (use configured value or default)
+	localClusterName := dashboardConfig.LocalClusterName
+	if localClusterName == "" {
+		localClusterName = client.LocalClusterName
+	}
+
 	return DashboardConfig{
 		DockerRegistries:   dashboardConfig.DockerRegistries,
 		ChartRegistries:    dashboardConfig.ChartRegistries,
@@ -133,6 +150,7 @@ func GetDashboardConfig() DashboardConfig {
 		MetricsDashboards:  dashboardConfig.MetricsDashboards,
 		AIAgentChatWebHook: dashboardConfig.AIAgentChatWebHook,
 		GPUConfig:          gpuConfig,
+		LocalClusterName:   localClusterName,
 	}
 }
 

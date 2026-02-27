@@ -321,7 +321,9 @@ func sanitizeEmailForK8sName(email string) string {
 	return result.String()
 }
 
-// createKubeflowProfile creates a Kubeflow Profile for the user in both Karmada and management cluster
+// createKubeflowProfile creates a Kubeflow Profile for the user
+// When Karmada is enabled, creates the profile in both Karmada and local cluster
+// When Karmada is not enabled, creates the profile only in the local cluster
 func createKubeflowProfile(ctx context.Context, userEmail string) error {
 	klog.InfoS("Creating Kubeflow Profile", "userEmail", userEmail)
 	
@@ -353,53 +355,57 @@ func createKubeflowProfile(ctx context.Context, userEmail string) error {
 		},
 	}
 
-	// 1. Create the Profile in Karmada (will propagate to member clusters)
-	karmadaConfig, _, err := client.GetKarmadaConfig()
-	if err != nil {
-		return fmt.Errorf("failed to get karmada config: %v", err)
+	// 1. Create the Profile in Karmada (will propagate to member clusters) if Karmada is enabled
+	if client.IsKarmadaEnabled() {
+		karmadaConfig, _, err := client.GetKarmadaConfig()
+		if err != nil {
+			klog.ErrorS(err, "Failed to get karmada config, skipping Karmada profile creation")
+		} else {
+			karmadaDynamicClient, err := dynamic.NewForConfig(karmadaConfig)
+			if err != nil {
+				klog.ErrorS(err, "Failed to create karmada dynamic client")
+			} else {
+				_, err = karmadaDynamicClient.Resource(profileGVR).Create(ctx, profile, metav1.CreateOptions{})
+				if err != nil {
+					klog.ErrorS(err, "Failed to create Kubeflow Profile in Karmada", "userEmail", userEmail)
+				} else {
+					klog.InfoS("Kubeflow Profile created in Karmada", "userEmail", userEmail, "profileName", profileName)
+				}
+			}
+		}
 	}
 
-	karmadaDynamicClient, err := dynamic.NewForConfig(karmadaConfig)
-	if err != nil {
-		return fmt.Errorf("failed to create karmada dynamic client: %v", err)
-	}
-
-	_, err = karmadaDynamicClient.Resource(profileGVR).Create(ctx, profile, metav1.CreateOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to create Kubeflow Profile in Karmada: %v", err)
-	}
-	klog.InfoS("Kubeflow Profile created in Karmada", "userEmail", userEmail, "profileName", profileName)
-
-	// 2. Create the Profile in management cluster directly
+	// 2. Create the Profile in local cluster
 	mgmtConfig, _, err := client.GetKubeConfig()
 	if err != nil {
-		klog.ErrorS(err, "Failed to get management cluster config, skipping mgmt cluster profile creation")
-		// Don't fail the entire operation, Karmada profile is already created
-		return nil
+		return fmt.Errorf("failed to get local cluster config: %v", err)
 	}
 
 	mgmtDynamicClient, err := dynamic.NewForConfig(mgmtConfig)
 	if err != nil {
-		klog.ErrorS(err, "Failed to create management cluster dynamic client")
-		return nil
+		return fmt.Errorf("failed to create local cluster dynamic client: %v", err)
 	}
 
-	// Create a copy of the profile for mgmt cluster
+	// Create a copy of the profile for local cluster
 	mgmtProfile := profile.DeepCopy()
 	_, err = mgmtDynamicClient.Resource(profileGVR).Create(ctx, mgmtProfile, metav1.CreateOptions{})
 	if err != nil {
-		klog.ErrorS(err, "Failed to create Kubeflow Profile in management cluster", "userEmail", userEmail)
-		// Don't fail the operation, Karmada profile is already created
-		return nil
+		return fmt.Errorf("failed to create Kubeflow Profile in local cluster: %v", err)
 	}
-	klog.InfoS("Kubeflow Profile created in management cluster", "userEmail", userEmail, "profileName", profileName)
+	klog.InfoS("Kubeflow Profile created in local cluster", "userEmail", userEmail, "profileName", profileName)
 
-	klog.InfoS("Kubeflow Profile created successfully in both Karmada and management cluster", "userEmail", userEmail, "profileName", profileName)
 	return nil
 }
 
 // createProfilePropagationPolicy creates a ClusterPropagationPolicy to propagate the profile to all member clusters
+// Only operates when Karmada is enabled
 func createProfilePropagationPolicy(ctx context.Context, userEmail string) error {
+	// Skip if Karmada is not enabled
+	if !client.IsKarmadaEnabled() {
+		klog.InfoS("Karmada not enabled, skipping propagation policy creation", "userEmail", userEmail)
+		return nil
+	}
+	
 	klog.InfoS("Creating propagation policy for Kubeflow Profile", "userEmail", userEmail)
 	
 	// Get karmada client
@@ -828,7 +834,9 @@ func handleUpdatePassword(c *gin.Context) {
 	})
 }
 
-// deleteKubeflowProfile deletes the Kubeflow Profile for a user from both Karmada and management cluster
+// deleteKubeflowProfile deletes the Kubeflow Profile for a user
+// When Karmada is enabled, deletes from both Karmada and local cluster
+// When Karmada is not enabled, deletes only from the local cluster
 func deleteKubeflowProfile(ctx context.Context, userEmail string) error {
 	klog.InfoS("Deleting Kubeflow Profile", "userEmail", userEmail)
 	
@@ -844,44 +852,46 @@ func deleteKubeflowProfile(ctx context.Context, userEmail string) error {
 
 	var deleteErrors []error
 
-	// 1. Delete the Profile from Karmada
-	karmadaConfig, _, err := client.GetKarmadaConfig()
-	if err != nil {
-		klog.ErrorS(err, "Failed to get karmada config")
-		deleteErrors = append(deleteErrors, fmt.Errorf("failed to get karmada config: %v", err))
-	} else {
-		karmadaDynamicClient, err := dynamic.NewForConfig(karmadaConfig)
+	// 1. Delete the Profile from Karmada if enabled
+	if client.IsKarmadaEnabled() {
+		karmadaConfig, _, err := client.GetKarmadaConfig()
 		if err != nil {
-			klog.ErrorS(err, "Failed to create karmada dynamic client")
-			deleteErrors = append(deleteErrors, fmt.Errorf("failed to create karmada dynamic client: %v", err))
+			klog.ErrorS(err, "Failed to get karmada config")
+			deleteErrors = append(deleteErrors, fmt.Errorf("failed to get karmada config: %v", err))
 		} else {
-			err = karmadaDynamicClient.Resource(profileGVR).Delete(ctx, profileName, metav1.DeleteOptions{})
+			karmadaDynamicClient, err := dynamic.NewForConfig(karmadaConfig)
 			if err != nil {
-				klog.ErrorS(err, "Failed to delete Kubeflow Profile from Karmada", "profileName", profileName)
-				deleteErrors = append(deleteErrors, fmt.Errorf("failed to delete from Karmada: %v", err))
+				klog.ErrorS(err, "Failed to create karmada dynamic client")
+				deleteErrors = append(deleteErrors, fmt.Errorf("failed to create karmada dynamic client: %v", err))
 			} else {
-				klog.InfoS("Kubeflow Profile deleted from Karmada", "userEmail", userEmail, "profileName", profileName)
+				err = karmadaDynamicClient.Resource(profileGVR).Delete(ctx, profileName, metav1.DeleteOptions{})
+				if err != nil {
+					klog.ErrorS(err, "Failed to delete Kubeflow Profile from Karmada", "profileName", profileName)
+					deleteErrors = append(deleteErrors, fmt.Errorf("failed to delete from Karmada: %v", err))
+				} else {
+					klog.InfoS("Kubeflow Profile deleted from Karmada", "userEmail", userEmail, "profileName", profileName)
+				}
 			}
 		}
 	}
 
-	// 2. Delete the Profile from management cluster
+	// 2. Delete the Profile from local cluster
 	mgmtConfig, _, err := client.GetKubeConfig()
 	if err != nil {
-		klog.ErrorS(err, "Failed to get management cluster config")
-		deleteErrors = append(deleteErrors, fmt.Errorf("failed to get management cluster config: %v", err))
+		klog.ErrorS(err, "Failed to get local cluster config")
+		deleteErrors = append(deleteErrors, fmt.Errorf("failed to get local cluster config: %v", err))
 	} else {
 		mgmtDynamicClient, err := dynamic.NewForConfig(mgmtConfig)
 		if err != nil {
-			klog.ErrorS(err, "Failed to create management cluster dynamic client")
-			deleteErrors = append(deleteErrors, fmt.Errorf("failed to create management dynamic client: %v", err))
+			klog.ErrorS(err, "Failed to create local cluster dynamic client")
+			deleteErrors = append(deleteErrors, fmt.Errorf("failed to create local cluster dynamic client: %v", err))
 		} else {
 			err = mgmtDynamicClient.Resource(profileGVR).Delete(ctx, profileName, metav1.DeleteOptions{})
 			if err != nil {
-				klog.ErrorS(err, "Failed to delete Kubeflow Profile from management cluster", "profileName", profileName)
-				deleteErrors = append(deleteErrors, fmt.Errorf("failed to delete from management cluster: %v", err))
+				klog.ErrorS(err, "Failed to delete Kubeflow Profile from local cluster", "profileName", profileName)
+				deleteErrors = append(deleteErrors, fmt.Errorf("failed to delete from local cluster: %v", err))
 			} else {
-				klog.InfoS("Kubeflow Profile deleted from management cluster", "userEmail", userEmail, "profileName", profileName)
+				klog.InfoS("Kubeflow Profile deleted from local cluster", "userEmail", userEmail, "profileName", profileName)
 			}
 		}
 	}
@@ -890,12 +900,19 @@ func deleteKubeflowProfile(ctx context.Context, userEmail string) error {
 		return fmt.Errorf("errors during profile deletion: %v", deleteErrors)
 	}
 
-	klog.InfoS("Kubeflow Profile deleted successfully from both Karmada and management cluster", "userEmail", userEmail, "profileName", profileName)
+	klog.InfoS("Kubeflow Profile deleted successfully", "userEmail", userEmail, "profileName", profileName)
 	return nil
 }
 
 // deleteProfilePropagationPolicy deletes the ClusterPropagationPolicy for a user's profile
+// Only operates when Karmada is enabled
 func deleteProfilePropagationPolicy(ctx context.Context, userEmail string) error {
+	// Skip if Karmada is not enabled
+	if !client.IsKarmadaEnabled() {
+		klog.InfoS("Karmada not enabled, skipping propagation policy deletion", "userEmail", userEmail)
+		return nil
+	}
+	
 	klog.InfoS("Deleting propagation policy for Kubeflow Profile", "userEmail", userEmail)
 	
 	// Get karmada client
@@ -1103,20 +1120,31 @@ func getInt64Value(ptr *int64) int64 {
 }
 
 // getProfileMap fetches all Kubeflow Profile CRs and creates a map of email -> profile name
+// When Karmada is enabled, fetches from Karmada; otherwise fetches from the local cluster
 func getProfileMap(ctx context.Context) map[string]string {
 	profileMap := make(map[string]string)
 
-	// Get Karmada config and create dynamic client
-	karmadaConfig, _, err := client.GetKarmadaConfig()
-	if err != nil {
-		klog.InfoS("Failed to get Karmada config, profile mapping unavailable", "error", err)
-		return profileMap
-	}
-
-	dynamicClient, err := dynamic.NewForConfig(karmadaConfig)
-	if err != nil {
-		klog.InfoS("Failed to create dynamic client, profile mapping unavailable", "error", err)
-		return profileMap
+	// Get dynamic client - use local cluster when Karmada is not enabled
+	var dynamicClient dynamic.Interface
+	var err error
+	
+	if client.IsKarmadaEnabled() {
+		karmadaConfig, _, err := client.GetKarmadaConfig()
+		if err != nil {
+			klog.InfoS("Failed to get Karmada config, profile mapping unavailable", "error", err)
+			return profileMap
+		}
+		dynamicClient, err = dynamic.NewForConfig(karmadaConfig)
+		if err != nil {
+			klog.InfoS("Failed to create Karmada dynamic client, profile mapping unavailable", "error", err)
+			return profileMap
+		}
+	} else {
+		dynamicClient, err = client.GetDynamicClient()
+		if err != nil {
+			klog.InfoS("Failed to get local dynamic client, profile mapping unavailable", "error", err)
+			return profileMap
+		}
 	}
 
 	// Define the Kubeflow Profile GVR

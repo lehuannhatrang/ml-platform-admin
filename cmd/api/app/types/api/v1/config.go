@@ -25,4 +25,5 @@ type SetDashboardConfigRequest struct {
 	MenuConfigs        []config.MenuConfig     `json:"menu_configs"`
 	AIAgentChatWebHook string                  `json:"ai_agent_chat_webhook"`
 	GPUConfig          *config.GPUConfig       `json:"gpu_config,omitempty"`
+	LocalClusterName   string                  `json:"local_cluster_name,omitempty"` // Custom name for local cluster
 }

@@ -63,7 +63,11 @@ type PriorityListResponse struct {
 // getOrCreateConfigMap retrieves or creates the profile-priority ConfigMap
 func getOrCreateConfigMap(ctx context.Context) (*corev1.ConfigMap, error) {
 	// Use Kubernetes client for ConfigMap access
-	kubeClient := client.InClusterClientForKarmadaAPIServer()
+	// When Karmada is not enabled, use the local cluster client
+	var kubeClient = client.InClusterClient()
+	if client.IsKarmadaEnabled() {
+		kubeClient = client.InClusterClientForKarmadaAPIServer()
+	}
 	if kubeClient == nil {
 		return nil, fmt.Errorf("failed to get kubernetes client")
 	}
@@ -191,7 +195,11 @@ func handleSetPriority(c *gin.Context) {
 		return
 	}
 
-	kubeClient := client.InClusterClientForKarmadaAPIServer()
+	// Use local cluster client when Karmada is not enabled
+	var kubeClient = client.InClusterClient()
+	if client.IsKarmadaEnabled() {
+		kubeClient = client.InClusterClientForKarmadaAPIServer()
+	}
 	if kubeClient == nil {
 		common.Fail(c, fmt.Errorf("failed to get kubernetes client"))
 		return
@@ -235,7 +243,11 @@ func handleDeletePriority(c *gin.Context) {
 		return
 	}
 
-	kubeClient := client.InClusterClientForKarmadaAPIServer()
+	// Use local cluster client when Karmada is not enabled
+	var kubeClient = client.InClusterClient()
+	if client.IsKarmadaEnabled() {
+		kubeClient = client.InClusterClientForKarmadaAPIServer()
+	}
 	if kubeClient == nil {
 		common.Fail(c, fmt.Errorf("failed to get kubernetes client"))
 		return
@@ -280,17 +292,27 @@ type ProfileUserInfo struct {
 func getProfileUserMap(ctx context.Context) map[string]ProfileUserInfo {
 	profileUserMap := make(map[string]ProfileUserInfo)
 
-	// Get Karmada config and create dynamic client
-	karmadaConfig, _, err := client.GetKarmadaConfig()
-	if err != nil {
-		klog.V(4).InfoS("Failed to get Karmada config, profile user mapping unavailable", "error", err)
-		return profileUserMap
-	}
-
-	dynamicClient, err := dynamic.NewForConfig(karmadaConfig)
-	if err != nil {
-		klog.V(4).InfoS("Failed to create dynamic client, profile user mapping unavailable", "error", err)
-		return profileUserMap
+	// Get dynamic client - use local cluster when Karmada is not enabled
+	var dynamicClient dynamic.Interface
+	var err error
+	
+	if client.IsKarmadaEnabled() {
+		karmadaConfig, _, err := client.GetKarmadaConfig()
+		if err != nil {
+			klog.V(4).InfoS("Failed to get Karmada config, profile user mapping unavailable", "error", err)
+			return profileUserMap
+		}
+		dynamicClient, err = dynamic.NewForConfig(karmadaConfig)
+		if err != nil {
+			klog.V(4).InfoS("Failed to create dynamic client, profile user mapping unavailable", "error", err)
+			return profileUserMap
+		}
+	} else {
+		dynamicClient, err = client.GetDynamicClient()
+		if err != nil {
+			klog.V(4).InfoS("Failed to get dynamic client, profile user mapping unavailable", "error", err)
+			return profileUserMap
+		}
 	}
 
 	// Define the Kubeflow Profile GVR

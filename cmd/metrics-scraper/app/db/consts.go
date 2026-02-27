@@ -16,10 +16,6 @@ limitations under the License.
 
 package db
 
-import (
-	"os"
-)
-
 const (
 	// KarmadaAgent is the name of karmada agent.
 	KarmadaAgent = "karmada-agent"

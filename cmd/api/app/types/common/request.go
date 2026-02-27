@@ -22,6 +22,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/karmada-io/dashboard/pkg/client"
 	"github.com/karmada-io/dashboard/pkg/dataselect"
 	"github.com/karmada-io/dashboard/pkg/resource/common"
 )
@@ -72,4 +73,52 @@ func ParseNamespacePathParameter(request *gin.Context) *common.NamespaceQuery {
 		}
 	}
 	return common.NewNamespaceQuery(nonEmptyNamespaces)
+}
+
+// GetResolvedClusterName retrieves the resolved cluster name from the Gin context.
+// The cluster name is resolved by the EnsureMemberClusterMiddleware.
+// If not set in context, it falls back to the clustername path parameter.
+// If Karmada is not enabled, it always returns the configured local cluster name.
+func GetResolvedClusterName(c *gin.Context) string {
+	// Check if resolved cluster name is in context (set by middleware)
+	if resolvedCluster, exists := c.Get("resolvedClusterName"); exists {
+		if clusterStr, ok := resolvedCluster.(string); ok {
+			return clusterStr
+		}
+	}
+	
+	// Fallback to the path parameter
+	clusterName := c.Param("clustername")
+	
+	// If Karmada is not enabled, always return local cluster
+	if !client.IsKarmadaEnabled() {
+		return client.GetLocalClusterName()
+	}
+	
+	// Check for local cluster aliases
+	if client.IsLocalClusterName(clusterName) {
+		return client.GetLocalClusterName()
+	}
+	
+	return clusterName
+}
+
+// IsLocalClusterRequest checks if the current request is for the local cluster.
+// This considers both single-cluster mode (Karmada disabled) and explicit local cluster names.
+func IsLocalClusterRequest(c *gin.Context) bool {
+	// Check if already resolved by middleware
+	if isLocal, exists := c.Get("isLocalCluster"); exists {
+		if isLocalBool, ok := isLocal.(bool); ok {
+			return isLocalBool
+		}
+	}
+	
+	// If Karmada is not enabled, all requests are local
+	if !client.IsKarmadaEnabled() {
+		return true
+	}
+	
+	// Check the cluster name using the centralized helper
+	clusterName := c.Param("clustername")
+	return client.IsLocalClusterName(clusterName)
 }

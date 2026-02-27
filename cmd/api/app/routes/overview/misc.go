@@ -139,7 +139,26 @@ func ParseVersion(versionStr string) *version.Info {
 }
 
 // GetControllerManagerInfo returns the version info of karmada-controller-manager.
+// When Karmada is not enabled, returns a default info struct indicating single-cluster mode.
 func GetControllerManagerInfo() (*v1.KarmadaInfo, error) {
+	// When Karmada is not enabled, return info indicating single-cluster mode
+	if !client.IsKarmadaEnabled() {
+		kubeClient := client.InClusterClient()
+		serverVersion, err := kubeClient.Discovery().ServerVersion()
+		if err != nil {
+			return nil, err
+		}
+		
+		return &v1.KarmadaInfo{
+			Version: &version.Info{
+				GitVersion: serverVersion.GitVersion,
+				Platform:   serverVersion.Platform,
+			},
+			Status:     "single-cluster-mode",
+			CreateTime: metav1.Now(),
+		}, nil
+	}
+	
 	versionInfo, err := GetControllerManagerVersionInfo()
 	if err != nil {
 		return nil, err
@@ -223,37 +242,49 @@ func GetMemberClusterInfo(ds *dataselect.DataSelectQuery) (*v1.MemberClusterStat
 }
 
 // GetClusterResourceStatus returns the status of cluster resources.
+// When Karmada is not enabled, returns resource status from the local cluster.
 func GetClusterResourceStatus() (*v1.ClusterResourceStatus, error) {
 	clusterResourceStatus := &v1.ClusterResourceStatus{}
 	ctx := context.TODO()
-	karmadaClient := client.InClusterKarmadaClient()
-	// handle pp num
-	clusterPPRet, err := karmadaClient.PolicyV1alpha1().ClusterPropagationPolicies().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	clusterResourceStatus.PropagationPolicyNum += len(clusterPPRet.Items)
+	
+	// Use local cluster client when Karmada is not enabled
+	kubeClient := client.InClusterClient()
+	
+	// When Karmada is enabled, also count propagation policies and override policies
+	if client.IsKarmadaEnabled() {
+		karmadaClient := client.InClusterKarmadaClient()
+		if karmadaClient != nil {
+			// handle pp num
+			clusterPPRet, err := karmadaClient.PolicyV1alpha1().ClusterPropagationPolicies().List(ctx, metav1.ListOptions{})
+			if err == nil {
+				clusterResourceStatus.PropagationPolicyNum += len(clusterPPRet.Items)
+			}
 
-	ppRet, err := karmadaClient.PolicyV1alpha1().PropagationPolicies("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	clusterResourceStatus.PropagationPolicyNum += len(ppRet.Items)
-	// handle op num
-	clusterOPRet, err := karmadaClient.PolicyV1alpha1().ClusterOverridePolicies().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	clusterResourceStatus.OverridePolicyNum += len(clusterOPRet.Items)
-	opRet, err := karmadaClient.PolicyV1alpha1().OverridePolicies("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	clusterResourceStatus.OverridePolicyNum += len(opRet.Items)
+			ppRet, err := karmadaClient.PolicyV1alpha1().PropagationPolicies("").List(ctx, metav1.ListOptions{})
+			if err == nil {
+				clusterResourceStatus.PropagationPolicyNum += len(ppRet.Items)
+			}
+			
+			// handle op num
+			clusterOPRet, err := karmadaClient.PolicyV1alpha1().ClusterOverridePolicies().List(ctx, metav1.ListOptions{})
+			if err == nil {
+				clusterResourceStatus.OverridePolicyNum += len(clusterOPRet.Items)
+			}
+			
+			opRet, err := karmadaClient.PolicyV1alpha1().OverridePolicies("").List(ctx, metav1.ListOptions{})
+			if err == nil {
+				clusterResourceStatus.OverridePolicyNum += len(opRet.Items)
+			}
 
-	// handle cluster resources
+			// Use Karmada API server client for other resources
+			karmadaKubeClient := client.InClusterClientForKarmadaAPIServer()
+			if karmadaKubeClient != nil {
+				kubeClient = karmadaKubeClient
+			}
+		}
+	}
+
 	// handler namespace num
-	kubeClient := client.InClusterClientForKarmadaAPIServer()
 	nsRet, err := kubeClient.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -294,6 +325,7 @@ func GetClusterResourceStatus() (*v1.ClusterResourceStatus, error) {
 }
 
 // GetArgoMetrics retrieves ArgoCD application and project counts from all member clusters
+// When Karmada is not enabled, returns metrics from the local cluster only.
 func GetArgoMetrics(c *gin.Context) (*v1.ArgoMetrics, error) {
 	ctx := context.TODO()
 
@@ -309,7 +341,35 @@ func GetArgoMetrics(c *gin.Context) (*v1.ArgoMetrics, error) {
 		Resource: "appprojects",
 	}
 
-	// Get a list of all clusters
+	// Count applications and projects
+	var applicationCount, projectCount int
+
+	// When Karmada is not enabled, use local cluster only
+	if !client.IsKarmadaEnabled() {
+		dynamicClient, err := client.GetDynamicClient()
+		if err != nil {
+			return nil, err
+		}
+
+		// Count ArgoCD applications
+		applications, err := dynamicClient.Resource(applicationGVR).List(ctx, metav1.ListOptions{})
+		if err == nil {
+			applicationCount = len(applications.Items)
+		}
+
+		// Count ArgoCD projects
+		projects, err := dynamicClient.Resource(projectGVR).List(ctx, metav1.ListOptions{})
+		if err == nil {
+			projectCount = len(projects.Items)
+		}
+
+		return &v1.ArgoMetrics{
+			ApplicationCount: applicationCount,
+			ProjectCount:     projectCount,
+		}, nil
+	}
+
+	// Get a list of all clusters from Karmada
 	karmadaClient := client.InClusterKarmadaClient()
 	if karmadaClient == nil {
 		return nil, errors.New("failed to get Karmada client")
@@ -320,17 +380,14 @@ func GetArgoMetrics(c *gin.Context) (*v1.ArgoMetrics, error) {
 		return nil, err
 	}
 
-	// Count applications and projects across all clusters
-	var applicationCount, projectCount int
-
-	for _, cluster := range clusterList.Items {
+	for _, clusterItem := range clusterList.Items {
 		// Skip clusters that aren't ready
-		if !isClusterReady(&cluster) {
+		if !isClusterReady(&clusterItem) {
 			continue
 		}
 
 		// Create a dynamic client with this config
-		dynamicClient, err := client.GetDynamicClientForMember(c, cluster.ObjectMeta.Name)
+		dynamicClient, err := client.GetDynamicClientForMember(c, clusterItem.ObjectMeta.Name)
 		if err != nil {
 			continue
 		}

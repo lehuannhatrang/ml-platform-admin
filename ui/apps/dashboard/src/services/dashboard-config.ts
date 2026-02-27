@@ -51,6 +51,8 @@ export interface DashboardConfig {
   menu_configs: menuConfig[];
   ai_agent_chat_webhook: string;
   gpu_config: GPUConfig;
+  karmada_enabled: boolean;
+  local_cluster_name: string;  // Custom name for local cluster (default: "local-cluster")
 }
 
 export async function GetDashboardConfig() {

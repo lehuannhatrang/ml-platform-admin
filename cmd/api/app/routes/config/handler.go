@@ -27,10 +27,20 @@ import (
 	"github.com/karmada-io/dashboard/pkg/config"
 )
 
+// DashboardConfigResponse extends the dashboard config with runtime information
+type DashboardConfigResponse struct {
+	config.DashboardConfig
+	KarmadaEnabled bool `json:"karmada_enabled"`
+}
+
 // GetDashboardConfig handles the request to retrieve the dashboard configuration.
 func GetDashboardConfig(c *gin.Context) {
 	dashboardConfig := config.GetDashboardConfig()
-	common.Success(c, dashboardConfig)
+	response := DashboardConfigResponse{
+		DashboardConfig: dashboardConfig,
+		KarmadaEnabled:  client.IsKarmadaEnabled(),
+	}
+	common.Success(c, response)
 }
 
 // SetDashboardConfig handles the request to update the dashboard configuration.
@@ -57,6 +67,11 @@ func SetDashboardConfig(c *gin.Context) {
 	}
 	if setDashboardConfigRequest.GPUConfig != nil {
 		dashboardConfig.GPUConfig = *setDashboardConfigRequest.GPUConfig
+	}
+	if setDashboardConfigRequest.LocalClusterName != "" {
+		dashboardConfig.LocalClusterName = setDashboardConfigRequest.LocalClusterName
+		// Also update the client's local cluster name
+		client.SetLocalClusterName(setDashboardConfigRequest.LocalClusterName)
 	}
 	k8sClient := client.InClusterClient()
 	err := config.UpdateDashboardConfig(k8sClient, dashboardConfig)

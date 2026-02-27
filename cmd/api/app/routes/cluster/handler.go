@@ -39,13 +39,16 @@ import (
 )
 
 func handleGetClusterList(c *gin.Context) {
-	karmadaClient := client.InClusterKarmadaClient()
 	dataSelect := common.ParseDataSelectPathParameter(c)
 
 	// Get the authenticated username
 	username := utilauth.GetAuthenticatedUser(c)
 
+	// Get Karmada client (may be nil if Karmada is not enabled)
+	karmadaClient := client.InClusterKarmadaClient()
+
 	// Call GetClusterList with the username to filter by permissions
+	// When karmadaClient is nil, GetClusterList returns only the local cluster
 	result, err := cluster.GetClusterList(karmadaClient, dataSelect, username)
 	if err != nil {
 		klog.ErrorS(err, "GetClusterList failed")
@@ -56,8 +59,31 @@ func handleGetClusterList(c *gin.Context) {
 }
 
 func handleGetClusterDetail(c *gin.Context) {
-	karmadaClient := client.InClusterKarmadaClient()
 	name := c.Param("name")
+	
+	// Handle local-cluster request when Karmada is not enabled
+	if !client.IsKarmadaEnabled() {
+		if name == client.LocalClusterName || name == "mgmt-cluster" {
+			// Return local cluster detail
+			result, err := cluster.GetLocalClusterDetail()
+			if err != nil {
+				klog.ErrorS(err, "GetLocalClusterDetail failed")
+				common.Fail(c, err)
+				return
+			}
+			common.Success(c, result)
+			return
+		}
+		common.Fail(c, fmt.Errorf("cluster %s not found (Karmada not enabled, only %s is available)", name, client.LocalClusterName))
+		return
+	}
+	
+	karmadaClient := client.InClusterKarmadaClient()
+	if karmadaClient == nil {
+		common.Fail(c, fmt.Errorf("Karmada client not available"))
+		return
+	}
+	
 	result, err := cluster.GetClusterDetail(karmadaClient, name)
 	if err != nil {
 		klog.ErrorS(err, "GetClusterDetail failed")
@@ -68,6 +94,12 @@ func handleGetClusterDetail(c *gin.Context) {
 }
 
 func handlePostCluster(c *gin.Context) {
+	// Creating clusters requires Karmada
+	if !client.IsKarmadaEnabled() {
+		common.Fail(c, fmt.Errorf("cannot create clusters: Karmada is not enabled (running in single-cluster mode)"))
+		return
+	}
+	
 	clusterRequest := new(v1.PostClusterRequest)
 	if err := c.ShouldBind(clusterRequest); err != nil {
 		klog.ErrorS(err, "Could not read cluster request")
@@ -144,6 +176,12 @@ func handlePostCluster(c *gin.Context) {
 }
 
 func handlePutCluster(c *gin.Context) {
+	// Updating clusters requires Karmada
+	if !client.IsKarmadaEnabled() {
+		common.Fail(c, fmt.Errorf("cannot update clusters: Karmada is not enabled (running in single-cluster mode)"))
+		return
+	}
+	
 	clusterRequest := new(v1.PutClusterRequest)
 	name := c.Param("name")
 	if err := c.ShouldBind(clusterRequest); err != nil {
@@ -190,6 +228,12 @@ func handlePutCluster(c *gin.Context) {
 }
 
 func handleDeleteCluster(c *gin.Context) {
+	// Deleting clusters requires Karmada
+	if !client.IsKarmadaEnabled() {
+		common.Fail(c, fmt.Errorf("cannot delete clusters: Karmada is not enabled (running in single-cluster mode)"))
+		return
+	}
+	
 	ctx := context.Context(c)
 	clusterRequest := new(v1.DeleteClusterRequest)
 	if err := c.ShouldBindUri(&clusterRequest); err != nil {
@@ -233,8 +277,14 @@ func handleDeleteCluster(c *gin.Context) {
 }
 
 func handleGetClusterUsers(c *gin.Context) {
-	karmadaClient := client.InClusterKarmadaClient()
 	clusterName := c.Param("name")
+	
+	// Handle local cluster when Karmada is not enabled
+	karmadaClient := client.InClusterKarmadaClient()
+	if !client.IsKarmadaEnabled() && (clusterName == client.LocalClusterName || clusterName == "mgmt-cluster") {
+		// For local cluster, we can still return users from FGA
+		karmadaClient = nil // Will be handled below
+	}
 
 	// Get the authenticated user to ensure they have permission
 	username := utilauth.GetAuthenticatedUser(c)

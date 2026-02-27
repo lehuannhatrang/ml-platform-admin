@@ -1,0 +1,139 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ml-platform-admin-etcd
+  namespace: ml-platform-system
+  labels:
+    app: ml-platform-admin-etcd
+spec:
+  replicas: 1
+  serviceName: ml-platform-admin-etcd-headless
+  selector:
+    matchLabels: 
+      app: ml-platform-admin-etcd
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: ml-platform-admin-etcd
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: etcd
+          image: registry.k8s.io/etcd:3.5.9-0
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+            limits:
+              cpu: 200m
+              memory: 200Mi
+          ports:
+            - containerPort: 2379
+              name: client
+              protocol: TCP
+            - containerPort: 2380
+              name: server
+              protocol: TCP
+          command:
+            - /usr/local/bin/etcd
+            - --name
+            - etcd0
+            - --listen-peer-urls
+            - http://0.0.0.0:2380
+            - --listen-client-urls
+            - http://0.0.0.0:2379
+            - --advertise-client-urls
+            - http://ml-platform-admin-etcd.ml-platform-system.svc:2379
+            - '--initial-cluster'
+            - >-
+              etcd0=http://ml-platform-admin-etcd-0.ml-platform-admin-etcd-headless.ml-platform-system.svc:2380
+            - --initial-cluster-state
+            - new
+            - --data-dir=/var/lib/etcd
+            - --snapshot-count=10000
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -ec
+                - 'etcdctl get / --prefix --keys-only --endpoints http://127.0.0.1:2379'
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -ec
+                - 'etcdctl get / --prefix --keys-only --endpoints http://127.0.0.1:2379'
+            failureThreshold: 3
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 10
+          volumeMounts:
+            - mountPath: /var/lib/etcd
+              name: etcd-data
+      volumes:
+        - name: etcd-data
+          persistentVolumeClaim:
+            claimName: ml-platform-admin-etcd-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ml-platform-admin-etcd-data
+  namespace: ml-platform-system
+spec:
+  # storageClassName: manual-hostpath
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+# Service for etcd client
+apiVersion: v1
+kind: Service
+metadata:
+  name: ml-platform-admin-etcd
+  namespace: ml-platform-system
+  labels:
+    app: ml-platform-admin-etcd
+spec:
+  ports:
+    - name: client
+      port: 2379
+      targetPort: 2379
+    - name: server
+      port: 2380
+      targetPort: 2380
+  selector:
+    app: ml-platform-admin-etcd
+  type: ClusterIP
+---
+# Headless service for etcd peer discovery
+apiVersion: v1
+kind: Service
+metadata:
+  name: ml-platform-admin-etcd-headless
+  namespace: ml-platform-system
+  labels:
+    app: ml-platform-admin-etcd
+spec:
+  publishNotReadyAddresses: true
+  ports:
+    - name: client
+      port: 2379
+      targetPort: 2379
+    - name: server
+      port: 2380
+      targetPort: 2380
+  selector:
+    app: ml-platform-admin-etcd
+  clusterIP: None
