@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: ml-platform-admin-configmap
+  name: ml-platform-admin-configmap-example
   namespace: ml-platform-system
 data:
   dev.yaml: |-
