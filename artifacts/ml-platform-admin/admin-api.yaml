@@ -35,7 +35,7 @@ spec:
             - --etcd-port=2379
             - --use-keycloak=true
             - --keycloak-realm=ml-platform
-            - --keycloak-url=http://192.168.40.248:32008
+            - --keycloak-url=http://192.168.40.245:32008
           name: ml-platform-admin-api
           image: docker.io/lehuannhatrang/ml-platform-admin-api:v0.15
           imagePullPolicy: IfNotPresent
@@ -44,11 +44,8 @@ spec:
               value: prod
             - name: GIN_MODE
               value: release
-            # Optional environment variable for etcd endpoint - can be overridden by --etcd-host flag
-            - name: ETCD_ENDPOINT
-              value: ""
             - name: KEYCLOAK_CLIENT_SECRET
-              value: ""
+              value: "rRwwvNyUpRDbDGcfIztbae4bFdoyhbdH"
             # No need for TLS settings with our standalone non-TLS etcd
             # Default admin password (should be changed after first login)
             - name: KARMADA_DASHBOARD_ADMIN_PASSWORD
