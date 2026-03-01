@@ -22,3 +22,28 @@ secretGenerator:
     type: Opaque
     literals:
       - secret=ml-platform-admin-secret-key-change-me-in-production
+
+patches:
+  - target:
+      kind: Service
+      name: ml-platform-admin-web
+      namespace: ml-platform-system
+      version: v1
+    patch: |-
+      - op: replace
+        path: /spec/type
+        value: NodePort
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 32000  # you can change the nodePort value
+  - target:
+      kind: Deployment
+      name: ml-platform-admin-api
+      namespace: ml-platform-system
+      version: v1
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: FRONTEND_URL
+          value: http://192.168.40.246:32000
