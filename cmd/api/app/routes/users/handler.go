@@ -32,6 +32,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
+	"github.com/karmada-io/dashboard/cmd/api/app/routes/quota"
 	"github.com/karmada-io/dashboard/cmd/api/app/types/common"
 	"github.com/karmada-io/dashboard/pkg/auth/keycloak"
 	"github.com/karmada-io/dashboard/pkg/client"
@@ -578,6 +579,7 @@ func handleCreateUser(c *gin.Context) {
 	}
 
 	// Create Kubeflow Profile for the user
+	profileName := sanitizeEmailForK8sName(req.Email)
 	if err := createKubeflowProfile(ctx, req.Email); err != nil {
 		klog.ErrorS(err, "Failed to create Kubeflow Profile", "userEmail", req.Email)
 		// Don't fail the request, user is created but profile needs to be created manually
@@ -587,6 +589,12 @@ func handleCreateUser(c *gin.Context) {
 		if err := createProfilePropagationPolicy(ctx, req.Email); err != nil {
 			klog.ErrorS(err, "Failed to create propagation policy", "userEmail", req.Email)
 			// Don't fail the request, profile is created but policy needs to be created manually
+		}
+
+		// Create KAI Queue (quota) for the user's profile
+		if err := quota.CreateQueueForProfile(ctx, profileName); err != nil {
+			klog.ErrorS(err, "Failed to create quota queue for user", "userEmail", req.Email, "profile", profileName)
+			// Don't fail the request, quota can be configured manually
 		}
 	}
 
@@ -1012,6 +1020,8 @@ func handleDeleteUser(c *gin.Context) {
 
 	// Delete the propagation policy first (to stop propagation to member clusters)
 	if userEmail != "" {
+		profileName := sanitizeEmailForK8sName(userEmail)
+
 		if err := deleteProfilePropagationPolicy(ctx, userEmail); err != nil {
 			klog.ErrorS(err, "Failed to delete propagation policy", "userEmail", userEmail)
 			// Don't fail the request, continue to delete the profile
@@ -1021,6 +1031,12 @@ func handleDeleteUser(c *gin.Context) {
 		if err := deleteKubeflowProfile(ctx, userEmail); err != nil {
 			klog.ErrorS(err, "Failed to delete Kubeflow Profile", "userEmail", userEmail)
 			// Don't fail the request, profile deletion can be done manually if needed
+		}
+
+		// Delete the KAI Queue (quota) for the user's profile
+		if err := quota.DeleteQueueForProfile(ctx, profileName); err != nil {
+			klog.ErrorS(err, "Failed to delete quota queue for user", "userEmail", userEmail, "profile", profileName)
+			// Don't fail the request, quota deletion can be done manually if needed
 		}
 	} else {
 		klog.InfoS("User email is empty, skipping Kubeflow Profile cleanup", "userID", userID)

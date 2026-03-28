@@ -126,6 +126,9 @@ func applyLocalClusterNameFromConfig(cfg DashboardConfig) {
 func GetDashboardConfig() DashboardConfig {
 	// Ensure GPU config has default values if not set
 	gpuConfig := dashboardConfig.GPUConfig
+	if gpuConfig.NumGPUs == 0 {
+		gpuConfig.NumGPUs = 1
+	}
 	if gpuConfig.TotalVRAMGiB == 0 {
 		gpuConfig.TotalVRAMGiB = 24
 	}

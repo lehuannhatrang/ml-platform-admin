@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GetClusters } from '@/services';
 import { DataSelectQuery } from '@/services/base.ts';
@@ -52,16 +52,16 @@ export const LOCAL_CLUSTER_OPTION: ClusterOption = {
 const SELECTED_CLUSTER_KEY = 'selectedCluster';
 const SELECTED_CLUSTER_QUERY_KEY = 'selectedClusterState';
 
-export const getStoredCluster = (): ClusterOption => {
+export const getStoredCluster = (): ClusterOption | null => {
     const stored = localStorage.getItem(SELECTED_CLUSTER_KEY);
     if (stored) {
         try {
             return JSON.parse(stored);
         } catch (e) {
-            return DEFAULT_CLUSTER_OPTION;
+            return null;
         }
     }
-    return DEFAULT_CLUSTER_OPTION;
+    return null;
 };
 
 export const setStoredCluster = (cluster: ClusterOption) => {
@@ -97,9 +97,9 @@ const useCluster = (props: { clusterFilter?: DataSelectQuery, allowSelectAll?: b
         },
     });
 
-    const { data: selectedCluster = getStoredCluster() } = useQuery({
+    const { data: selectedCluster = DEFAULT_CLUSTER_OPTION } = useQuery({
         queryKey: [SELECTED_CLUSTER_QUERY_KEY],
-        initialData: getStoredCluster(),
+        initialData: getStoredCluster() ?? DEFAULT_CLUSTER_OPTION,
         enabled: false, // This query never fetches, just manages state
     });
 
@@ -121,11 +121,26 @@ const useCluster = (props: { clusterFilter?: DataSelectQuery, allowSelectAll?: b
             ...clusters,
         ];
     }, [clusterData, allowSelectAll, karmadaEnabled]);
-    
+
     const setSelectedCluster = (cluster: ClusterOption) => {
         setStoredCluster(cluster);
         queryClient.setQueryData([SELECTED_CLUSTER_QUERY_KEY], cluster);
     };
+
+    // Auto-select the first real cluster when clusters load and no explicit
+    // choice has been stored (or the stored value is still the 'ALL' default).
+    useEffect(() => {
+        if (!clusterOptions.length) return;
+        const stored = getStoredCluster();
+        const noExplicitChoice = stored === null || stored.value === DEFAULT_CLUSTER_OPTION.value;
+        if (noExplicitChoice) {
+            const firstCluster = clusterOptions.find(c => c.value !== DEFAULT_CLUSTER_OPTION.value);
+            if (firstCluster) {
+                setSelectedCluster(firstCluster);
+            }
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [clusterOptions]);
 
     return {
         clusterOptions,

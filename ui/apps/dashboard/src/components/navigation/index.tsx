@@ -16,7 +16,8 @@ limitations under the License.
 
 import { FC, CSSProperties, useMemo } from 'react';
 import styles from './index.module.less';
-import DCNLogo from '@/assets/dcn_logo_removebg.png';
+import DCNLogo from '@/assets/dcn_logo_2026.png';
+import DCNLogoDark from '@/assets/dcn_logo_2026_dark.png';
 import { Button, Popconfirm } from 'antd';
 import { LogoutOutlined } from '@ant-design/icons';
 import ThemeToggle from '@/components/theme-toggle';
@@ -42,7 +43,7 @@ const Navigation: FC<INavigationProps> = (props) => {
   const {
     headerStyle = {},
     usePlaceholder = true,
-    brandText = 'Admin Portal',
+    brandText = 'Admin Dashboard',
     userInfo,
   } = props;
   
@@ -93,7 +94,7 @@ const Navigation: FC<INavigationProps> = (props) => {
               <div className={styles.logoWrap}>
                 <img 
                   className={styles.logo} 
-                  src={DCNLogo} 
+                  src={theme === 'dark' ? DCNLogoDark : DCNLogo} 
                   style={theme === 'dark' ? { filter: 'brightness(1.2)' } : {}} 
                 />
               </div>

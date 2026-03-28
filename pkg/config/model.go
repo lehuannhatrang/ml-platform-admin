@@ -49,7 +49,8 @@ type MetricsDashboard struct {
 
 // GPUConfig represents GPU-related configuration for quota management
 type GPUConfig struct {
-	TotalVRAMGiB  int `yaml:"total_vram_gib" json:"total_vram_gib"`   // Total VRAM per GPU in GiB (default: 24)
+	NumGPUs       int `yaml:"num_gpus" json:"num_gpus"`               // Number of GPUs in the cluster (default: 1)
+	TotalVRAMGiB  int `yaml:"total_vram_gib" json:"total_vram_gib"`   // VRAM per GPU in GiB (default: 24)
 	SliceSizeGiB  int `yaml:"slice_size_gib" json:"slice_size_gib"`   // Size of each GPU slice in GiB (default: 4)
 	DefaultSlices int `yaml:"default_slices" json:"default_slices"`   // Default number of slices for new users (default: 1)
 }
@@ -57,6 +58,7 @@ type GPUConfig struct {
 // GetDefaultGPUConfig returns the default GPU configuration
 func GetDefaultGPUConfig() GPUConfig {
 	return GPUConfig{
+		NumGPUs:       1,
 		TotalVRAMGiB:  24,
 		SliceSizeGiB:  4,
 		DefaultSlices: 1,

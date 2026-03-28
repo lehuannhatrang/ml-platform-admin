@@ -16,7 +16,7 @@ limitations under the License.
 
 import { Modal, Alert, Typography } from 'antd';
 import { GPUConfig } from '@/services/dashboard-config';
-import { getDefaultSlices } from '../../utils';
+import { getDefaultSlices, getNumGPUs, getMaxSlices } from '../../utils';
 
 const { Text } = Typography;
 
@@ -39,6 +39,8 @@ const ScanAllModal = ({
 }: ScanAllModalProps) => {
   const defaultSlices = getDefaultSlices(gpuConfig);
   const defaultGB = (defaultSlices * gpuConfig.slice_size_gib).toFixed(0);
+  const numGPUs = getNumGPUs(gpuConfig);
+  const totalSlices = getMaxSlices(gpuConfig);
 
   return (
     <Modal
@@ -67,7 +69,7 @@ const ScanAllModal = ({
       <Alert
         type="info"
         message={`Default quota: ${defaultSlices} slice(s) = ${defaultGB} GB`}
-        description="This value can be configured in the GPU Slicing tab."
+        description={`Cluster total: ${numGPUs} GPU(s), ${totalSlices} slices available. Configurable in the GPU Slicing tab.`}
       />
     </Modal>
   );

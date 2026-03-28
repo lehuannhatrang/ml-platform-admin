@@ -95,6 +95,14 @@ export function getRoutes() {
               },
             },
             {
+              path: 'Quota',
+              element: <QuotaManagement />,
+              handle: {
+                sidebarKey: 'QUOTA',
+                sidebarName: 'Quota',
+              },
+            },
+            {
               path: 'Priority',
               element: <PriorityManagement />,
               handle: {
@@ -102,14 +110,6 @@ export function getRoutes() {
                 sidebarName: 'Priority',
               },
             },
-            {
-              path: 'Quota',
-              element: <QuotaManagement />,
-              handle: {
-                sidebarKey: 'QUOTA',
-                sidebarName: 'Quota',
-              },
-            }
           ],
         },
         {

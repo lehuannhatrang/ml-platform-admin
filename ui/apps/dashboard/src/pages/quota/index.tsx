@@ -54,7 +54,7 @@ const QuotaManagement = () => {
   ];
 
   return (
-    <Panel showSelectCluster={true} allowSelectAllCluster={false}>
+    <Panel showSelectCluster={false} allowSelectAllCluster={false}>
       <Title level={3} style={{ marginBottom: 24 }}>GPU Quota Management</Title>
       <Tabs 
         defaultActiveKey="quota-management" 

@@ -106,7 +106,7 @@ const LoginPage = () => {
                 'bg-blue-500 text-white h-[56px] flex items-center px-[16px] text-xl rounded-t-[8px]'
               }
             >
-              Admin Portal
+              Admin Dashboard
             </div>
           }
         >
@@ -121,15 +121,6 @@ const LoginPage = () => {
                 {i18nInstance.t('login_with_keycloak', 'Login with Keycloak')}
               </Button>
               
-              {/* Optional: Show traditional login option */}
-              <div className="text-center">
-                <Button 
-                  type="link" 
-                  onClick={() => setLoginMethod('traditional')}
-                >
-                  {i18nInstance.t('use_traditional_login', 'Use Username/Password')}
-                </Button>
-              </div>
             </div>
           ) : (
             <Form

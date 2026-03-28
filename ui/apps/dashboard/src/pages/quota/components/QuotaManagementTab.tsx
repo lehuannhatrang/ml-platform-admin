@@ -49,6 +49,8 @@ import {
   formatGpuAsGiB,
   formatAsSlices,
   getMaxSlices,
+  getSlicesPerGPU,
+  getNumGPUs,
   getDefaultSlices,
   fractionToSlices,
 } from '../utils';
@@ -71,7 +73,9 @@ const QuotaManagementTab = ({ gpuConfig }: QuotaManagementTabProps) => {
 
   // Check if viewing aggregated (all clusters) view
   const isAggregatedView = selectedCluster.value === DEFAULT_CLUSTER_OPTION.value;
-  const maxSlices = getMaxSlices(gpuConfig);
+  const numGPUs = getNumGPUs(gpuConfig);
+  const slicesPerGPU = getSlicesPerGPU(gpuConfig);
+  const maxSlices = getMaxSlices(gpuConfig);       // total across all GPUs
   const defaultSlices = getDefaultSlices(gpuConfig);
 
   // Fetch quota assignments
@@ -314,7 +318,7 @@ const QuotaManagementTab = ({ gpuConfig }: QuotaManagementTabProps) => {
           <div style={{ marginBottom: 24 }}>
             <Title level={4} style={{ margin: 0 }}>GPU Quota Assignments</Title>
             <Text type="secondary">
-              1 slice = {gpuConfig.slice_size_gib} GB | Max {maxSlices} slices per GPU | Default: {defaultSlices} slice(s)
+              {numGPUs} GPU(s) · 1 slice = {gpuConfig.slice_size_gib} GB · {slicesPerGPU} slices/GPU · {maxSlices} total slices · Default: {defaultSlices} slice(s)
             </Text>
           </div>
 

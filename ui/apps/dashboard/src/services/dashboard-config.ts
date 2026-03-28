@@ -40,7 +40,8 @@ export interface menuConfig {
 }
 
 export interface GPUConfig {
-  total_vram_gib: number;  // Total VRAM per GPU in GiB (default: 24)
+  num_gpus: number;        // Number of GPUs in the cluster (default: 1)
+  total_vram_gib: number;  // VRAM per GPU in GiB (default: 24)
   slice_size_gib: number;  // Size of each GPU slice in GiB (default: 4)
   default_slices: number;  // Default number of slices for new users (default: 1)
 }

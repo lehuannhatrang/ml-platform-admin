@@ -31,6 +31,7 @@ import (
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
 	"github.com/karmada-io/dashboard/cmd/api/app/types/common"
 	"github.com/karmada-io/dashboard/pkg/client"
+	"github.com/karmada-io/dashboard/pkg/config"
 )
 
 const (
@@ -693,6 +694,82 @@ func handleDeleteQuota(c *gin.Context) {
 
 	klog.InfoS("Queue deleted", "profile", profile, "queueName", queueName)
 	common.Success(c, gin.H{"message": "Quota deleted successfully"})
+}
+
+// CreateQueueForProfile creates a KAI Queue CR for a given profile.
+// The default GPU quota is derived from the dashboard GPU config:
+//
+//	gpuFraction = defaultSlices * sliceSizeGiB / totalVRAMGiB
+//
+// It is a no-op if the queue already exists.
+func CreateQueueForProfile(ctx context.Context, profile string) error {
+	dynamicClient, err := getDynamicClient()
+	if err != nil {
+		return fmt.Errorf("failed to get dynamic client: %v", err)
+	}
+
+	queueName := GetQueueNameForProfile(profile)
+
+	// No-op if queue already exists
+	_, err = dynamicClient.Resource(QueueGVR).Get(ctx, queueName, metav1.GetOptions{})
+	if err == nil {
+		klog.InfoS("Queue already exists for profile, skipping creation", "profile", profile, "queueName", queueName)
+		return nil
+	}
+
+	// Calculate GPU fraction for 1 default slice from the dashboard GPU config
+	gpuCfg := config.GetDashboardConfig().GPUConfig
+	gpuFraction := float64(gpuCfg.DefaultSlices*gpuCfg.SliceSizeGiB) / float64(gpuCfg.TotalVRAMGiB)
+
+	klog.InfoS("Creating queue with default GPU quota",
+		"profile", profile,
+		"defaultSlices", gpuCfg.DefaultSlices,
+		"sliceSizeGiB", gpuCfg.SliceSizeGiB,
+		"totalVRAMGiB", gpuCfg.TotalVRAMGiB,
+		"gpuFraction", gpuFraction,
+	)
+
+	resources := &QuotaResources{
+		GPU: &ResourceQuota{Quota: gpuFraction, Limit: gpuFraction},
+	}
+
+	queue := buildQueueObject(profile, DefaultParentQueue, resources)
+
+	_, err = dynamicClient.Resource(QueueGVR).Create(ctx, queue, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to create queue for profile %s: %v", profile, err)
+	}
+
+	klog.InfoS("Queue created for profile", "profile", profile, "queueName", queueName, "gpuFraction", gpuFraction)
+	return nil
+}
+
+// DeleteQueueForProfile deletes the KAI Queue CR for a given profile.
+// It is a no-op if the queue does not exist.
+func DeleteQueueForProfile(ctx context.Context, profile string) error {
+	dynamicClient, err := getDynamicClient()
+	if err != nil {
+		return fmt.Errorf("failed to get dynamic client: %v", err)
+	}
+
+	queueName := GetQueueNameForProfile(profile)
+
+	_, err = dynamicClient.Resource(QueueGVR).Get(ctx, queueName, metav1.GetOptions{})
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			klog.InfoS("Queue not found for profile, skipping deletion", "profile", profile, "queueName", queueName)
+			return nil
+		}
+		return fmt.Errorf("failed to get queue for profile %s: %v", profile, err)
+	}
+
+	err = dynamicClient.Resource(QueueGVR).Delete(ctx, queueName, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to delete queue for profile %s: %v", profile, err)
+	}
+
+	klog.InfoS("Queue deleted for profile", "profile", profile, "queueName", queueName)
+	return nil
 }
 
 func init() {

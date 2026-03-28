@@ -19,7 +19,7 @@ import { Modal, Form, InputNumber, Tooltip } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { GPUConfig } from '@/services/dashboard-config';
 import { QuotaAssignment } from '@/services/quota';
-import { getMaxSlices, fractionToSlices } from '../../utils';
+import { getMaxSlices, getSlicesPerGPU, getNumGPUs, fractionToSlices } from '../../utils';
 
 interface EditQuotaModalProps {
   open: boolean;
@@ -39,7 +39,9 @@ const EditQuotaModal = ({
   onCancel,
 }: EditQuotaModalProps) => {
   const [form] = Form.useForm();
-  const maxSlices = getMaxSlices(gpuConfig);
+  const maxSlices = getMaxSlices(gpuConfig);       // total across all GPUs
+  const slicesPerGPU = getSlicesPerGPU(gpuConfig);
+  const numGPUs = getNumGPUs(gpuConfig);
 
   useEffect(() => {
     if (open && assignment) {
@@ -76,7 +78,7 @@ const EditQuotaModal = ({
           label={
             <span>
               GPU Slices{' '}
-              <Tooltip title={`Number of GPU slices to allocate. Each slice = ${gpuConfig.slice_size_gib} GB VRAM`}>
+              <Tooltip title={`Each slice = ${gpuConfig.slice_size_gib} GB VRAM. Max ${maxSlices} slices (${numGPUs} GPU(s) × ${slicesPerGPU} slices/GPU).`}>
                 <InfoCircleOutlined />
               </Tooltip>
             </span>
@@ -90,6 +92,11 @@ const EditQuotaModal = ({
                 return (
                   <span>
                     {slices} slice(s) = {(slices * gpuConfig.slice_size_gib).toFixed(1)} GB
+                    {numGPUs > 1 && slices > slicesPerGPU && (
+                      <span style={{ color: '#1890ff', marginLeft: 6 }}>
+                        (spans {Math.ceil(slices / slicesPerGPU)} GPU(s))
+                      </span>
+                    )}
                   </span>
                 );
               }}
